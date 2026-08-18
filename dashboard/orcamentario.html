@@ -2,1705 +2,1032 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard de Contabilidade Pública | Campo Largo</title>
 
-<title>Dashboard Contabilidade Pública | Campo Largo</title>
-
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root {
-    --azul: #1261a0;
-    --azul-escuro: #083b66;
-    --azul-claro: #eaf4fc;
-    --fundo: #f4f7fb;
-    --branco: #ffffff;
-    --texto: #172b4d;
-    --cinza: #6b778c;
-    --borda: #dfe6ee;
-    --verde: #16865c;
-    --vermelho: #c93636;
-    --sombra: 0 5px 20px rgba(0,0,0,.07);
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --fundo:#f4f7fb;
 }
-
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    font-family: Arial, Helvetica, sans-serif;
-    background: var(--fundo);
-    color: var(--texto);
-}
-
-/* CABEÇALHO */
-
-.header {
-    background: linear-gradient(135deg, #083b66, #1261a0);
-    color: white;
-    padding: 24px 30px;
-}
-
-.header-content {
-    max-width: 1500px;
-    margin: auto;
-}
-
-.header h1 {
-    margin: 0;
-    font-size: 27px;
-}
-
-.header p {
-    margin: 7px 0 0;
-    opacity: .85;
-}
-
-/* CONTAINER */
-
-.container {
-    max-width: 1500px;
-    margin: auto;
-    padding: 25px;
-}
-
-/* FILTROS */
-
-.filters {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: var(--sombra);
-    margin-bottom: 20px;
-}
-
-.filters-title {
-    font-weight: bold;
-    margin-bottom: 15px;
-}
-
-.filter-grid {
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-}
-
-label {
-    font-size: 12px;
-    font-weight: bold;
-    color: var(--cinza);
-    display: block;
-    margin-bottom: 5px;
-}
-
-input,
-select {
-    width: 100%;
-    padding: 11px;
-    border: 1px solid var(--borda);
-    border-radius: 7px;
-    background: white;
-}
-
-button {
-    border: none;
-    border-radius: 7px;
-    padding: 11px 18px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.btn-primary {
-    background: var(--azul);
-    color: white;
-}
-
-.btn-secondary {
-    background: var(--azul-claro);
-    color: var(--azul-escuro);
-}
-
-/* CARDS */
-
-.cards {
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(220px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: var(--sombra);
-}
-
-.card-title {
-    color: var(--cinza);
-    font-size: 13px;
-}
-
-.card-value {
-    font-size: 25px;
-    font-weight: bold;
-    margin-top: 9px;
-    color: var(--azul-escuro);
-}
-
-/* GRÁFICOS */
-
-.charts {
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(400px, 1fr));
-    gap: 20px;
-}
-
-.chart-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: var(--sombra);
-}
-
-.chart-card h3 {
-    margin-top: 0;
-    font-size: 16px;
-}
-
-/* TABELA */
-
-.table-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: var(--sombra);
-    margin-top: 20px;
-}
-
-.table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.table-container {
-    overflow-x: auto;
-    max-height: 550px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-
-th {
-    background: var(--azul-escuro);
-    color: white;
-    padding: 11px;
-    text-align: left;
-    position: sticky;
-    top: 0;
-}
-
-td {
-    padding: 10px;
-    border-bottom: 1px solid var(--borda);
-}
-
-tr:hover {
-    background: #f4f8fc;
-}
-
-/* STATUS */
-
-.status {
-    margin-bottom: 15px;
-    padding: 12px 15px;
-    border-radius: 8px;
-    background: #fff7df;
-    color: #775d00;
-}
-
-.status.success {
-    background: #e8f7ef;
-    color: var(--verde);
-}
-
-.status.error {
-    background: #fdeaea;
-    color: var(--vermelho);
-}
-
-/* LOADING */
-
-.loading {
-    text-align: center;
-    padding: 40px;
-    display: none;
-}
-
-.spinner {
-    width: 35px;
-    height: 35px;
-    border: 4px solid #ddd;
-    border-top-color: var(--azul);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: auto;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* RESPONSIVO */
-
-@media(max-width:700px) {
-
-    .container {
-        padding: 12px;
-    }
-
-    .header {
-        padding: 20px;
-    }
-
-    .header h1 {
-        font-size: 21px;
-    }
-
-    .charts {
-        grid-template-columns: 1fr;
-    }
-}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi .valor{font-size:1.45rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:360px}
+.table-responsive{max-height:600px}
+.table thead th{position:sticky;top:0;z-index:2}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
 </style>
 </head>
 
 <body>
 
-<header class="header">
-    <div class="header-content">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-bank"></i> Contabilidade Pública
+</a>
+<div class="text-white small">Campo Largo - PR</div>
+</div>
+</nav>
 
-        <h1>Dashboard de Contabilidade Pública</h1>
-
-        <p>
-            Município de Campo Largo — Paraná
-            | Exercício 2026
-        </p>
-
-    </div>
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">DADOS ABERTOS</span>
+<h1 class="display-5 fw-bold">Dashboard de Despesas Públicas</h1>
+<p class="lead mb-0">
+Consulta direta aos dados de despesas disponibilizados pelo Município de Campo Largo.
+</p>
+</div>
+</div>
+</div>
 </header>
 
-
-<main class="container">
-
-    <div id="status" class="status">
-        Preparando consulta aos Dados Abertos...
-    </div>
-
-
-    <!-- FILTROS -->
-
-    <section class="filters">
-
-        <div class="filters-title">
-            Filtros da consulta
-        </div>
-
-        <div class="filter-grid">
-
-            <div>
-                <label>Data inicial</label>
-                <input
-                    type="date"
-                    id="dataInicial"
-                    value="2026-01-01">
-            </div>
-
-            <div>
-                <label>Data final</label>
-                <input
-                    type="date"
-                    id="dataFinal"
-                    value="2026-12-31">
-            </div>
-
-            <div>
-                <label>Fornecedor</label>
-                <input
-                    type="text"
-                    id="filtroFornecedor"
-                    placeholder="Nome do fornecedor">
-            </div>
-
-            <div>
-                <label>Natureza</label>
-                <select id="filtroNatureza">
-                    <option value="">Todas</option>
-                </select>
-            </div>
-
-            <div>
-                <label>Rubrica contábil</label>
-                <select id="filtroRubrica">
-                    <option value="">Todas</option>
-                </select>
-            </div>
-
-            <div style="display:flex;align-items:end;gap:8px">
-
-                <button
-                    class="btn-primary"
-                    onclick="carregarDados()">
-                    Atualizar
-                </button>
-
-                <button
-                    class="btn-secondary"
-                    onclick="limparFiltros()">
-                    Limpar
-                </button>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- CARREGAMENTO -->
-
-    <div id="loading" class="loading">
-
-        <div class="spinner"></div>
-
-        <p>Consultando dados...</p>
-
-    </div>
-
-
-    <!-- INDICADORES -->
-
-    <section class="cards">
-
-        <div class="card">
-
-            <div class="card-title">
-                Total das despesas
-            </div>
-
-            <div
-                class="card-value"
-                id="totalDespesas">
-                R$ 0,00
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="card-title">
-                Registros
-            </div>
-
-            <div
-                class="card-value"
-                id="quantidade">
-                0
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="card-title">
-                Ticket médio
-            </div>
-
-            <div
-                class="card-value"
-                id="ticketMedio">
-                R$ 0,00
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="card-title">
-                Fornecedores
-            </div>
-
-            <div
-                class="card-value"
-                id="fornecedores">
-                0
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- GRÁFICOS -->
-
-    <section class="charts">
-
-        <div class="chart-card">
-
-            <h3>
-                Despesas por mês
-            </h3>
-
-            <canvas id="graficoMensal"></canvas>
-
-        </div>
-
-
-        <div class="chart-card">
-
-            <h3>
-                Despesas por natureza
-            </h3>
-
-            <canvas id="graficoNatureza"></canvas>
-
-        </div>
-
-
-        <div class="chart-card">
-
-            <h3>
-                Top 10 fornecedores
-            </h3>
-
-            <canvas id="graficoFornecedores"></canvas>
-
-        </div>
-
-
-        <div class="chart-card">
-
-            <h3>
-                Despesas por rubrica contábil
-            </h3>
-
-            <canvas id="graficoRubrica"></canvas>
-
-        </div>
-
-    </section>
-
-
-    <!-- TABELA -->
-
-    <section class="table-card">
-
-        <div class="table-header">
-
-            <h3>
-                Detalhamento das despesas
-            </h3>
-
-            <button
-                class="btn-primary"
-                onclick="exportarCSV()">
-                Exportar CSV
-            </button>
-
-        </div>
-
-
-        <div class="table-container">
-
-            <table>
-
-                <thead id="thead"></thead>
-
-                <tbody id="tbody"></tbody>
-
-            </table>
-
-        </div>
-
-    </section>
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title">Período e filtros</h5>
+
+<div class="row g-3">
+
+<div class="col-md-2">
+<label class="form-label">Data inicial</label>
+<input type="date" id="dataInicial" class="form-control" value="2026-01-01">
+</div>
+
+<div class="col-md-2">
+<label class="form-label">Data final</label>
+<input type="date" id="dataFinal" class="form-control" value="2026-12-31">
+</div>
+
+<div class="col-md-3">
+<label class="form-label">Credor</label>
+<input type="text" id="filtroCredor" class="form-control" placeholder="Nome do credor">
+</div>
+
+<div class="col-md-2">
+<label class="form-label">Órgão</label>
+<select id="filtroOrgao" class="form-select">
+<option value="">Todos</option>
+</select>
+</div>
+
+<div class="col-md-2">
+<label class="form-label">Unidade</label>
+<select id="filtroUnidade" class="form-select">
+<option value="">Todas</option>
+</select>
+</div>
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100">
+Consultar
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap">
+<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">Limpar filtros</button>
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">Exportar CSV</button>
+</div>
+
+<div class="small-muted mt-3">
+API utilizada:
+<code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary"></div>
+<div class="mt-2">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Empenhado</div>
+<div id="totalEmpenhado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Anulado</div>
+<div id="totalAnulado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Liquidado</div>
+<div id="totalLiquidado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Retido</div>
+<div id="totalRetido" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Pago</div>
+<div id="totalPago" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Registros</div>
+<div id="quantidade" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Credores</div>
+<div id="credores" class="valor">0</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5>Empenhado x Liquidado x Pago</h5>
+<div class="chart-box"><canvas id="graficoValores"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5>Despesas por Órgão</h5>
+<div class="chart-box"><canvas id="graficoOrgao"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5>Despesas por Unidade</h5>
+<div class="chart-box"><canvas id="graficoUnidade"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5>Top 10 Credores</h5>
+<div class="chart-box"><canvas id="graficoCredores"></canvas></div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<div>
+<h5 class="mb-1">Detalhamento das despesas</h5>
+<div class="small-muted">Os valores são apresentados conforme o retorno da API.</div>
+</div>
+<span id="contadorTabela" class="badge text-bg-primary">0 registros</span>
+</div>
+
+<div class="table-responsive">
+<table class="table table-hover table-sm align-middle">
+<thead class="table-dark">
+<tr>
+<th>Órgão</th>
+<th>Unidade</th>
+<th>Fonte</th>
+<th>CPF/CNPJ</th>
+<th>Credor</th>
+<th>Empenhado</th>
+<th>Anulado</th>
+<th>Liquidado</th>
+<th>Retido</th>
+<th>Pago</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<div class="alert alert-warning small">
+<strong>Atenção:</strong> este arquivo depende de a API de Campo Largo permitir
+CORS para o domínio onde o GitHub Pages estiver hospedado.
+Se o navegador informar <code>blocked by CORS policy</code>, o problema está
+no servidor da API e não pode ser corrigido somente pelo HTML.
+</div>
 
 </main>
 
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Dashboard de Contabilidade Pública — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do município.
+</div>
+</footer>
 
 <script>
-
-/* =========================================================
-   CONFIGURAÇÃO DA API
-========================================================= */
-
 const API_URL =
-    "https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
-
+"https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
 
 let dados = [];
-
 let dadosFiltrados = [];
-
 let graficos = {};
 
+const $ = id => document.getElementById(id);
 
-/* =========================================================
-   INICIALIZAÇÃO
-========================================================= */
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{
+    style:"currency",
+    currency:"BRL"
+  }).format(Number(valor)||0);
+}
 
-document.addEventListener(
-    "DOMContentLoaded",
-    carregarDados
-);
+function numero(valor){
 
+  if(typeof valor === "number"){
+    return Number.isFinite(valor) ? valor : 0;
+  }
 
-/* =========================================================
-   CARREGAR API
-========================================================= */
+  if(valor === null || valor === undefined || valor === ""){
+    return 0;
+  }
 
-async function carregarDados() {
+  let texto = String(valor)
+    .replace("R$","")
+    .trim();
 
-    const inicio =
-        document.getElementById("dataInicial").value;
+  /*
+   * A API mostrada pelo usuário retorna valores como:
+   * "200.00"
+   *
+   * Também suportamos:
+   * "1.234,56"
+   * "1234,56"
+   */
 
-    const fim =
-        document.getElementById("dataFinal").value;
+  if(texto.includes(".") && texto.includes(",")){
+    texto = texto.replace(/\./g,"").replace(",",".");
+  }else if(texto.includes(",")){
+    texto = texto.replace(",",".");
+  }
 
+  const n = Number(texto);
 
-    if (!inicio || !fim) {
+  return Number.isFinite(n) ? n : 0;
+}
 
-        mostrarStatus(
-            "Informe o período.",
-            "error"
-        );
+function dataBR(data){
+  const [ano,mes,dia] = data.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
 
-        return;
-    }
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
 
+function mostrarStatus(texto,tipo="info"){
 
-    const dataInicial =
-        formatarDataAPI(inicio);
+  const el = $("status");
 
-    const dataFinal =
-        formatarDataAPI(fim);
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
 
+function mostrarLoading(sim){
 
-    const url =
-        `${API_URL}?dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
+  $("loading").classList.toggle("d-none",!sim);
+}
 
+async function consultarAPI(){
 
-    mostrarLoading(true);
+  const inicio = $("dataInicial").value;
+  const fim = $("dataFinal").value;
 
+  if(!inicio || !fim){
+    mostrarStatus("Informe as duas datas.","warning");
+    return;
+  }
+
+  if(inicio > fim){
     mostrarStatus(
-        "Consultando Dados Abertos de Campo Largo..."
+      "A data inicial não pode ser maior que a data final.",
+      "warning"
     );
+    return;
+  }
 
+  const url =
+    `${API_URL}?dataInicial=${encodeURIComponent(dataBR(inicio))}` +
+    `&dataFinal=${encodeURIComponent(dataBR(fim))}`;
 
-    try {
+  console.log("Consultando:",url);
 
-        const resposta =
-            await fetch(url, {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json"
-                }
-            });
+  mostrarLoading(true);
 
+  mostrarStatus(
+    "Consultando diretamente a API de Campo Largo..."
+  );
 
-        if (!resposta.ok) {
+  try{
 
-            throw new Error(
-                `HTTP ${resposta.status}`
-            );
+    const resposta = await fetch(url,{
+      method:"GET",
+      headers:{
+        "Accept":"application/json"
+      }
+    });
 
-        }
-
-
-        const resultado =
-            await resposta.json();
-
-
-        dados =
-            normalizarResposta(resultado);
-
-
-        dadosFiltrados =
-            [...dados];
-
-
-        preencherFiltros();
-
-        atualizarDashboard();
-
-
-        mostrarStatus(
-            `Dados carregados com sucesso: ${dados.length.toLocaleString("pt-BR")} registros.`,
-            "success"
-        );
-
-
-    } catch (erro) {
-
-        console.error(erro);
-
-
-        mostrarStatus(
-            "Não foi possível acessar a API diretamente pelo navegador. " +
-            "Isso pode ocorrer devido à política CORS do servidor. " +
-            "Nesse caso, utilize um pequeno backend/proxy para consumir a API.",
-            "error"
-        );
-
-    } finally {
-
-        mostrarLoading(false);
-
+    if(!resposta.ok){
+      throw new Error(
+        `API retornou HTTP ${resposta.status}`
+      );
     }
 
-}
+    const resultado = await resposta.json();
 
+    console.log("Resposta da API:",resultado);
 
-/* =========================================================
-   NORMALIZAÇÃO
-========================================================= */
-
-function normalizarResposta(resultado) {
-
-    let lista = resultado;
-
+    if(resultado.status && resultado.status !== "ok"){
+      throw new Error(
+        resultado.mensagem || "A API retornou status diferente de ok."
+      );
+    }
 
     /*
-       Algumas APIs retornam:
+     * FORMATO CONFIRMADO PELO USUÁRIO:
+     *
+     * {
+     *   "status": "ok",
+     *   "retorno": [...]
+     * }
+     */
 
-       { dados: [...] }
-
-       { data: [...] }
-
-       { result: [...] }
-
-       ou diretamente [...]
-    */
-
-    if (resultado && Array.isArray(resultado.dados)) {
-
-        lista = resultado.dados;
-
-    } else if (
-        resultado &&
-        Array.isArray(resultado.data)
-    ) {
-
-        lista = resultado.data;
-
-    } else if (
-        resultado &&
-        Array.isArray(resultado.result)
-    ) {
-
-        lista = resultado.result;
-
+    if(!Array.isArray(resultado.retorno)){
+      throw new Error(
+        "A resposta não possui o array 'retorno'."
+      );
     }
 
+    dados = resultado.retorno.map(item => ({
 
-    if (!Array.isArray(lista)) {
+      orgaoCodigo:
+        item.orgaoCodigo ?? "",
 
-        return [];
+      orgaoDescricao:
+        item.orgaoDescricao ?? "",
 
-    }
+      unidadeCodigo:
+        item.unidadeCodigo ?? "",
 
+      unidadeDescricao:
+        item.unidadeDescricao ?? "",
 
-    return lista.map(item => {
+      fonteRecurso:
+        item.fonteRecurso ?? "",
 
-        return {
-            mes: pegar(item, [
-                "MES",
-                "Mes",
-                "mes"
-            ]),
+      fonteRecursoDescricao:
+        item.fonteRecursoDescricao ?? "",
 
-            ano: pegar(item, [
-                "ANO",
-                "Ano",
-                "ano"
-            ]),
+      cpfCnpjCredor:
+        item.cpfCnpjCredor ?? "",
 
-            fornecedor: pegar(item, [
-                "FORNECEDOR",
-                "Fornecedor",
-                "fornecedor"
-            ]),
+      nomeCredor:
+        item.nomeCredor ?? "",
 
-            cpfCnpj: pegar(item, [
-                "CPF/CNPJ",
-                "CPF_CNPJ",
-                "CPFCNPJ"
-            ]),
+      valorEmpenhado:
+        numero(item.valorEmpenhado),
 
-            descricao: pegar(item, [
-                "DESCRICAO PAGAMENTO",
-                "DESCRICAO_PAGAMENTO",
-                "DescricaoPagamento"
-            ]),
+      valorAnulado:
+        numero(item.valorAnulado),
 
-            natureza: pegar(item, [
-                "Natureza",
-                "NATUREZA",
-                "natureza"
-            ]),
+      valorLiquidado:
+        numero(item.valorLiquidado),
 
-            valor: converterNumero(
-                pegar(item, [
-                    "VALOR",
-                    "Valor",
-                    "valor"
-                ])
-            ),
+      valorRetido:
+        numero(item.valorRetido),
 
-            formaPagamento: pegar(item, [
-                "FORMA DE PAGAMENTO",
-                "FORMA_PAGAMENTO",
-                "FormaPagamento"
-            ]),
+      valorPago:
+        numero(item.valorPago)
 
-            rubrica: pegar(item, [
-                "Rubrica contabil",
-                "RUBRICA CONTABIL",
-                "RubricaContabil"
-            ]),
+    }));
 
-            procedimento: pegar(item, [
-                "Procedimento Licitatorio",
-                "PROCEDIMENTO LICITATORIO",
-                "ProcedimentoLicitatorio"
-            ])
-        };
-
-    });
-
-}
-
-
-/* =========================================================
-   PEGAR CAMPO
-========================================================= */
-
-function pegar(obj, campos) {
-
-    for (const campo of campos) {
-
-        if (
-            obj &&
-            obj[campo] !== undefined &&
-            obj[campo] !== null
-        ) {
-
-            return obj[campo];
-
-        }
-
-    }
-
-    return "";
-
-}
-
-
-/* =========================================================
-   CONVERSÃO NUMÉRICA
-========================================================= */
-
-function converterNumero(valor) {
-
-    if (typeof valor === "number") {
-
-        return valor;
-
-    }
-
-
-    if (!valor) {
-
-        return 0;
-
-    }
-
-
-    let texto =
-        String(valor)
-        .trim()
-        .replace("R$", "")
-        .trim();
-
-
-    /*
-       Trata formatos:
-
-       1.234,56
-
-       1234,56
-
-       1234.56
-    */
-
-    if (
-        texto.includes(".") &&
-        texto.includes(",")
-    ) {
-
-        texto =
-            texto
-            .replace(/\./g, "")
-            .replace(",", ".");
-
-    } else if (
-        texto.includes(",")
-    ) {
-
-        texto =
-            texto.replace(",", ".");
-
-    }
-
-
-    const numero =
-        Number(texto);
-
-
-    return Number.isFinite(numero)
-        ? numero
-        : 0;
-
-}
-
-
-/* =========================================================
-   FILTROS
-========================================================= */
-
-function preencherFiltros() {
-
-    const naturezas =
-        [...new Set(
-            dados
-            .map(x => x.natureza)
-            .filter(Boolean)
-        )]
-        .sort();
-
-
-    const rubricas =
-        [...new Set(
-            dados
-            .map(x => x.rubrica)
-            .filter(Boolean)
-        )]
-        .sort();
-
-
-    const selectNatureza =
-        document.getElementById(
-            "filtroNatureza"
-        );
-
-
-    const selectRubrica =
-        document.getElementById(
-            "filtroRubrica"
-        );
-
-
-    selectNatureza.innerHTML =
-        `<option value="">Todas</option>`;
-
-
-    naturezas.forEach(item => {
-
-        selectNatureza.innerHTML +=
-            `<option value="${escapeHtml(item)}">
-                ${escapeHtml(item)}
-            </option>`;
-
-    });
-
-
-    selectRubrica.innerHTML =
-        `<option value="">Todas</option>`;
-
-
-    rubricas.forEach(item => {
-
-        selectRubrica.innerHTML +=
-            `<option value="${escapeHtml(item)}">
-                ${escapeHtml(item)}
-            </option>`;
-
-    });
-
-}
-
-
-/* =========================================================
-   ATUALIZAR DASHBOARD
-========================================================= */
-
-function atualizarDashboard() {
-
-    aplicarFiltros();
-
-    atualizarCards();
-
-    atualizarGraficos();
-
-    atualizarTabela();
-
-}
-
-
-/* =========================================================
-   APLICAR FILTROS
-========================================================= */
-
-function aplicarFiltros() {
-
-    const fornecedor =
-        document
-        .getElementById("filtroFornecedor")
-        .value
-        .toLowerCase();
-
-
-    const natureza =
-        document
-        .getElementById("filtroNatureza")
-        .value;
-
-
-    const rubrica =
-        document
-        .getElementById("filtroRubrica")
-        .value;
-
-
-    dadosFiltrados =
-        dados.filter(item => {
-
-            const okFornecedor =
-                !fornecedor ||
-                String(item.fornecedor)
-                .toLowerCase()
-                .includes(fornecedor);
-
-
-            const okNatureza =
-                !natureza ||
-                String(item.natureza)
-                === natureza;
-
-
-            const okRubrica =
-                !rubrica ||
-                String(item.rubrica)
-                === rubrica;
-
-
-            return (
-                okFornecedor &&
-                okNatureza &&
-                okRubrica
-            );
-
-        });
-
-}
-
-
-/* =========================================================
-   CARDS
-========================================================= */
-
-function atualizarCards() {
-
-    const total =
-        dadosFiltrados.reduce(
-            (soma, item) =>
-                soma + item.valor,
-            0
-        );
-
-
-    const quantidade =
-        dadosFiltrados.length;
-
-
-    const ticket =
-        quantidade
-            ? total / quantidade
-            : 0;
-
-
-    const fornecedores =
-        new Set(
-            dadosFiltrados
-            .map(x => x.fornecedor)
-            .filter(Boolean)
-        ).size;
-
-
-    document.getElementById(
-        "totalDespesas"
-    ).textContent =
-        moeda(total);
-
-
-    document.getElementById(
-        "quantidade"
-    ).textContent =
-        quantidade.toLocaleString("pt-BR");
-
-
-    document.getElementById(
-        "ticketMedio"
-    ).textContent =
-        moeda(ticket);
-
-
-    document.getElementById(
-        "fornecedores"
-    ).textContent =
-        fornecedores.toLocaleString("pt-BR");
-
-}
-
-
-/* =========================================================
-   GRÁFICOS
-========================================================= */
-
-function destruirGrafico(nome) {
-
-    if (graficos[nome]) {
-
-        graficos[nome].destroy();
-
-    }
-
-}
-
-
-/* ---------- MENSAL ---------- */
-
-function graficoMensal() {
-
-    const meses = [
-        "Janeiro",
-        "Fevereiro",
-        "Março",
-        "Abril",
-        "Maio",
-        "Junho",
-        "Julho",
-        "Agosto",
-        "Setembro",
-        "Outubro",
-        "Novembro",
-        "Dezembro"
-    ];
-
-
-    const valores =
-        new Array(12).fill(0);
-
-
-    dadosFiltrados.forEach(item => {
-
-        let mes =
-            parseInt(item.mes);
-
-
-        if (
-            !Number.isNaN(mes) &&
-            mes >= 1 &&
-            mes <= 12
-        ) {
-
-            valores[mes - 1] +=
-                item.valor;
-
-        }
-
-    });
-
-
-    destruirGrafico("mensal");
-
-
-    graficos.mensal =
-        new Chart(
-            document
-            .getElementById("graficoMensal"),
-            {
-                type: "bar",
-
-                data: {
-
-                    labels: meses,
-
-                    datasets: [{
-                        label:
-                            "Despesas",
-
-                        data:
-                            valores,
-
-                        borderWidth: 1
-
-                    }]
-
-                },
-
-                options: {
-
-                    responsive: true,
-
-                    plugins: {
-
-                        tooltip: {
-
-                            callbacks: {
-
-                                label:
-                                    context =>
-                                        moeda(
-                                            context.raw
-                                        )
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            }
-        );
-
-}
-
-
-/* ---------- NATUREZA ---------- */
-
-function graficoPorCampo(
-    canvasId,
-    campo,
-    nome,
-    limite = 10
-) {
-
-    const mapa = {};
-
-
-    dadosFiltrados.forEach(item => {
-
-        const chave =
-            item[campo] ||
-            "Não informado";
-
-
-        mapa[chave] =
-            (mapa[chave] || 0)
-            + item.valor;
-
-    });
-
-
-    const dados =
-        Object.entries(mapa)
-        .sort((a,b) => b[1] - a[1])
-        .slice(0, limite);
-
-
-    const labels =
-        dados.map(x => x[0]);
-
-
-    const valores =
-        dados.map(x => x[1]);
-
-
-    destruirGrafico(canvasId);
-
-
-    graficos[canvasId] =
-        new Chart(
-            document.getElementById(canvasId),
-            {
-
-                type: "doughnut",
-
-                data: {
-
-                    labels,
-
-                    datasets: [{
-                        label: nome,
-                        data: valores,
-                        borderWidth: 1
-                    }]
-
-                },
-
-                options: {
-
-                    responsive: true,
-
-                    plugins: {
-
-                        tooltip: {
-
-                            callbacks: {
-
-                                label:
-                                    context =>
-                                        `${context.label}: ${moeda(context.raw)}`
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            }
-        );
-
-}
-
-
-/* ---------- FORNECEDORES ---------- */
-
-function graficoFornecedores() {
-
-    const mapa = {};
-
-
-    dadosFiltrados.forEach(item => {
-
-        const fornecedor =
-            item.fornecedor ||
-            "Não informado";
-
-
-        mapa[fornecedor] =
-            (mapa[fornecedor] || 0)
-            + item.valor;
-
-    });
-
-
-    const top =
-        Object.entries(mapa)
-        .sort((a,b) => b[1] - a[1])
-        .slice(0,10);
-
-
-    destruirGrafico(
-        "fornecedoresGrafico"
-    );
-
-
-    graficos.fornecedoresGrafico =
-        new Chart(
-            document.getElementById(
-                "graficoFornecedores"
-            ),
-            {
-
-                type: "bar",
-
-                data: {
-
-                    labels:
-                        top.map(x => x[0]),
-
-                    datasets: [{
-                        label:
-                            "Valor",
-
-                        data:
-                            top.map(x => x[1]),
-
-                        borderWidth: 1
-                    }]
-
-                },
-
-                options: {
-
-                    indexAxis: "y",
-
-                    responsive: true,
-
-                    plugins: {
-
-                        tooltip: {
-
-                            callbacks: {
-
-                                label:
-                                    context =>
-                                        moeda(context.raw)
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   ATUALIZAR TODOS OS GRÁFICOS
-========================================================= */
-
-function atualizarGraficos() {
-
-    graficoMensal();
-
-    graficoPorCampo(
-        "graficoNatureza",
-        "natureza",
-        "Natureza"
-    );
-
-    graficoFornecedores();
-
-    graficoPorCampo(
-        "graficoRubrica",
-        "rubrica",
-        "Rubrica"
-    );
-
-}
-
-
-/* =========================================================
-   TABELA
-========================================================= */
-
-function atualizarTabela() {
-
-    const thead =
-        document.getElementById("thead");
-
-
-    const tbody =
-        document.getElementById("tbody");
-
-
-    thead.innerHTML = `
-        <tr>
-            <th>Mês</th>
-            <th>Ano</th>
-            <th>Fornecedor</th>
-            <th>CPF/CNPJ</th>
-            <th>Descrição</th>
-            <th>Natureza</th>
-            <th>Valor</th>
-            <th>Forma de pagamento</th>
-            <th>Rubrica contábil</th>
-            <th>Procedimento licitatório</th>
-        </tr>
-    `;
-
-
-    tbody.innerHTML = "";
-
-
-    const fragment =
-        document.createDocumentFragment();
-
-
-    dadosFiltrados.forEach(item => {
-
-        const tr =
-            document.createElement("tr");
-
-
-        tr.innerHTML = `
-
-            <td>${escapeHtml(item.mes)}</td>
-
-            <td>${escapeHtml(item.ano)}</td>
-
-            <td>${escapeHtml(item.fornecedor)}</td>
-
-            <td>${escapeHtml(item.cpfCnpj)}</td>
-
-            <td>${escapeHtml(item.descricao)}</td>
-
-            <td>${escapeHtml(item.natureza)}</td>
-
-            <td>
-                <strong>
-                    ${moeda(item.valor)}
-                </strong>
-            </td>
-
-            <td>
-                ${escapeHtml(item.formaPagamento)}
-            </td>
-
-            <td>
-                ${escapeHtml(item.rubrica)}
-            </td>
-
-            <td>
-                ${escapeHtml(item.procedimento)}
-            </td>
-
-        `;
-
-
-        fragment.appendChild(tr);
-
-    });
-
-
-    tbody.appendChild(fragment);
-
-}
-
-
-/* =========================================================
-   EXPORTAÇÃO
-========================================================= */
-
-function exportarCSV() {
-
-    if (!dadosFiltrados.length) {
-
-        alert(
-            "Não existem dados para exportar."
-        );
-
-        return;
-
-    }
-
-
-    const cabecalho = [
-        "Mes",
-        "Ano",
-        "Fornecedor",
-        "CPF/CNPJ",
-        "Descricao",
-        "Natureza",
-        "Valor",
-        "Forma de Pagamento",
-        "Rubrica Contabil",
-        "Procedimento Licitatorio"
-    ];
-
-
-    const linhas =
-        dadosFiltrados.map(item => [
-
-            item.mes,
-            item.ano,
-            item.fornecedor,
-            item.cpfCnpj,
-            item.descricao,
-            item.natureza,
-            item.valor,
-            item.formaPagamento,
-            item.rubrica,
-            item.procedimento
-
-        ]);
-
-
-    const csv =
-        [cabecalho, ...linhas]
-        .map(linha =>
-            linha
-            .map(valor =>
-                `"${String(valor ?? "")
-                    .replace(/"/g, '""')}"`
-            )
-            .join(";")
-        )
-        .join("\n");
-
-
-    const blob =
-        new Blob(
-            ["\ufeff" + csv],
-            {
-                type:
-                    "text/csv;charset=utf-8;"
-            }
-        );
-
-
-    const url =
-        URL.createObjectURL(blob);
-
-
-    const a =
-        document.createElement("a");
-
-
-    a.href = url;
-
-    a.download =
-        "despesas_campo_largo_2026.csv";
-
-
-    a.click();
-
-
-    URL.revokeObjectURL(url);
-
-}
-
-
-/* =========================================================
-   UTILITÁRIOS
-========================================================= */
-
-function formatarDataAPI(data) {
-
-    const [ano, mes, dia] =
-        data.split("-");
-
-
-    return `${dia}/${mes}/${ano}`;
-
-}
-
-
-function moeda(valor) {
-
-    return new Intl.NumberFormat(
-        "pt-BR",
-        {
-            style: "currency",
-            currency: "BRL"
-        }
-    ).format(valor || 0);
-
-}
-
-
-function escapeHtml(valor) {
-
-    return String(valor ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
-}
-
-
-function mostrarLoading(exibir) {
-
-    document.getElementById(
-        "loading"
-    ).style.display =
-        exibir ? "block" : "none";
-
-}
-
-
-function mostrarStatus(
-    mensagem,
-    tipo = ""
-) {
-
-    const elemento =
-        document.getElementById("status");
-
-
-    elemento.textContent =
-        mensagem;
-
-
-    elemento.className =
-        "status " + tipo;
-
-}
-
-
-function limparFiltros() {
-
-    document.getElementById(
-        "filtroFornecedor"
-    ).value = "";
-
-
-    document.getElementById(
-        "filtroNatureza"
-    ).value = "";
-
-
-    document.getElementById(
-        "filtroRubrica"
-    ).value = "";
-
+    preencherFiltros();
 
     atualizarDashboard();
 
+    mostrarStatus(
+      `${dados.length.toLocaleString("pt-BR")} registros carregados com sucesso.`,
+      "success"
+    );
+
+  }catch(erro){
+
+    console.error("Erro:",erro);
+
+    mostrarStatus(
+      "Não foi possível acessar a API diretamente pelo navegador. " +
+      "Se o console apresentar 'CORS policy', a API não permite " +
+      "acesso direto pelo GitHub Pages.",
+      "danger"
+    );
+
+  }finally{
+
+    mostrarLoading(false);
+
+  }
+
 }
 
+function preencherFiltros(){
 
-/* filtros em tempo real */
+  const orgaos =
+    [...new Map(
+      dados.map(item => [
+        item.orgaoCodigo,
+        item.orgaoDescricao
+      ])
+    ).entries()]
+    .sort((a,b)=>
+      String(a[1]).localeCompare(String(b[1]))
+    );
 
-document
-    .getElementById("filtroFornecedor")
-    .addEventListener(
-        "input",
-        atualizarDashboard
+  const unidades =
+    [...new Map(
+      dados.map(item => [
+        item.unidadeCodigo,
+        item.unidadeDescricao
+      ])
+    ).entries()]
+    .sort((a,b)=>
+      String(a[1]).localeCompare(String(b[1]))
+    );
+
+  $("filtroOrgao").innerHTML =
+    `<option value="">Todos</option>` +
+    orgaos.map(([codigo,nome])=>
+      `<option value="${escapeHtml(codigo)}">
+        ${escapeHtml(nome)}
+      </option>`
+    ).join("");
+
+  $("filtroUnidade").innerHTML =
+    `<option value="">Todas</option>` +
+    unidades.map(([codigo,nome])=>
+      `<option value="${escapeHtml(codigo)}">
+        ${escapeHtml(nome)}
+      </option>`
+    ).join("");
+
+}
+
+function aplicarFiltros(){
+
+  const credor =
+    $("filtroCredor")
+      .value
+      .toLowerCase()
+      .trim();
+
+  const orgao =
+    $("filtroOrgao").value;
+
+  const unidade =
+    $("filtroUnidade").value;
+
+  dadosFiltrados =
+    dados.filter(item => {
+
+      const okCredor =
+        !credor ||
+        String(item.nomeCredor)
+          .toLowerCase()
+          .includes(credor);
+
+      const okOrgao =
+        !orgao ||
+        String(item.orgaoCodigo) === orgao;
+
+      const okUnidade =
+        !unidade ||
+        String(item.unidadeCodigo) === unidade;
+
+      return (
+        okCredor &&
+        okOrgao &&
+        okUnidade
+      );
+
+    });
+
+}
+
+function soma(campo){
+
+  return dadosFiltrados.reduce(
+    (total,item)=>
+      total + numero(item[campo]),
+    0
+  );
+
+}
+
+function atualizarDashboard(){
+
+  aplicarFiltros();
+
+  atualizarCards();
+
+  atualizarGraficos();
+
+  atualizarTabela();
+
+}
+
+function atualizarCards(){
+
+  $("totalEmpenhado").textContent =
+    moeda(soma("valorEmpenhado"));
+
+  $("totalAnulado").textContent =
+    moeda(soma("valorAnulado"));
+
+  $("totalLiquidado").textContent =
+    moeda(soma("valorLiquidado"));
+
+  $("totalRetido").textContent =
+    moeda(soma("valorRetido"));
+
+  $("totalPago").textContent =
+    moeda(soma("valorPago"));
+
+  $("quantidade").textContent =
+    dadosFiltrados.length
+      .toLocaleString("pt-BR");
+
+  $("credores").textContent =
+    new Set(
+      dadosFiltrados
+        .map(item=>item.nomeCredor)
+        .filter(Boolean)
+    ).size.toLocaleString("pt-BR");
+
+  $("contadorTabela").textContent =
+    `${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
+
+}
+
+function destruirGrafico(nome){
+
+  if(graficos[nome]){
+    graficos[nome].destroy();
+  }
+
+}
+
+function agrupar(campo){
+
+  const mapa = {};
+
+  dadosFiltrados.forEach(item=>{
+
+    const chave =
+      item[campo] || "Não informado";
+
+    mapa[chave] =
+      (mapa[chave] || 0) +
+      numero(item.valorPago);
+
+  });
+
+  return Object.entries(mapa)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,10);
+
+}
+
+function atualizarGraficos(){
+
+  destruirGrafico("valores");
+
+  graficos.valores =
+    new Chart(
+      $("graficoValores"),
+      {
+        type:"bar",
+
+        data:{
+          labels:[
+            "Empenhado",
+            "Liquidado",
+            "Pago"
+          ],
+
+          datasets:[{
+            label:"Valor",
+
+            data:[
+              soma("valorEmpenhado"),
+              soma("valorLiquidado"),
+              soma("valorPago")
+            ]
+          }]
+        },
+
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+
+          plugins:{
+            tooltip:{
+              callbacks:{
+                label:
+                  context =>
+                  moeda(context.raw)
+              }
+            }
+          }
+        }
+      }
     );
 
 
-document
-    .getElementById("filtroNatureza")
-    .addEventListener(
-        "change",
-        atualizarDashboard
+  const orgao =
+    agrupar("orgaoDescricao");
+
+  destruirGrafico("orgao");
+
+  graficos.orgao =
+    new Chart(
+      $("graficoOrgao"),
+      {
+        type:"doughnut",
+
+        data:{
+          labels:
+            orgao.map(item=>item[0]),
+
+          datasets:[{
+            data:
+              orgao.map(item=>item[1])
+          }]
+        },
+
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+
+          plugins:{
+            tooltip:{
+              callbacks:{
+                label:
+                  context =>
+                  `${context.label}: ${moeda(context.raw)}`
+              }
+            }
+          }
+        }
+      }
     );
 
 
-document
-    .getElementById("filtroRubrica")
-    .addEventListener(
-        "change",
-        atualizarDashboard
+  const unidade =
+    agrupar("unidadeDescricao");
+
+  destruirGrafico("unidade");
+
+  graficos.unidade =
+    new Chart(
+      $("graficoUnidade"),
+      {
+        type:"bar",
+
+        data:{
+          labels:
+            unidade.map(item=>item[0]),
+
+          datasets:[{
+            label:"Valor Pago",
+
+            data:
+              unidade.map(item=>item[1])
+          }]
+        },
+
+        options:{
+          indexAxis:"y",
+          responsive:true,
+          maintainAspectRatio:false,
+
+          plugins:{
+            tooltip:{
+              callbacks:{
+                label:
+                  context =>
+                  moeda(context.raw)
+              }
+            }
+          }
+        }
+      }
     );
 
+
+  const credores =
+    agrupar("nomeCredor");
+
+  destruirGrafico("credores");
+
+  graficos.credores =
+    new Chart(
+      $("graficoCredores"),
+      {
+        type:"bar",
+
+        data:{
+          labels:
+            credores.map(item=>item[0]),
+
+          datasets:[{
+            label:"Valor Pago",
+
+            data:
+              credores.map(item=>item[1])
+          }]
+        },
+
+        options:{
+          indexAxis:"y",
+          responsive:true,
+          maintainAspectRatio:false,
+
+          plugins:{
+            tooltip:{
+              callbacks:{
+                label:
+                  context =>
+                  moeda(context.raw)
+              }
+            }
+          }
+        }
+      }
+    );
+
+}
+
+function atualizarTabela(){
+
+  const tbody = $("tbody");
+
+  tbody.innerHTML =
+    dadosFiltrados.map(item=>`
+
+      <tr>
+
+        <td>
+          ${escapeHtml(item.orgaoDescricao)}
+        </td>
+
+        <td>
+          ${escapeHtml(item.unidadeDescricao)}
+        </td>
+
+        <td>
+          ${escapeHtml(item.fonteRecursoDescricao)}
+        </td>
+
+        <td>
+          ${escapeHtml(item.cpfCnpjCredor)}
+        </td>
+
+        <td>
+          <strong>
+            ${escapeHtml(item.nomeCredor)}
+          </strong>
+        </td>
+
+        <td>
+          ${moeda(item.valorEmpenhado)}
+        </td>
+
+        <td>
+          ${moeda(item.valorAnulado)}
+        </td>
+
+        <td>
+          ${moeda(item.valorLiquidado)}
+        </td>
+
+        <td>
+          ${moeda(item.valorRetido)}
+        </td>
+
+        <td>
+          <strong>
+            ${moeda(item.valorPago)}
+          </strong>
+        </td>
+
+      </tr>
+
+    `).join("");
+
+}
+
+function limparFiltros(){
+
+  $("filtroCredor").value = "";
+
+  $("filtroOrgao").value = "";
+
+  $("filtroUnidade").value = "";
+
+  atualizarDashboard();
+
+}
+
+function exportarCSV(){
+
+  if(!dadosFiltrados.length){
+
+    alert(
+      "Não existem dados para exportar."
+    );
+
+    return;
+  }
+
+  const cabecalho = [
+
+    "Orgao Codigo",
+    "Orgao",
+    "Unidade Codigo",
+    "Unidade",
+    "Fonte Recurso",
+    "Fonte Recurso Descricao",
+    "CPF/CNPJ",
+    "Credor",
+    "Valor Empenhado",
+    "Valor Anulado",
+    "Valor Liquidado",
+    "Valor Retido",
+    "Valor Pago"
+
+  ];
+
+  const linhas =
+    dadosFiltrados.map(item=>[
+
+      item.orgaoCodigo,
+      item.orgaoDescricao,
+      item.unidadeCodigo,
+      item.unidadeDescricao,
+      item.fonteRecurso,
+      item.fonteRecursoDescricao,
+      item.cpfCnpjCredor,
+      item.nomeCredor,
+      item.valorEmpenhado,
+      item.valorAnulado,
+      item.valorLiquidado,
+      item.valorRetido,
+      item.valorPago
+
+    ]);
+
+  const csv =
+    [cabecalho,...linhas]
+      .map(linha=>
+        linha
+          .map(valor=>
+            `"${String(valor ?? "")
+              .replace(/"/g,'""')}"`
+          )
+          .join(";")
+      )
+      .join("\n");
+
+  const blob =
+    new Blob(
+      ["\ufeff"+csv],
+      {
+        type:"text/csv;charset=utf-8;"
+      }
+    );
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const a =
+    document.createElement("a");
+
+  a.href = url;
+
+  a.download =
+    "despesas_campo_largo.csv";
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  a.remove();
+
+  URL.revokeObjectURL(url);
+
+}
+
+$("btnConsultar")
+  .addEventListener(
+    "click",
+    consultarAPI
+  );
+
+$("btnLimpar")
+  .addEventListener(
+    "click",
+    limparFiltros
+  );
+
+$("btnCsv")
+  .addEventListener(
+    "click",
+    exportarCSV
+  );
+
+$("filtroCredor")
+  .addEventListener(
+    "input",
+    atualizarDashboard
+  );
+
+$("filtroOrgao")
+  .addEventListener(
+    "change",
+    atualizarDashboard
+  );
+
+$("filtroUnidade")
+  .addEventListener(
+    "change",
+    atualizarDashboard
+  );
+
+consultarAPI();
 </script>
 
 </body>
