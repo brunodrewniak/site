@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dashboard de Contabilidade Pública | Campo Largo</title>
 
+<!-- Bootstrap 5 & Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -20,7 +23,7 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
 .kpi{border-left:5px solid var(--azul)}
 .kpi .valor{font-size:1.45rem;font-weight:700;color:var(--azul-escuro)}
-.chart-box{height:360px}
+.chart-box{height:360px;position:relative;}
 .table-responsive{max-height:600px}
 .table thead th{position:sticky;top:0;z-index:2}
 .status{font-size:.92rem}
@@ -46,7 +49,7 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 <span class="badge bg-light text-primary mb-3">DADOS ABERTOS</span>
 <h1 class="display-5 fw-bold">Dashboard de Despesas Públicas</h1>
 <p class="lead mb-0">
-Consulta direta aos dados de despesas disponibilizados pelo Município de Campo Largo.
+Consulta direta aos dados de despesas disponibilizados pelo Município de Campo Largo com suporte a Proxy CORS e Carga Manual.
 </p>
 </div>
 </div>
@@ -61,34 +64,34 @@ Aguardando consulta...
 
 <div class="card mb-4">
 <div class="card-body">
-<h5 class="card-title">Período e filtros</h5>
+<h5 class="card-title mb-3">Período e filtros</h5>
 
 <div class="row g-3">
 
 <div class="col-md-2">
-<label class="form-label">Data inicial</label>
+<label class="form-label fw-semibold">Data inicial</label>
 <input type="date" id="dataInicial" class="form-control" value="2026-01-01">
 </div>
 
 <div class="col-md-2">
-<label class="form-label">Data final</label>
+<label class="form-label fw-semibold">Data final</label>
 <input type="date" id="dataFinal" class="form-control" value="2026-12-31">
 </div>
 
 <div class="col-md-3">
-<label class="form-label">Credor</label>
+<label class="form-label fw-semibold">Credor</label>
 <input type="text" id="filtroCredor" class="form-control" placeholder="Nome do credor">
 </div>
 
 <div class="col-md-2">
-<label class="form-label">Órgão</label>
+<label class="form-label fw-semibold">Órgão</label>
 <select id="filtroOrgao" class="form-select">
 <option value="">Todos</option>
 </select>
 </div>
 
 <div class="col-md-2">
-<label class="form-label">Unidade</label>
+<label class="form-label fw-semibold">Unidade</label>
 <select id="filtroUnidade" class="form-select">
 <option value="">Todas</option>
 </select>
@@ -96,28 +99,36 @@ Aguardando consulta...
 
 <div class="col-md-1 d-flex align-items-end">
 <button id="btnConsultar" class="btn btn-primary w-100">
-Consultar
+<i class="bi bi-search"></i>
 </button>
 </div>
 
 </div>
 
-<div class="mt-3 d-flex gap-2 flex-wrap">
-<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">Limpar filtros</button>
-<button id="btnCsv" class="btn btn-outline-primary btn-sm">Exportar CSV</button>
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-eraser"></i> Limpar filtros
+</button>
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-success btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
 </div>
 
 <div class="small-muted mt-3">
-API utilizada:
-<code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
+API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 </div>
 
 </div>
 </div>
 
 <div id="loading" class="text-center py-4 d-none">
-<div class="spinner-border text-primary"></div>
-<div class="mt-2">Consultando a API...</div>
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
 </div>
 
 <section class="row g-3 mb-4">
@@ -192,7 +203,7 @@ API utilizada:
 <div class="col-lg-6">
 <div class="card">
 <div class="card-body">
-<h5>Empenhado x Liquidado x Pago</h5>
+<h5 class="card-title mb-3">Empenhado x Liquidado x Pago</h5>
 <div class="chart-box"><canvas id="graficoValores"></canvas></div>
 </div>
 </div>
@@ -201,7 +212,7 @@ API utilizada:
 <div class="col-lg-6">
 <div class="card">
 <div class="card-body">
-<h5>Despesas por Órgão</h5>
+<h5 class="card-title mb-3">Despesas por Órgão</h5>
 <div class="chart-box"><canvas id="graficoOrgao"></canvas></div>
 </div>
 </div>
@@ -210,7 +221,7 @@ API utilizada:
 <div class="col-lg-6">
 <div class="card">
 <div class="card-body">
-<h5>Despesas por Unidade</h5>
+<h5 class="card-title mb-3">Despesas por Unidade</h5>
 <div class="chart-box"><canvas id="graficoUnidade"></canvas></div>
 </div>
 </div>
@@ -219,7 +230,7 @@ API utilizada:
 <div class="col-lg-6">
 <div class="card">
 <div class="card-body">
-<h5>Top 10 Credores</h5>
+<h5 class="card-title mb-3">Top 10 Credores</h5>
 <div class="chart-box"><canvas id="graficoCredores"></canvas></div>
 </div>
 </div>
@@ -259,11 +270,8 @@ API utilizada:
 </div>
 </section>
 
-<div class="alert alert-warning small">
-<strong>Atenção:</strong> este arquivo depende de a API de Campo Largo permitir
-CORS para o domínio onde o GitHub Pages estiver hospedado.
-Se o navegador informar <code>blocked by CORS policy</code>, o problema está
-no servidor da API e não pode ser corrigido somente pelo HTML.
+<div class="alert alert-info small">
+<strong>Solução de CORS Ativa:</strong> O sistema realiza a busca utilizando Proxies transparentes para contornar bloqueios de navegadores no GitHub Pages/servidores externos. Caso prefira, você também pode utilizar o botão <strong>"Carregar JSON Local"</strong> para importar arquivos previamente baixados.
 </div>
 
 </main>
@@ -276,8 +284,13 @@ Dados provenientes da API de Dados Abertos do município.
 </footer>
 
 <script>
-const API_URL =
-"https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
+const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
+
+// Lista de proxies para fallback automático caso um falhe
+const PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+];
 
 let dados = [];
 let dadosFiltrados = [];
@@ -293,7 +306,6 @@ function moeda(valor){
 }
 
 function numero(valor){
-
   if(typeof valor === "number"){
     return Number.isFinite(valor) ? valor : 0;
   }
@@ -306,15 +318,6 @@ function numero(valor){
     .replace("R$","")
     .trim();
 
-  /*
-   * A API mostrada pelo usuário retorna valores como:
-   * "200.00"
-   *
-   * Também suportamos:
-   * "1.234,56"
-   * "1234,56"
-   */
-
   if(texto.includes(".") && texto.includes(",")){
     texto = texto.replace(/\./g,"").replace(",",".");
   }else if(texto.includes(",")){
@@ -322,7 +325,6 @@ function numero(valor){
   }
 
   const n = Number(texto);
-
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -341,20 +343,39 @@ function escapeHtml(valor){
 }
 
 function mostrarStatus(texto,tipo="info"){
-
   const el = $("status");
-
   el.className = "alert alert-" + tipo + " status";
   el.textContent = texto;
 }
 
 function mostrarLoading(sim){
-
   $("loading").classList.toggle("d-none",!sim);
 }
 
-async function consultarAPI(){
+async function fetchComFallback(targetUrl) {
+  // Tentativa 1: Requisição direta
+  try {
+    const res = await fetch(targetUrl, { headers: { "Accept": "application/json" } });
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.warn("Requisição direta bloqueada por CORS/Rede. Tentando proxies...", e);
+  }
 
+  // Tentativa 2 e 3: Proxies CORS
+  for (let i = 0; i < PROXIES.length; i++) {
+    try {
+      const proxyUrl = PROXIES[i](targetUrl);
+      const res = await fetch(proxyUrl);
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn(`Proxy ${i+1} falhou.`, e);
+    }
+  }
+
+  throw new Error("Todas as tentativas de conexão (direta e proxies CORS) falharam.");
+}
+
+async function consultarAPI(){
   const inicio = $("dataInicial").value;
   const fim = $("dataFinal").value;
 
@@ -364,669 +385,298 @@ async function consultarAPI(){
   }
 
   if(inicio > fim){
-    mostrarStatus(
-      "A data inicial não pode ser maior que a data final.",
-      "warning"
-    );
+    mostrarStatus("A data inicial não pode ser maior que a data final.","warning");
     return;
   }
 
-  const url =
-    `${API_URL}?dataInicial=${encodeURIComponent(dataBR(inicio))}` +
-    `&dataFinal=${encodeURIComponent(dataBR(fim))}`;
-
-  console.log("Consultando:",url);
+  const url = `${API_URL}?dataInicial=${encodeURIComponent(dataBR(inicio))}&dataFinal=${encodeURIComponent(dataBR(fim))}`;
 
   mostrarLoading(true);
+  mostrarStatus("Consultando dados da API de Campo Largo...");
 
-  mostrarStatus(
-    "Consultando diretamente a API de Campo Largo..."
-  );
-
-  try{
-
-    const resposta = await fetch(url,{
-      method:"GET",
-      headers:{
-        "Accept":"application/json"
-      }
-    });
-
-    if(!resposta.ok){
-      throw new Error(
-        `API retornou HTTP ${resposta.status}`
-      );
-    }
-
-    const resultado = await resposta.json();
-
-    console.log("Resposta da API:",resultado);
+  try {
+    const resultado = await fetchComFallback(url);
 
     if(resultado.status && resultado.status !== "ok"){
-      throw new Error(
-        resultado.mensagem || "A API retornou status diferente de ok."
-      );
+      throw new Error(resultado.mensagem || "A API retornou status diferente de ok.");
     }
-
-    /*
-     * FORMATO CONFIRMADO PELO USUÁRIO:
-     *
-     * {
-     *   "status": "ok",
-     *   "retorno": [...]
-     * }
-     */
 
     if(!Array.isArray(resultado.retorno)){
-      throw new Error(
-        "A resposta não possui o array 'retorno'."
-      );
+      throw new Error("A resposta não possui o array 'retorno'.");
     }
 
-    dados = resultado.retorno.map(item => ({
+    processarDados(resultado.retorno);
+    mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados com sucesso.`, "success");
 
-      orgaoCodigo:
-        item.orgaoCodigo ?? "",
-
-      orgaoDescricao:
-        item.orgaoDescricao ?? "",
-
-      unidadeCodigo:
-        item.unidadeCodigo ?? "",
-
-      unidadeDescricao:
-        item.unidadeDescricao ?? "",
-
-      fonteRecurso:
-        item.fonteRecurso ?? "",
-
-      fonteRecursoDescricao:
-        item.fonteRecursoDescricao ?? "",
-
-      cpfCnpjCredor:
-        item.cpfCnpjCredor ?? "",
-
-      nomeCredor:
-        item.nomeCredor ?? "",
-
-      valorEmpenhado:
-        numero(item.valorEmpenhado),
-
-      valorAnulado:
-        numero(item.valorAnulado),
-
-      valorLiquidado:
-        numero(item.valorLiquidado),
-
-      valorRetido:
-        numero(item.valorRetido),
-
-      valorPago:
-        numero(item.valorPago)
-
-    }));
-
-    preencherFiltros();
-
-    atualizarDashboard();
-
-    mostrarStatus(
-      `${dados.length.toLocaleString("pt-BR")} registros carregados com sucesso.`,
-      "success"
-    );
-
-  }catch(erro){
-
-    console.error("Erro:",erro);
-
-    mostrarStatus(
-      "Não foi possível acessar a API diretamente pelo navegador. " +
-      "Se o console apresentar 'CORS policy', a API não permite " +
-      "acesso direto pelo GitHub Pages.",
-      "danger"
-    );
-
-  }finally{
-
+  } catch(erro) {
+    console.error("Erro:", erro);
+    mostrarStatus("Não foi possível acessar a API pelos servidores públicos. Tente carregar um arquivo JSON local pelo botão 'Carregar JSON Local'.", "danger");
+  } finally {
     mostrarLoading(false);
-
   }
+}
 
+function processarDados(lista) {
+  dados = lista.map(item => ({
+    orgaoCodigo: item.orgaoCodigo ?? "",
+    orgaoDescricao: item.orgaoDescricao ?? "",
+    unidadeCodigo: item.unidadeCodigo ?? "",
+    unidadeDescricao: item.unidadeDescricao ?? "",
+    fonteRecurso: item.fonteRecurso ?? "",
+    fonteRecursoDescricao: item.fonteRecursoDescricao ?? "",
+    cpfCnpjCredor: item.cpfCnpjCredor ?? "",
+    nomeCredor: item.nomeCredor ?? "",
+    valorEmpenhado: numero(item.valorEmpenhado),
+    valorAnulado: numero(item.valorAnulado),
+    valorLiquidado: numero(item.valorLiquidado),
+    valorRetido: numero(item.valorRetido),
+    valorPago: numero(item.valorPago)
+  }));
+
+  preencherFiltros();
+  atualizarDashboard();
 }
 
 function preencherFiltros(){
+  const orgaos = [...new Map(dados.map(item => [item.orgaoCodigo, item.orgaoDescricao])).entries()]
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
 
-  const orgaos =
-    [...new Map(
-      dados.map(item => [
-        item.orgaoCodigo,
-        item.orgaoDescricao
-      ])
-    ).entries()]
-    .sort((a,b)=>
-      String(a[1]).localeCompare(String(b[1]))
-    );
+  const unidades = [...new Map(dados.map(item => [item.unidadeCodigo, item.unidadeDescricao])).entries()]
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
 
-  const unidades =
-    [...new Map(
-      dados.map(item => [
-        item.unidadeCodigo,
-        item.unidadeDescricao
-      ])
-    ).entries()]
-    .sort((a,b)=>
-      String(a[1]).localeCompare(String(b[1]))
-    );
+  $("filtroOrgao").innerHTML = `<option value="">Todos</option>` +
+    orgaos.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
 
-  $("filtroOrgao").innerHTML =
-    `<option value="">Todos</option>` +
-    orgaos.map(([codigo,nome])=>
-      `<option value="${escapeHtml(codigo)}">
-        ${escapeHtml(nome)}
-      </option>`
-    ).join("");
-
-  $("filtroUnidade").innerHTML =
-    `<option value="">Todas</option>` +
-    unidades.map(([codigo,nome])=>
-      `<option value="${escapeHtml(codigo)}">
-        ${escapeHtml(nome)}
-      </option>`
-    ).join("");
-
+  $("filtroUnidade").innerHTML = `<option value="">Todas</option>` +
+    unidades.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
 }
 
 function aplicarFiltros(){
+  const credor = $("filtroCredor").value.toLowerCase().trim();
+  const orgao = $("filtroOrgao").value;
+  const unidade = $("filtroUnidade").value;
 
-  const credor =
-    $("filtroCredor")
-      .value
-      .toLowerCase()
-      .trim();
-
-  const orgao =
-    $("filtroOrgao").value;
-
-  const unidade =
-    $("filtroUnidade").value;
-
-  dadosFiltrados =
-    dados.filter(item => {
-
-      const okCredor =
-        !credor ||
-        String(item.nomeCredor)
-          .toLowerCase()
-          .includes(credor);
-
-      const okOrgao =
-        !orgao ||
-        String(item.orgaoCodigo) === orgao;
-
-      const okUnidade =
-        !unidade ||
-        String(item.unidadeCodigo) === unidade;
-
-      return (
-        okCredor &&
-        okOrgao &&
-        okUnidade
-      );
-
-    });
-
+  dadosFiltrados = dados.filter(item => {
+    const okCredor = !credor || String(item.nomeCredor).toLowerCase().includes(credor);
+    const okOrgao = !orgao || String(item.orgaoCodigo) === orgao;
+    const okUnidade = !unidade || String(item.unidadeCodigo) === unidade;
+    return okCredor && okOrgao && okUnidade;
+  });
 }
 
 function soma(campo){
-
-  return dadosFiltrados.reduce(
-    (total,item)=>
-      total + numero(item[campo]),
-    0
-  );
-
+  return dadosFiltrados.reduce((total,item)=> total + numero(item[campo]), 0);
 }
 
 function atualizarDashboard(){
-
   aplicarFiltros();
-
   atualizarCards();
-
   atualizarGraficos();
-
   atualizarTabela();
-
 }
 
 function atualizarCards(){
-
-  $("totalEmpenhado").textContent =
-    moeda(soma("valorEmpenhado"));
-
-  $("totalAnulado").textContent =
-    moeda(soma("valorAnulado"));
-
-  $("totalLiquidado").textContent =
-    moeda(soma("valorLiquidado"));
-
-  $("totalRetido").textContent =
-    moeda(soma("valorRetido"));
-
-  $("totalPago").textContent =
-    moeda(soma("valorPago"));
-
-  $("quantidade").textContent =
-    dadosFiltrados.length
-      .toLocaleString("pt-BR");
-
-  $("credores").textContent =
-    new Set(
-      dadosFiltrados
-        .map(item=>item.nomeCredor)
-        .filter(Boolean)
-    ).size.toLocaleString("pt-BR");
-
-  $("contadorTabela").textContent =
-    `${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
-
+  $("totalEmpenhado").textContent = moeda(soma("valorEmpenhado"));
+  $("totalAnulado").textContent = moeda(soma("valorAnulado"));
+  $("totalLiquidado").textContent = moeda(soma("valorLiquidado"));
+  $("totalRetido").textContent = moeda(soma("valorRetido"));
+  $("totalPago").textContent = moeda(soma("valorPago"));
+  $("quantidade").textContent = dadosFiltrados.length.toLocaleString("pt-BR");
+  $("credores").textContent = new Set(dadosFiltrados.map(item=>item.nomeCredor).filter(Boolean)).size.toLocaleString("pt-BR");
+  $("contadorTabela").textContent = `${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
 }
 
 function destruirGrafico(nome){
-
   if(graficos[nome]){
     graficos[nome].destroy();
   }
-
 }
 
 function agrupar(campo){
-
   const mapa = {};
-
   dadosFiltrados.forEach(item=>{
-
-    const chave =
-      item[campo] || "Não informado";
-
-    mapa[chave] =
-      (mapa[chave] || 0) +
-      numero(item.valorPago);
-
+    const chave = item[campo] || "Não informado";
+    mapa[chave] = (mapa[chave] || 0) + numero(item.valorPago);
   });
-
-  return Object.entries(mapa)
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,10);
-
+  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,10);
 }
 
 function atualizarGraficos(){
-
   destruirGrafico("valores");
-
-  graficos.valores =
-    new Chart(
-      $("graficoValores"),
-      {
-        type:"bar",
-
-        data:{
-          labels:[
-            "Empenhado",
-            "Liquidado",
-            "Pago"
-          ],
-
-          datasets:[{
-            label:"Valor",
-
-            data:[
-              soma("valorEmpenhado"),
-              soma("valorLiquidado"),
-              soma("valorPago")
-            ]
-          }]
-        },
-
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-
-          plugins:{
-            tooltip:{
-              callbacks:{
-                label:
-                  context =>
-                  moeda(context.raw)
-              }
-            }
-          }
-        }
+  graficos.valores = new Chart($("graficoValores"), {
+    type:"bar",
+    data:{
+      labels:["Empenhado", "Liquidado", "Pago"],
+      datasets:[{
+        label:"Valor Total (R$)",
+        backgroundColor: ["#0d6efd", "#ffc107", "#198754"],
+        data:[soma("valorEmpenhado"), soma("valorLiquidado"), soma("valorPago")]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } }
       }
-    );
+    }
+  });
 
-
-  const orgao =
-    agrupar("orgaoDescricao");
-
+  const orgao = agrupar("orgaoDescricao");
   destruirGrafico("orgao");
-
-  graficos.orgao =
-    new Chart(
-      $("graficoOrgao"),
-      {
-        type:"doughnut",
-
-        data:{
-          labels:
-            orgao.map(item=>item[0]),
-
-          datasets:[{
-            data:
-              orgao.map(item=>item[1])
-          }]
-        },
-
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-
-          plugins:{
-            tooltip:{
-              callbacks:{
-                label:
-                  context =>
-                  `${context.label}: ${moeda(context.raw)}`
-              }
-            }
-          }
-        }
+  graficos.orgao = new Chart($("graficoOrgao"), {
+    type:"doughnut",
+    data:{
+      labels: orgao.map(item=>item[0]),
+      datasets:[{
+        data: orgao.map(item=>item[1]),
+        backgroundColor: ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6c757d","#6f42c1","#fd7e14","#20c997","#073b6f"]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } }
       }
-    );
+    }
+  });
 
-
-  const unidade =
-    agrupar("unidadeDescricao");
-
+  const unidade = agrupar("unidadeDescricao");
   destruirGrafico("unidade");
-
-  graficos.unidade =
-    new Chart(
-      $("graficoUnidade"),
-      {
-        type:"bar",
-
-        data:{
-          labels:
-            unidade.map(item=>item[0]),
-
-          datasets:[{
-            label:"Valor Pago",
-
-            data:
-              unidade.map(item=>item[1])
-          }]
-        },
-
-        options:{
-          indexAxis:"y",
-          responsive:true,
-          maintainAspectRatio:false,
-
-          plugins:{
-            tooltip:{
-              callbacks:{
-                label:
-                  context =>
-                  moeda(context.raw)
-              }
-            }
-          }
-        }
+  graficos.unidade = new Chart($("graficoUnidade"), {
+    type:"bar",
+    data:{
+      labels: unidade.map(item=>item[0]),
+      datasets:[{
+        label:"Valor Pago",
+        backgroundColor: "#0dcaf0",
+        data: unidade.map(item=>item[1])
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } }
       }
-    );
+    }
+  });
 
-
-  const credores =
-    agrupar("nomeCredor");
-
+  const credores = agrupar("nomeCredor");
   destruirGrafico("credores");
-
-  graficos.credores =
-    new Chart(
-      $("graficoCredores"),
-      {
-        type:"bar",
-
-        data:{
-          labels:
-            credores.map(item=>item[0]),
-
-          datasets:[{
-            label:"Valor Pago",
-
-            data:
-              credores.map(item=>item[1])
-          }]
-        },
-
-        options:{
-          indexAxis:"y",
-          responsive:true,
-          maintainAspectRatio:false,
-
-          plugins:{
-            tooltip:{
-              callbacks:{
-                label:
-                  context =>
-                  moeda(context.raw)
-              }
-            }
-          }
-        }
+  graficos.credores = new Chart($("graficoCredores"), {
+    type:"bar",
+    data:{
+      labels: credores.map(item=>item[0]),
+      datasets:[{
+        label:"Valor Pago",
+        backgroundColor: "#073b6f",
+        data: credores.map(item=>item[1])
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } }
       }
-    );
-
+    }
+  });
 }
 
 function atualizarTabela(){
-
   const tbody = $("tbody");
-
-  tbody.innerHTML =
-    dadosFiltrados.map(item=>`
-
-      <tr>
-
-        <td>
-          ${escapeHtml(item.orgaoDescricao)}
-        </td>
-
-        <td>
-          ${escapeHtml(item.unidadeDescricao)}
-        </td>
-
-        <td>
-          ${escapeHtml(item.fonteRecursoDescricao)}
-        </td>
-
-        <td>
-          ${escapeHtml(item.cpfCnpjCredor)}
-        </td>
-
-        <td>
-          <strong>
-            ${escapeHtml(item.nomeCredor)}
-          </strong>
-        </td>
-
-        <td>
-          ${moeda(item.valorEmpenhado)}
-        </td>
-
-        <td>
-          ${moeda(item.valorAnulado)}
-        </td>
-
-        <td>
-          ${moeda(item.valorLiquidado)}
-        </td>
-
-        <td>
-          ${moeda(item.valorRetido)}
-        </td>
-
-        <td>
-          <strong>
-            ${moeda(item.valorPago)}
-          </strong>
-        </td>
-
-      </tr>
-
-    `).join("");
-
+  tbody.innerHTML = dadosFiltrados.map(item=>`
+    <tr>
+      <td>${escapeHtml(item.orgaoDescricao)}</td>
+      <td>${escapeHtml(item.unidadeDescricao)}</td>
+      <td>${escapeHtml(item.fonteRecursoDescricao)}</td>
+      <td>${escapeHtml(item.cpfCnpjCredor)}</td>
+      <td><strong>${escapeHtml(item.nomeCredor)}</strong></td>
+      <td>${moeda(item.valorEmpenhado)}</td>
+      <td>${moeda(item.valorAnulado)}</td>
+      <td>${moeda(item.valorLiquidado)}</td>
+      <td>${moeda(item.valorRetido)}</td>
+      <td><strong>${moeda(item.valorPago)}</strong></td>
+    </tr>
+  `).join("");
 }
 
 function limparFiltros(){
-
   $("filtroCredor").value = "";
-
   $("filtroOrgao").value = "";
-
   $("filtroUnidade").value = "";
-
   atualizarDashboard();
-
 }
 
 function exportarCSV(){
-
   if(!dadosFiltrados.length){
-
-    alert(
-      "Não existem dados para exportar."
-    );
-
+    alert("Não existem dados para exportar.");
     return;
   }
 
   const cabecalho = [
-
-    "Orgao Codigo",
-    "Orgao",
-    "Unidade Codigo",
-    "Unidade",
-    "Fonte Recurso",
-    "Fonte Recurso Descricao",
-    "CPF/CNPJ",
-    "Credor",
-    "Valor Empenhado",
-    "Valor Anulado",
-    "Valor Liquidado",
-    "Valor Retido",
-    "Valor Pago"
-
+    "Orgao Codigo","Orgao","Unidade Codigo","Unidade",
+    "Fonte Recurso","Fonte Recurso Descricao","CPF/CNPJ","Credor",
+    "Valor Empenhado","Valor Anulado","Valor Liquidado","Valor Retido","Valor Pago"
   ];
 
-  const linhas =
-    dadosFiltrados.map(item=>[
+  const linhas = dadosFiltrados.map(item=>[
+    item.orgaoCodigo, item.orgaoDescricao, item.unidadeCodigo, item.unidadeDescricao,
+    item.fonteRecurso, item.fonteRecursoDescricao, item.cpfCnpjCredor, item.nomeCredor,
+    item.valorEmpenhado, item.valorAnulado, item.valorLiquidado, item.valorRetido, item.valorPago
+  ]);
 
-      item.orgaoCodigo,
-      item.orgaoDescricao,
-      item.unidadeCodigo,
-      item.unidadeDescricao,
-      item.fonteRecurso,
-      item.fonteRecursoDescricao,
-      item.cpfCnpjCredor,
-      item.nomeCredor,
-      item.valorEmpenhado,
-      item.valorAnulado,
-      item.valorLiquidado,
-      item.valorRetido,
-      item.valorPago
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(valor=> `"${String(valor ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
 
-    ]);
-
-  const csv =
-    [cabecalho,...linhas]
-      .map(linha=>
-        linha
-          .map(valor=>
-            `"${String(valor ?? "")
-              .replace(/"/g,'""')}"`
-          )
-          .join(";")
-      )
-      .join("\n");
-
-  const blob =
-    new Blob(
-      ["\ufeff"+csv],
-      {
-        type:"text/csv;charset=utf-8;"
-      }
-    );
-
-  const url =
-    URL.createObjectURL(blob);
-
-  const a =
-    document.createElement("a");
-
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
   a.href = url;
-
-  a.download =
-    "despesas_campo_largo.csv";
-
+  a.download = "despesas_campo_largo.csv";
   document.body.appendChild(a);
-
   a.click();
-
   a.remove();
-
   URL.revokeObjectURL(url);
-
 }
 
-$("btnConsultar")
-  .addEventListener(
-    "click",
-    consultarAPI
-  );
+// Leitor do arquivo JSON local
+$("inputJson").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
 
-$("btnLimpar")
-  .addEventListener(
-    "click",
-    limparFiltros
-  );
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.retorno;
 
-$("btnCsv")
-  .addEventListener(
-    "click",
-    exportarCSV
-  );
+      if (!Array.isArray(lista)) {
+        throw new Error("Estrutura do arquivo JSON inválida.");
+      }
 
-$("filtroCredor")
-  .addEventListener(
-    "input",
-    atualizarDashboard
-  );
+      processarDados(lista);
+      mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado.", "danger");
+    }
+  };
+  reader.readAsText(file);
+});
 
-$("filtroOrgao")
-  .addEventListener(
-    "change",
-    atualizarDashboard
-  );
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnLimpar").addEventListener("click", limparFiltros);
+$("btnCsv").addEventListener("click", exportarCSV);
+$("filtroCredor").addEventListener("input", atualizarDashboard);
+$("filtroOrgao").addEventListener("change", atualizarDashboard);
+$("filtroUnidade").addEventListener("change", atualizarDashboard);
 
-$("filtroUnidade")
-  .addEventListener(
-    "change",
-    atualizarDashboard
-  );
-
+// Inicia consulta ao carregar a página
 consultarAPI();
 </script>
 
