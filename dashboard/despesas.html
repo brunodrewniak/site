@@ -25,7 +25,8 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .kpi .valor{font-size:1.45rem;font-weight:700;color:var(--azul-escuro)}
 .chart-box{height:360px;position:relative;}
 .table-responsive{max-height:600px}
-.table thead th{position:sticky;top:0;z-index:2}
+.table thead th{position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;}
+.table thead th:hover{background-color:#343a40;}
 .status{font-size:.92rem}
 .small-muted{font-size:.82rem;color:#6c757d}
 </style>
@@ -243,7 +244,7 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 <div>
 <h5 class="mb-1">Detalhamento das despesas</h5>
-<div class="small-muted">Os valores são apresentados conforme o retorno da API.</div>
+<div class="small-muted">Os valores são apresentados conforme o retorno da API. Clique nos cabeçalhos para classificar.</div>
 </div>
 <span id="contadorTabela" class="badge text-bg-primary">0 registros</span>
 </div>
@@ -252,16 +253,16 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 <table class="table table-hover table-sm align-middle">
 <thead class="table-dark">
 <tr>
-<th>Órgão</th>
-<th>Unidade</th>
-<th>Fonte</th>
-<th>CPF/CNPJ</th>
-<th>Credor</th>
-<th>Empenhado</th>
-<th>Anulado</th>
-<th>Liquidado</th>
-<th>Retido</th>
-<th>Pago</th>
+<th onclick="ordenarPor('orgaoDescricao')">Órgão <i id="icon-orgaoDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('unidadeDescricao')">Unidade <i id="icon-unidadeDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('fonteRecursoDescricao')">Fonte <i id="icon-fonteRecursoDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('cpfCnpjCredor')">CPF/CNPJ <i id="icon-cpfCnpjCredor" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('nomeCredor')">Credor <i id="icon-nomeCredor" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorEmpenhado')">Empenhado <i id="icon-valorEmpenhado" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorAnulado')">Anulado <i id="icon-valorAnulado" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorLiquidado')">Liquidado <i id="icon-valorLiquidado" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorRetido')">Retido <i id="icon-valorRetido" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorPago')">Pago <i id="icon-valorPago" class="bi bi-arrow-down-up small"></i></th>
 </tr>
 </thead>
 <tbody id="tbody"></tbody>
@@ -289,6 +290,10 @@ const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
 let dados = [];
 let dadosFiltrados = [];
 let graficos = {};
+
+// Controle de ordenação da tabela
+let colunaOrdenacao = "";
+let direcaoOrdenacao = "asc"; // 'asc' ou 'desc'
 
 const $ = id => document.getElementById(id);
 
@@ -441,6 +446,70 @@ function aplicarFiltros(){
     const okUnidade = !unidade || String(item.unidadeCodigo) === unidade;
     return okCredor && okOrgao && okUnidade;
   });
+
+  if (colunaOrdenacao) {
+    aplicarOrdenacao();
+  }
+}
+
+function ordenarPor(coluna) {
+  if (colunaOrdenacao === coluna) {
+    direcaoOrdenacao = direcaoOrdenacao === "asc" ? "desc" : "asc";
+  } else {
+    colunaOrdenacao = coluna;
+    direcaoOrdenacao = "asc";
+  }
+
+  aplicarOrdenacao();
+  atualizarIconesOrdenacao();
+  atualizarTabela();
+}
+
+function aplicarOrdenacao() {
+  dadosFiltrados.sort((a, b) => {
+    let valA = a[colunaOrdenacao];
+    let valB = b[colunaOrdenacao];
+
+    if (typeof valA === "number" && typeof valB === "number") {
+      return direcaoOrdenacao === "asc" ? valA - valB : valB - valA;
+    }
+
+    valA = String(valA ?? "").toLowerCase();
+    valB = String(valB ?? "").toLowerCase();
+
+    if (direcaoOrdenacao === "asc") {
+      return valA.localeCompare(valB, "pt-BR");
+    } else {
+      return valB.localeCompare(valA, "pt-BR");
+    }
+  });
+}
+
+function atualizarIconesOrdenacao() {
+  const colunas = [
+    'orgaoDescricao', 'unidadeDescricao', 'fonteRecursoDescricao',
+    'cpfCnpjCredor', 'nomeCredor', 'valorEmpenhado', 'valorAnulado',
+    'valorLiquidado', 'valorRetido', 'valorPago'
+  ];
+
+  colunas.forEach(col => {
+    const icon = $(`icon-${col}`);
+    if (!icon) return;
+
+    if (col === colunaOrdenacao) {
+      if (direcaoOrdenacao === "asc") {
+        icon.className = typeof dadosFiltrados[0]?.[col] === "number" 
+          ? "bi bi-sort-numeric-down" 
+          : "bi bi-sort-alpha-down";
+      } else {
+        icon.className = typeof dadosFiltrados[0]?.[col] === "number" 
+          ? "bi bi-sort-numeric-down-alt" 
+          : "bi bi-sort-alpha-down-alt";
+      }
+    } else {
+      icon.className = "bi bi-arrow-down-up small opacity-50";
+    }
+  });
 }
 
 function soma(campo){
@@ -588,6 +657,9 @@ function limparFiltros(){
   $("filtroCredor").value = "";
   $("filtroOrgao").value = "";
   $("filtroUnidade").value = "";
+  colunaOrdenacao = "";
+  direcaoOrdenacao = "asc";
+  atualizarIconesOrdenacao();
   atualizarDashboard();
 }
 
