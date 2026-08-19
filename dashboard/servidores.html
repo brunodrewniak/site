@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard de Transparência de Pessoal | Campo Largo</title>
+
+<!-- Bootstrap 5 & Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --amarelo:#d9ea37;
+  --amarelo-escuro:#8c9b00;
+  --grafite-escuro:#1f2421;
+  --fundo:#f8f9fa;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{background-color:var(--grafite-escuro) !important;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.hero{background:linear-gradient(135deg, var(--grafite-escuro), #343a40);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--amarelo-escuro)}
+.kpi .valor{font-size:1.45rem;font-weight:700;color:var(--grafite-escuro)}
+.chart-box{height:360px;position:relative;}
+.table-responsive{max-height:600px}
+.table thead th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  cursor:pointer;
+  user-select:none;
+  background-color: var(--grafite-escuro) !important;
+  color: #fff;
+  white-space: nowrap; /* Impede a quebra de linha no cabeçalho */
+}
+.table thead th:hover{background-color:var(--amarelo-escuro) !important; color:#fff;}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.btn-amarelo{background-color:var(--amarelo);color:var(--grafite-escuro);font-weight:600;border:none}
+.btn-amarelo:hover{background-color:var(--amarelo-escuro);color:#fff}
+.btn-outline-amarelo{border-color:var(--amarelo-escuro);color:var(--amarelo-escuro)}
+.btn-outline-amarelo:hover{background-color:var(--amarelo-escuro);color:#fff}
+.badge-amarelo{background-color:var(--amarelo);color:var(--grafite-escuro);font-weight:600}
+.progress-bar-custom{background-color:var(--amarelo-escuro)}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-people-fill"></i> Transparência de Pessoal
+</a>
+<div class="text-white small">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-dark mb-3">DADOS ABERTOS</span>
+<h1 class="display-5 fw-bold">Dashboard de Servidores Públicos</h1>
+<p class="lead mb-0">
+Consulta detalhada aos registros de funcionários e quadro de pessoal disponibilizados pela Prefeitura.
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Filtros e Configurações</h5>
+
+<!-- LINHA 1 DE FILTROS -->
+<div class="row g-3 mb-2">
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Páginas a Consultar</label>
+<input type="number" id="numPaginas" class="form-control" value="45" min="1" max="100">
+<div class="small-muted">Máx: 100 páginas</div>
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Busca Geral</label>
+<input type="text" id="filtroTexto" class="form-control" placeholder="Digite nome, CPF parcial, etc...">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Filtrar por Cargo</label>
+<select id="selectCargo" class="form-select">
+<option value="">Todos os cargos</option>
+</select>
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Filtrar por Vínculo / Situação</label>
+<select id="selectVinculo" class="form-select">
+<option value="">Todos os vínculos</option>
+</select>
+</div>
+
+</div>
+
+<!-- LINHA 2 DE BOTOES -->
+<div class="row g-3 align-items-center">
+<div class="col-md-10 d-flex gap-2 flex-wrap">
+<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-eraser"></i> Limpar filtros
+</button>
+<button id="btnCsv" class="btn btn-outline-amarelo btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-amarelo btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+</div>
+
+<div class="col-md-2 text-end">
+<button id="btnConsultar" class="btn btn-amarelo w-100">
+<i class="bi bi-search"></i> Consultar API
+</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">
+API utilizada: <code>campolargo.atende.net/api/transparencia-pessoal-funcionarios</code>
+</div>
+
+</div>
+</div>
+
+<!-- TELA DE LOADING E BARRA DE PROGRESSO -->
+<div id="loading" class="card mb-4 d-none">
+<div class="card-body text-center py-4">
+<div class="spinner-border mb-3" role="status" style="color: var(--amarelo-escuro);"></div>
+<h6 id="loadingTexto" class="fw-semibold mb-2">Iniciando consulta às páginas...</h6>
+<div class="progress w-75 mx-auto" style="height: 18px;">
+<div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated progress-bar-custom" role="progressbar" style="width: 0%;">0%</div>
+</div>
+</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-4">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Total de Registros Exibidos</div>
+<div id="totalRegistros" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Cargos Distintos</div>
+<div id="cargosDistintos" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Vínculos Únicos</div>
+<div id="vinculosDistintos" class="valor">0</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Top 10 Cargos mais Frequentes</h5>
+<div class="chart-box"><canvas id="graficoCargos"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Distribuição por Vínculo / Situação</h5>
+<div class="chart-box"><canvas id="graficoVinculos"></canvas></div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<div>
+<h5 class="mb-1">Quadro de Pessoal</h5>
+<div class="small-muted">Clique nos cabeçalhos das colunas para ordenar os dados.</div>
+</div>
+<span id="contadorTabela" class="badge badge-amarelo">0 registros</span>
+</div>
+
+<div class="table-responsive">
+<table class="table table-hover table-sm align-middle">
+<thead>
+<tr id="tableHeader">
+<th>Carregando colunas...</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<div class="alert alert-info small">
+<strong>Consulta à API de Pessoal:</strong> Para evitar limitações de taxa (CORS/429) no navegador ao buscar até 100 páginas, são inseridas pausas automáticas de segurança. Você também pode importar a base completa através da opção <strong>"Carregar JSON Local"</strong>.
+</div>
+
+</main>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Dashboard de Transparência de Pessoal — Campo Largo/PR<br>
+Dados de servidores provenientes da API de Dados Abertos.
+</div>
+</footer>
+
+<script>
+const BASE_URL = "https://campolargo.atende.net/api/transparencia-pessoal-funcionarios";
+
+let dados = [];
+let dadosFiltrados = [];
+let colunasDinamicas = [];
+let graficos = {};
+
+let colunaOrdenacao = "";
+let direcaoOrdenacao = "asc";
+
+const $ = id => document.getElementById(id);
+
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function mostrarStatus(texto, tipo="info"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+
+function atualizarLoadingProgresso(paginaAtual, totalPaginas) {
+  const percentual = Math.round((paginaAtual / totalPaginas) * 100);
+  $("loadingTexto").textContent = `Carregando dados da página ${paginaAtual} de ${totalPaginas}... (${dados.length} registros obtidos)`;
+  const pb = $("progressBar");
+  pb.style.width = percentual + "%";
+  pb.textContent = percentual + "%";
+}
+
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none", !sim);
+}
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function consultarAPI(){
+  let maxPaginas = parseInt($("numPaginas").value) || 45;
+  if (maxPaginas > 100) maxPaginas = 100;
+  if (maxPaginas < 1) maxPaginas = 1;
+  $("numPaginas").value = maxPaginas;
+
+  dados = [];
+  colunasDinamicas = [];
+  
+  mostrarLoading(true);
+  mostrarStatus(`Iniciando a importação de até ${maxPaginas} página(s)...`, "info");
+
+  for (let pagina = 1; pagina <= maxPaginas; pagina++) {
+    atualizarLoadingProgresso(pagina, maxPaginas);
+    const url = `${BASE_URL}?cidade=padrao&pagina=${pagina}`;
+
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+      });
+
+      if (response.status === 429) {
+        mostrarStatus(`Limite de requisições atingido na página ${pagina}. Aguardando pausa de segurança...`, "warning");
+        await sleep(2500);
+        pagina--; 
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP ${response.status}`);
+      }
+
+      const json = await response.json();
+      let listaPagina = [];
+
+      if (Array.isArray(json)) {
+        listaPagina = json;
+      } else if (json && typeof json === "object") {
+        listaPagina = json.dados || json.data || json.registros || json.itens || json.content || json.retorno || [];
+      }
+
+      if (listaPagina.length === 0) {
+        mostrarStatus(`Nenhum dado retornado na página ${pagina}. Encerrando busca antecipadamente.`, "info");
+        break;
+      }
+
+      dados.push(...listaPagina);
+      await sleep(300);
+
+    } catch (erro) {
+      console.error(`Erro na página ${pagina}:`, erro);
+      mostrarStatus(`Falha ao carregar a página ${pagina}: ${erro.message}`, "danger");
+      break;
+    }
+  }
+
+  mostrarLoading(false);
+
+  if (dados.length > 0) {
+    extrairColunas();
+    preencherFiltrosDropdown();
+    atualizarDashboard();
+    mostrarStatus(`Sucesso! ${dados.length.toLocaleString("pt-BR")} registros de pessoal importados.`, "success");
+  } else {
+    mostrarStatus("Nenhum dado pôde ser carregado. Tente carregar via arquivo JSON local.", "warning");
+  }
+}
+
+function extrairColunas() {
+  if (dados.length === 0) return;
+  colunasDinamicas = Object.keys(dados[0]);
+}
+
+function identificarCampo(possibilidades) {
+  if (!colunasDinamicas.length) return null;
+  return colunasDinamicas.find(c => possibilidades.some(p => c.toLowerCase().includes(p)));
+}
+
+function preencherFiltrosDropdown(){
+  const campoCargo = identificarCampo(["cargo", "funcao", "descricao"]);
+  const campoVinculo = identificarCampo(["vinculo", "situacao", "tipo", "regime"]);
+
+  const selectCargo = $("selectCargo");
+  const selectVinculo = $("selectVinculo");
+
+  selectCargo.innerHTML = '<option value="">Todos os cargos</option>';
+  selectVinculo.innerHTML = '<option value="">Todos os vínculos</option>';
+
+  if (campoCargo) {
+    const cargos = [...new Set(dados.map(i => String(i[campoCargo] || "").trim()).filter(Boolean))].sort();
+    cargos.forEach(c => {
+      selectCargo.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+    });
+  }
+
+  if (campoVinculo) {
+    const vinculos = [...new Set(dados.map(i => String(i[campoVinculo] || "").trim()).filter(Boolean))].sort();
+    vinculos.forEach(v => {
+      selectVinculo.innerHTML += `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`;
+    });
+  }
+}
+
+function aplicarFiltros(){
+  const texto = $("filtroTexto").value.toLowerCase().trim();
+  const cargoSel = $("selectCargo").value.toLowerCase().trim();
+  const vinculoSel = $("selectVinculo").value.toLowerCase().trim();
+
+  const campoCargo = identificarCampo(["cargo", "funcao", "descricao"]);
+  const campoVinculo = identificarCampo(["vinculo", "situacao", "tipo", "regime"]);
+
+  dadosFiltrados = dados.filter(item => {
+    // Filtro por Texto Geral
+    if (texto) {
+      const bateTexto = Object.values(item).some(val => 
+        String(val ?? "").toLowerCase().includes(texto)
+      );
+      if (!bateTexto) return false;
+    }
+
+    // Filtro Específico por Cargo
+    if (cargoSel && campoCargo) {
+      const valCargo = String(item[campoCargo] || "").toLowerCase().trim();
+      if (valCargo !== cargoSel) return false;
+    }
+
+    // Filtro Específico por Vínculo
+    if (vinculoSel && campoVinculo) {
+      const valVinculo = String(item[campoVinculo] || "").toLowerCase().trim();
+      if (valVinculo !== vinculoSel) return false;
+    }
+
+    return true;
+  });
+
+  if (colunaOrdenacao) {
+    aplicarOrdenacao();
+  }
+}
+
+function ordenarPor(coluna) {
+  if (colunaOrdenacao === coluna) {
+    direcaoOrdenacao = direcaoOrdenacao === "asc" ? "desc" : "asc";
+  } else {
+    colunaOrdenacao = coluna;
+    direcaoOrdenacao = "asc";
+  }
+
+  aplicarOrdenacao();
+  atualizarIconesOrdenacao();
+  atualizarTabela();
+}
+
+function aplicarOrdenacao() {
+  dadosFiltrados.sort((a, b) => {
+    let valA = a[colunaOrdenacao];
+    let valB = b[colunaOrdenacao];
+
+    const numA = Number(valA);
+    const numB = Number(valB);
+
+    if (!isNaN(numA) && !isNaN(numB) && valA !== "" && valB !== "") {
+      return direcaoOrdenacao === "asc" ? numA - numB : numB - numA;
+    }
+
+    valA = String(valA ?? "").toLowerCase();
+    valB = String(valB ?? "").toLowerCase();
+
+    if (direcaoOrdenacao === "asc") {
+      return valA.localeCompare(valB, "pt-BR");
+    } else {
+      return valB.localeCompare(valA, "pt-BR");
+    }
+  });
+}
+
+function atualizarIconesOrdenacao() {
+  colunasDinamicas.forEach(col => {
+    const icon = $(`icon-${col}`);
+    if (!icon) return;
+
+    if (col === colunaOrdenacao) {
+      icon.className = direcaoOrdenacao === "asc" ? "bi bi-sort-down" : "bi bi-sort-up";
+    } else {
+      icon.className = "bi bi-arrow-down-up small opacity-50";
+    }
+  });
+}
+
+function atualizarDashboard(){
+  aplicarFiltros();
+  atualizarCards();
+  atualizarGraficos();
+  atualizarCabecalhosTabela();
+  atualizarTabela();
+}
+
+function atualizarCards(){
+  const campoCargo = identificarCampo(["cargo", "funcao", "descricao"]);
+  const campoVinculo = identificarCampo(["vinculo", "situacao", "tipo", "regime"]);
+
+  const cargosUnicos = campoCargo ? new Set(dadosFiltrados.map(i => i[campoCargo]).filter(Boolean)).size : 0;
+  const vinculosUnicos = campoVinculo ? new Set(dadosFiltrados.map(i => i[campoVinculo]).filter(Boolean)).size : 0;
+
+  $("totalRegistros").textContent = dadosFiltrados.length.toLocaleString("pt-BR");
+  $("cargosDistintos").textContent = cargosUnicos.toLocaleString("pt-BR");
+  $("vinculosDistintos").textContent = vinculosUnicos.toLocaleString("pt-BR");
+  $("contadorTabela").textContent = `${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
+}
+
+function agruparPorCampo(nomeCampo) {
+  const mapa = {};
+  dadosFiltrados.forEach(item => {
+    const valor = String(item[nomeCampo] || "Não Informado").trim();
+    mapa[valor] = (mapa[valor] || 0) + 1;
+  });
+  return Object.entries(mapa).sort((a,b) => b[1] - a[1]).slice(0, 10);
+}
+
+function destruirGraficos(){
+  if (graficos.cargos) graficos.cargos.destroy();
+  if (graficos.vinculos) graficos.vinculos.destroy();
+}
+
+function atualizarGraficos(){
+  destruirGraficos();
+
+  const campoCargo = identificarCampo(["cargo", "funcao", "descricao"]) || colunasDinamicas[0];
+  const campoVinculo = identificarCampo(["vinculo", "situacao", "tipo", "regime"]) || colunasDinamicas[1] || colunasDinamicas[0];
+
+  const topCargos = agruparPorCampo(campoCargo);
+  const topVinculos = agruparPorCampo(campoVinculo);
+
+  graficos.cargos = new Chart($("graficoCargos"), {
+    type: "bar",
+    data: {
+      labels: topCargos.map(i => i[0]),
+      datasets: [{
+        label: "Quantidade",
+        backgroundColor: "#8c9b00",
+        data: topCargos.map(i => i[1])
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+
+  graficos.vinculos = new Chart($("graficoVinculos"), {
+    type: "doughnut",
+    data: {
+      labels: topVinculos.map(i => i[0]),
+      datasets: [{
+        data: topVinculos.map(i => i[1]),
+        backgroundColor: ["#8c9b00","#20c997","#0dcaf0","#6f42c1","#1f2421","#ffc107","#fd7e14","#6c757d"]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function atualizarCabecalhosTabela() {
+  const trHeader = $("tableHeader");
+  if (!colunasDinamicas.length) return;
+
+  trHeader.innerHTML = colunasDinamicas.map(col => `
+    <th onclick="ordenarPor('${col}')">
+      ${escapeHtml(col)} <i id="icon-${col}" class="bi bi-arrow-down-up small opacity-50"></i>
+    </th>
+  `).join("");
+}
+
+function atualizarTabela(){
+  const tbody = $("tbody");
+
+  if (!dadosFiltrados.length) {
+    tbody.innerHTML = `<tr><td colspan="${colunasDinamicas.length || 1}" class="text-center py-3">Nenhum registro encontrado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = dadosFiltrados.map(item => `
+    <tr>
+      ${colunasDinamicas.map(col => {
+        let val = item[col];
+        if (typeof val === 'object' && val !== null) {
+          val = JSON.stringify(val);
+        }
+        return `<td>${escapeHtml(val)}</td>`;
+      }).join("")}
+    </tr>
+  `).join("");
+}
+
+function limparFiltros(){
+  $("filtroTexto").value = "";
+  $("selectCargo").value = "";
+  $("selectVinculo").value = "";
+  colunaOrdenacao = "";
+  direcaoOrdenacao = "asc";
+  atualizarIconesOrdenacao();
+  atualizarDashboard();
+}
+
+function exportarCSV(){
+  if(!dadosFiltrados.length){
+    alert("Não existem dados para exportar.");
+    return;
+  }
+
+  const cabecalho = colunasDinamicas;
+  const linhas = dadosFiltrados.map(item => 
+    colunasDinamicas.map(col => {
+      let val = item[col];
+      return typeof val === 'object' && val !== null ? JSON.stringify(val) : val;
+    })
+  );
+
+  const csv = [cabecalho, ...linhas]
+    .map(linha => linha.map(valor => `"${String(valor ?? "").replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "transparencia_pessoal_campo_largo.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Leitor de arquivo JSON local
+$("inputJson").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const json = JSON.parse(evt.target.result);
+      let lista = [];
+
+      if (Array.isArray(json)) {
+        lista = json;
+      } else if (json && typeof json === "object") {
+        lista = json.dados || json.data || json.registros || json.itens || json.content || json.retorno || [];
+      }
+
+      if (!Array.isArray(lista) || lista.length === 0) {
+        throw new Error("Estrutura do arquivo JSON inválida ou sem registros.");
+      }
+
+      dados = lista;
+      extrairColunas();
+      preencherFiltrosDropdown();
+      atualizarDashboard();
+      mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados com sucesso do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnLimpar").addEventListener("click", limparFiltros);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+$("filtroTexto").addEventListener("input", atualizarDashboard);
+$("selectCargo").addEventListener("change", atualizarDashboard);
+$("selectVinculo").addEventListener("change", atualizarDashboard);
+
+// Inicia consulta ao carregar a página
+consultarAPI();
+</script>
+
+</body>
+</html>
