@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard de Despesas Orçadas | Campo Largo</title>
+
+<!-- Bootstrap 5 & Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+  --laranja-primario: #e65100;
+  --laranja-escuro: #bf360c;
+  --laranja-medio: #f57c00;
+  --laranja-claro: #ffe0b2;
+  --fundo: #fff8f0;
+}
+body { background: var(--fundo); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.navbar { background-color: var(--laranja-escuro) !important; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+.hero { background: linear-gradient(135deg, var(--laranja-escuro), var(--laranja-medio)); color: #fff; }
+.card { border: 0; box-shadow: 0 4px 18px rgba(0,0,0,.06); }
+.kpi { border-left: 5px solid var(--laranja-primario); }
+.kpi .valor { font-size: 1.5rem; font-weight: 700; color: var(--laranja-escuro); }
+.chart-box { height: 360px; position: relative; }
+.table-responsive { max-height: 600px; }
+.table thead th { 
+  position: sticky; 
+  top: 0; 
+  z-index: 2; 
+  cursor: pointer; 
+  user-select: none; 
+  background-color: var(--laranja-escuro) !important; 
+  color: #fff;
+  white-space: nowrap; /* Impede a quebra de linha no cabeçalho */
+}
+.table thead th:hover { background-color: var(--laranja-primario) !important; }
+.status { font-size: .92rem; }
+.small-muted { font-size: .82rem; color: #6c757d; }
+.btn-laranja { background-color: var(--laranja-primario); color: white; border: none; }
+.btn-laranja:hover { background-color: var(--laranja-escuro); color: white; }
+.btn-outline-laranja { border-color: var(--laranja-primario); color: var(--laranja-primario); }
+.btn-outline-laranja:hover { background-color: var(--laranja-primario); color: white; }
+.badge-laranja { background-color: var(--laranja-primario); color: white; }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-bank"></i> Contabilidade Pública
+</a>
+<div class="text-white small">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-dark mb-3">DADOS ABERTOS</span>
+<h1 class="display-5 fw-bold">Dashboard de Despesas Orçadas</h1>
+<p class="lead mb-0">
+Consulta e análise aos dados de planejamento orçamentário disponibilizados pelo Município de Campo Largo.
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-warning status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Filtros e Parâmetros</h5>
+
+<div class="row g-3">
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Data Final</label>
+<input type="date" id="dataFinal" class="form-control" value="2026-12-31">
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Órgão</label>
+<select id="filtroOrgao" class="form-select">
+<option value="">Todos</option>
+</select>
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Unidade</label>
+<select id="filtroUnidade" class="form-select">
+<option value="">Todas</option>
+</select>
+</div>
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-laranja w-100 fw-semibold">
+<i class="bi bi-search"></i> 
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-eraser"></i> Limpar filtros
+</button>
+<button id="btnCsv" class="btn btn-outline-laranja btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-laranja btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+</div>
+
+<div class="small-muted mt-3">
+API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesasOrcadas</code>
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-warning" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API de Despesas Orçadas...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-4">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Total Orçado</div>
+<div id="totalOrcado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card h-100" style="border-left: 5px solid var(--laranja-escuro);">
+<div class="card-body">
+<div class="text-muted small">Total de Órgãos</div>
+<div id="totalOrgaos" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card h-100" style="border-left: 5px solid var(--laranja-medio);">
+<div class="card-body">
+<div class="text-muted small">Total de Unidades</div>
+<div id="totalUnidades" class="valor">0</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Top 10 Despesas Orçadas por Órgão</h5>
+<div class="chart-box"><canvas id="graficoOrgao"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Top 10 Despesas Orçadas por Unidade</h5>
+<div class="chart-box"><canvas id="graficoUnidade"></canvas></div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<div>
+<h5 class="mb-1">Detalhamento das despesas orçadas</h5>
+<div class="small-muted">Clique nos cabeçalhos das colunas para ordenar os dados.</div>
+</div>
+<span id="contadorTabela" class="badge badge-laranja">0 registros</span>
+</div>
+
+<div class="table-responsive">
+<table class="table table-hover table-sm align-middle">
+<thead>
+<tr>
+<th onclick="ordenarPor('orgaoCodigo')">Cód. Órgão <i id="icon-orgaoCodigo" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('orgaoDescricao')">Órgão <i id="icon-orgaoDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('unidadeCodigo')">Cód. Unidade <i id="icon-unidadeCodigo" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('unidadeDescricao')">Unidade <i id="icon-unidadeDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorOrcado')">Valor Orçado <i id="icon-valorOrcado" class="bi bi-arrow-down-up small"></i></th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<div class="alert alert-warning small">
+<strong>Consulta à API de Despesas Orçadas:</strong> O sistema busca dados diretamente de <code>campolargo.atende.net/api/WCPDadosAbertos/despesasOrcadas</code>. Caso o navegador bloqueie por restrições CORS, utilize o botão <strong>"Carregar JSON Local"</strong>.
+</div>
+
+</main>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Dashboard de Contabilidade Pública — Campo Largo/PR<br>
+Dados de Despesas Orçadas provenientes da API de Dados Abertos.
+</div>
+</footer>
+
+<script>
+const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/despesasOrcadas";
+
+let dados = [];
+let dadosFiltrados = [];
+let graficos = {};
+
+// Controle de ordenação da tabela
+let colunaOrdenacao = "";
+let direcaoOrdenacao = "asc"; // 'asc' ou 'desc'
+
+const $ = id => document.getElementById(id);
+
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{
+    style:"currency",
+    currency:"BRL"
+  }).format(Number(valor)||0);
+}
+
+function numero(valor){
+  if(typeof valor === "number"){
+    return Number.isFinite(valor) ? valor : 0;
+  }
+
+  if(valor === null || valor === undefined || valor === ""){
+    return 0;
+  }
+
+  let texto = String(valor).replace("R$","").trim();
+
+  if(texto.includes(".") && texto.includes(",")){
+    texto = texto.replace(/\./g,"").replace(",",".");
+  }else if(texto.includes(",")){
+    texto = texto.replace(",",".");
+  }
+
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function dataBR(dataISO){
+  if(!dataISO) return "31/12/2026";
+  const [ano,mes,dia] = dataISO.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function mostrarStatus(texto,tipo="warning"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none",!sim);
+}
+
+async function consultarAPI(){
+  const dataFinalInput = $("dataFinal").value;
+
+  if(!dataFinalInput){
+    mostrarStatus("Informe a data final.","warning");
+    return;
+  }
+
+  const dataFinalFormatada = dataBR(dataFinalInput);
+  const url = `${API_URL}?dataFinal=${dataFinalFormatada}`;
+
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`, "info");
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ${response.status}: A API recusou os parâmetros fornecidos.`);
+    }
+
+    const resultado = await response.json();
+
+    if (resultado.status !== "ok" || !Array.isArray(resultado.retorno)) {
+      throw new Error(resultado.mensagem || "A resposta da API não contém registros válidos.");
+    }
+
+    processarDados(resultado.retorno);
+    mostrarStatus(`Consulta realizada com sucesso! ${dados.length.toLocaleString("pt-BR")} registros carregados.`, "success");
+
+  } catch (erro) {
+    console.error("Erro na consulta:", erro);
+    mostrarStatus(`Falha ao conectar com a API: ${erro.message}`, "danger");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function processarDados(lista) {
+  // Estrutura alinhada ao endpoint de despesasOrcadas
+  dados = lista.map(item => ({
+    orgaoCodigo: item.orgaoCodigo ?? "",
+    orgaoDescricao: item.orgaoDescricao ?? "",
+    unidadeCodigo: item.unidadeCodigo ?? "",
+    unidadeDescricao: item.unidadeDescricao ?? "",
+    valorOrcado: item.valorOrcado ? numero(item.valorOrcado) : 0
+  }));
+
+  preencherFiltros();
+  atualizarDashboard();
+}
+
+function preencherFiltros(){
+  const orgaos = [...new Map(dados.map(item => [item.orgaoCodigo, item.orgaoDescricao])).entries()]
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
+
+  const unidades = [...new Map(dados.map(item => [item.unidadeCodigo, item.unidadeDescricao])).entries()]
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
+
+  $("filtroOrgao").innerHTML = `<option value="">Todos</option>` +
+    orgaos.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
+
+  $("filtroUnidade").innerHTML = `<option value="">Todas</option>` +
+    unidades.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
+}
+
+function aplicarFiltros(){
+  const orgao = $("filtroOrgao").value;
+  const unidade = $("filtroUnidade").value;
+
+  dadosFiltrados = dados.filter(item => {
+    const okOrgao = !orgao || String(item.orgaoCodigo) === orgao;
+    const okUnidade = !unidade || String(item.unidadeCodigo) === unidade;
+    return okOrgao && okUnidade;
+  });
+
+  if (colunaOrdenacao) {
+    aplicarOrdenacao();
+  }
+}
+
+function ordenarPor(coluna) {
+  if (colunaOrdenacao === coluna) {
+    direcaoOrdenacao = direcaoOrdenacao === "asc" ? "desc" : "asc";
+  } else {
+    colunaOrdenacao = coluna;
+    direcaoOrdenacao = "asc";
+  }
+
+  aplicarOrdenacao();
+  atualizarIconesOrdenacao();
+  atualizarTabela();
+}
+
+function aplicarOrdenacao() {
+  dadosFiltrados.sort((a, b) => {
+    let valA = a[colunaOrdenacao];
+    let valB = b[colunaOrdenacao];
+
+    if (typeof valA === "number" && typeof valB === "number") {
+      return direcaoOrdenacao === "asc" ? valA - valB : valB - valA;
+    }
+
+    valA = String(valA ?? "").toLowerCase();
+    valB = String(valB ?? "").toLowerCase();
+
+    if (direcaoOrdenacao === "asc") {
+      return valA.localeCompare(valB, "pt-BR");
+    } else {
+      return valB.localeCompare(valA, "pt-BR");
+    }
+  });
+}
+
+function atualizarIconesOrdenacao() {
+  const colunas = ['orgaoCodigo', 'orgaoDescricao', 'unidadeCodigo', 'unidadeDescricao', 'valorOrcado'];
+
+  colunas.forEach(col => {
+    const icon = $(`icon-${col}`);
+    if (!icon) return;
+
+    if (col === colunaOrdenacao) {
+      if (direcaoOrdenacao === "asc") {
+        icon.className = typeof dadosFiltrados[0]?.[col] === "number" 
+          ? "bi bi-sort-numeric-down" 
+          : "bi bi-sort-alpha-down";
+      } else {
+        icon.className = typeof dadosFiltrados[0]?.[col] === "number" 
+          ? "bi bi-sort-numeric-down-alt" 
+          : "bi bi-sort-alpha-down-alt";
+      }
+    } else {
+      icon.className = "bi bi-arrow-down-up small opacity-50";
+    }
+  });
+}
+
+function soma(campo){
+  return dadosFiltrados.reduce((total,item)=> total + numero(item[campo]), 0);
+}
+
+function atualizarDashboard(){
+  aplicarFiltros();
+  atualizarCards();
+  atualizarGraficos();
+  atualizarTabela();
+}
+
+function atualizarCards(){
+  $("totalOrcado").textContent = moeda(soma("valorOrcado"));
+  $("totalOrgaos").textContent = new Set(dadosFiltrados.map(item => item.orgaoCodigo).filter(Boolean)).size.toLocaleString("pt-BR");
+  $("totalUnidades").textContent = new Set(dadosFiltrados.map(item => item.unidadeCodigo).filter(Boolean)).size.toLocaleString("pt-BR");
+  $("contadorTabela").textContent = `${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
+}
+
+function destruirGrafico(nome){
+  if(graficos[nome]){
+    graficos[nome].destroy();
+  }
+}
+
+function agrupar(campo){
+  const mapa = {};
+  dadosFiltrados.forEach(item=>{
+    const chave = item[campo] || "Não informado";
+    mapa[chave] = (mapa[chave] || 0) + numero(item.valorOrcado);
+  });
+  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,10);
+}
+
+function atualizarGraficos(){
+  const paletaLaranja = [
+    "#e65100", "#f57c00", "#ff9800", "#ffb74d", 
+    "#bf360c", "#d84315", "#f4511e", "#ff7043", 
+    "#ff8a65", "#ffab91"
+  ];
+
+  const orgao = agrupar("orgaoDescricao");
+  destruirGrafico("orgao");
+  graficos.orgao = new Chart($("graficoOrgao"), {
+    type:"doughnut",
+    data:{
+      labels: orgao.map(item=>item[0]),
+      datasets:[{
+        data: orgao.map(item=>item[1]),
+        backgroundColor: paletaLaranja
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } }
+      }
+    }
+  });
+
+  const unidade = agrupar("unidadeDescricao");
+  destruirGrafico("unidade");
+  graficos.unidade = new Chart($("graficoUnidade"), {
+    type:"bar",
+    data:{
+      labels: unidade.map(item=>item[0]),
+      datasets:[{
+        label:"Valor Orçado",
+        backgroundColor: "#f57c00",
+        data: unidade.map(item=>item[1])
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } }
+      }
+    }
+  });
+}
+
+function atualizarTabela(){
+  const tbody = $("tbody");
+  tbody.innerHTML = dadosFiltrados.map(item=>`
+    <tr>
+      <td>${escapeHtml(item.orgaoCodigo)}</td>
+      <td>${escapeHtml(item.orgaoDescricao)}</td>
+      <td>${escapeHtml(item.unidadeCodigo)}</td>
+      <td>${escapeHtml(item.unidadeDescricao)}</td>
+      <td><strong>${moeda(item.valorOrcado)}</strong></td>
+    </tr>
+  `).join("");
+}
+
+function limparFiltros(){
+  $("filtroOrgao").value = "";
+  $("filtroUnidade").value = "";
+  colunaOrdenacao = "";
+  direcaoOrdenacao = "asc";
+  atualizarIconesOrdenacao();
+  atualizarDashboard();
+}
+
+function exportarCSV(){
+  if(!dadosFiltrados.length){
+    alert("Não existem dados para exportar.");
+    return;
+  }
+
+  const cabecalho = ["Codigo Orgao", "Orgao", "Codigo Unidade", "Unidade", "Valor Orcado"];
+
+  const linhas = dadosFiltrados.map(item=>[
+    item.orgaoCodigo, item.orgaoDescricao, item.unidadeCodigo, item.unidadeDescricao, item.valorOrcado
+  ]);
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(valor=> `"${String(valor ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "despesas_orcadas_campo_largo.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Leitor do arquivo JSON local
+$("inputJson").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.retorno;
+
+      if (!Array.isArray(lista)) {
+        throw new Error("Estrutura do arquivo JSON inválida.");
+      }
+
+      processarDados(lista);
+      mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado.", "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnLimpar").addEventListener("click", limparFiltros);
+$("btnCsv").addEventListener("click", exportarCSV);
+$("filtroOrgao").addEventListener("change", atualizarDashboard);
+$("filtroUnidade").addEventListener("change", atualizarDashboard);
+
+// Inicia consulta ao carregar a página
+consultarAPI();
+</script>
+
+</body>
+</html>
