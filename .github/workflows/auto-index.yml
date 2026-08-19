@@ -1,0 +1,36 @@
+name: Auto Generate INDEX.md
+
+on:
+  push:
+    branches:
+      - main  # Altere se a sua branch principal for master
+    paths-ignore:
+      - 'INDEX.md'  # Impede loops infinitos de execução
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Permite que a Action faça commit de volta
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Run script to generate INDEX.md
+      run: python generate_index.py
+
+    - name: Commit and push if changed
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add INDEX.md
+        git status
+        git diff-index --quiet HEAD || git commit -m "chore: atualiza INDEX.md automatizado"
+        git push
