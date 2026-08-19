@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard de Receitas Públicas | Campo Largo</title>
+
+<!-- Bootstrap 5 & Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --verde:#198754;
+  --verde-escuro:#0b3d24;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#0b3d24,#198754);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--verde)}
+.kpi .valor{font-size:1.45rem;font-weight:700;color:var(--verde-escuro)}
+.chart-box{height:360px;position:relative;}
+.table-responsive{max-height:600px}
+.table thead th{position:sticky;top:0;z-index:2}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.btn-primary{background-color:var(--verde);border-color:var(--verde)}
+.btn-primary:hover{background-color:var(--verde-escuro);border-color:var(--verde-escuro)}
+.btn-outline-primary{color:var(--verde);border-color:var(--verde)}
+.btn-outline-primary:hover{background-color:var(--verde);border-color:var(--verde)}
+.bg-primary{background-color:var(--verde) !important}
+.text-primary{color:var(--verde) !important}
+.text-bg-primary{background-color:var(--verde) !important}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-cash-coin"></i> Contabilidade Pública
+</a>
+<div class="text-white small">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">DADOS ABERTOS</span>
+<h1 class="display-5 fw-bold">Dashboard de Receitas Públicas</h1>
+<p class="lead mb-0">
+Consulta direta aos dados de receitas disponibilizados pelo Município de Campo Largo.
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e filtros</h5>
+
+<div class="row g-3">
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Data inicial</label>
+<input type="date" id="dataInicial" class="form-control" value="2026-01-01">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Data final</label>
+<input type="date" id="dataFinal" class="form-control" value="2026-12-31">
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Descrição da conta</label>
+<input type="text" id="filtroConta" class="form-control" placeholder="Buscar por descrição da conta">
+</div>
+
+<div class="col-md-2 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100">
+<i class="bi bi-search"></i>
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-eraser"></i> Limpar filtros
+</button>
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-success btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+</div>
+
+<div class="small-muted mt-3">
+API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/receitas</code>
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Total Arrecadado</div>
+<div id="totalArrecadado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Registros</div>
+<div id="quantidade" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Contas Distintas</div>
+<div id="contasDistintas" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Ticket Médio</div>
+<div id="ticketMedio" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Top 10 Contas por Valor Arrecadado</h5>
+<div class="chart-box"><canvas id="graficoTopContas"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Distribuição das Contas</h5>
+<div class="chart-box"><canvas id="graficoDistribuicao"></canvas></div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<div>
+<h5 class="mb-1">Detalhamento das receitas</h5>
+<div class="small-muted">Os valores são apresentados conforme o retorno da API.</div>
+</div>
+<span id="contadorTabela" class="badge text-bg-primary">0 registros</span>
+</div>
+
+<div class="table-responsive">
+<table class="table table-hover table-sm align-middle">
+<thead class="table-dark">
+<tr>
+<th>Código Conta</th>
+<th>Descrição da Conta</th>
+<th>Valor Arrecadado</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente em <code>campolargo.atende.net</code>. Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar arquivos previamente baixados.
+</div>
+
+</main>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Dashboard de Contabilidade Pública — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do município.
+</div>
+</footer>
+
+<script>
+const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/receitas";
+
+let dados = [];
+let dadosFiltrados = [];
+let graficos = {};
+
+const $ = id => document.getElementById(id);
+
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{
+    style:"currency",
+    currency:"BRL"
+  }).format(Number(valor)||0);
+}
+
+function numero(valor){
+  if(typeof valor === "number"){
+    return Number.isFinite(valor) ? valor : 0;
+  }
+
+  if(valor === null || valor === undefined || valor === ""){
+    return 0;
+  }
+
+  let texto = String(valor)
+    .replace("R$","")
+    .trim();
+
+  if(texto.includes(".") && texto.includes(",")){
+    texto = texto.replace(/\./g,"").replace(",",".");
+  }else if(texto.includes(",")){
+    texto = texto.replace(",",".");
+  }
+
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function dataBR(data){
+  const [ano,mes,dia] = data.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function mostrarStatus(texto,tipo="info"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none",!sim);
+}
+
+async function consultarAPI(){
+  const inicio = $("dataInicial").value;
+  const fim = $("dataFinal").value;
+
+  if(!inicio || !fim){
+    mostrarStatus("Informe as duas datas.","warning");
+    return;
+  }
+
+  if(inicio > fim){
+    mostrarStatus("A data inicial não pode ser maior que a data final.","warning");
+    return;
+  }
+
+  // Formata a data para DD/MM/AAAA sem usar encodeURIComponent para manter as barras normais
+  const url = `${API_URL}?dataInicial=${dataBR(inicio)}&dataFinal=${dataBR(fim)}`;
+
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ${response.status}: A API recusou os parâmetros fornecidos.`);
+    }
+
+    const resultado = await response.json();
+
+    if (resultado.status !== "ok" || !Array.isArray(resultado.retorno)) {
+      throw new Error(resultado.mensagem || "A resposta da API não contém registros válidos.");
+    }
+
+    processarDados(resultado.retorno);
+    mostrarStatus(`Consulta realizada com sucesso! ${dados.length.toLocaleString("pt-BR")} registros carregados.`, "success");
+
+  } catch (erro) {
+    console.error("Erro na consulta:", erro);
+    mostrarStatus(`Falha ao conectar com a API: ${erro.message}`, "danger");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function processarDados(lista) {
+  dados = lista.map(item => ({
+    contaCodigo: item.contaCodigo ?? "",
+    contaDescricao: item.contaDescricao ?? "",
+    valorArrecadado: numero(item.valorArrecadado)
+  }));
+
+  atualizarDashboard();
+}
+
+function aplicarFiltros(){
+  const conta = $("filtroConta").value.toLowerCase().trim();
+
+  dadosFiltrados = dados.filter(item => {
+    const okConta = !conta
+      || String(item.contaDescricao).toLowerCase().includes(conta)
+      || String(item.contaCodigo).toLowerCase().includes(conta);
+    return okConta;
+  });
+}
+
+function soma(campo){
+  return dadosFiltrados.reduce((total,item)=> total + numero(item[campo]), 0);
+}
+
+function atualizarDashboard(){
+  aplicarFiltros();
+  atualizarCards();
+  atualizarGraficos();
+  atualizarTabela();
+}
+
+function atualizarCards(){
+  const total = soma("valorArrecadado");
+  const qtd = dadosFiltrados.length;
+  const contasDistintas = new Set(dadosFiltrados.map(item=>item.contaCodigo).filter(v=>v!=="")).size;
+
+  $("totalArrecadado").textContent = moeda(total);
+  $("quantidade").textContent = qtd.toLocaleString("pt-BR");
+  $("contasDistintas").textContent = contasDistintas.toLocaleString("pt-BR");
+  $("ticketMedio").textContent = moeda(qtd ? total / qtd : 0);
+  $("contadorTabela").textContent = `${qtd.toLocaleString("pt-BR")} registros`;
+}
+
+function destruirGrafico(nome){
+  if(graficos[nome]){
+    graficos[nome].destroy();
+  }
+}
+
+function agruparPorConta(){
+  const mapa = {};
+  dadosFiltrados.forEach(item=>{
+    const chave = item.contaDescricao || "Não informado";
+    mapa[chave] = (mapa[chave] || 0) + numero(item.valorArrecadado);
+  });
+  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,10);
+}
+
+function atualizarGraficos(){
+  const topContas = agruparPorConta();
+
+  destruirGrafico("topContas");
+  graficos.topContas = new Chart($("graficoTopContas"), {
+    type:"bar",
+    data:{
+      labels: topContas.map(item=>item[0]),
+      datasets:[{
+        label:"Valor Arrecadado",
+        backgroundColor: "#198754",
+        data: topContas.map(item=>item[1])
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } }
+      }
+    }
+  });
+
+  destruirGrafico("distribuicao");
+  graficos.distribuicao = new Chart($("graficoDistribuicao"), {
+    type:"doughnut",
+    data:{
+      labels: topContas.map(item=>item[0]),
+      datasets:[{
+        data: topContas.map(item=>item[1]),
+        backgroundColor: ["#198754","#20c997","#0dcaf0","#6f42c1","#0b3d24","#ffc107","#fd7e14","#6c757d","#146c43","#0a4d2e"]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } }
+      }
+    }
+  });
+}
+
+function atualizarTabela(){
+  const tbody = $("tbody");
+  tbody.innerHTML = dadosFiltrados.map(item=>`
+    <tr>
+      <td>${escapeHtml(item.contaCodigo)}</td>
+      <td>${escapeHtml(item.contaDescricao)}</td>
+      <td><strong>${moeda(item.valorArrecadado)}</strong></td>
+    </tr>
+  `).join("");
+}
+
+function limparFiltros(){
+  $("filtroConta").value = "";
+  atualizarDashboard();
+}
+
+function exportarCSV(){
+  if(!dadosFiltrados.length){
+    alert("Não existem dados para exportar.");
+    return;
+  }
+
+  const cabecalho = [
+    "Codigo Conta","Descricao da Conta","Valor Arrecadado"
+  ];
+
+  const linhas = dadosFiltrados.map(item=>[
+    item.contaCodigo, item.contaDescricao, item.valorArrecadado
+  ]);
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(valor=> `"${String(valor ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "receitas_campo_largo.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Leitor do arquivo JSON local
+$("inputJson").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.retorno;
+
+      if (!Array.isArray(lista)) {
+        throw new Error("Estrutura do arquivo JSON inválida.");
+      }
+
+      processarDados(lista);
+      mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado.", "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnLimpar").addEventListener("click", limparFiltros);
+$("btnCsv").addEventListener("click", exportarCSV);
+$("filtroConta").addEventListener("input", atualizarDashboard);
+
+// Inicia consulta ao carregar a página
+consultarAPI();
+</script>
+
+</body>
+</html>
