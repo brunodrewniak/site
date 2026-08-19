@@ -271,7 +271,7 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 </section>
 
 <div class="alert alert-info small">
-<strong>Solução de CORS Ativa:</strong> O sistema realiza a busca utilizando Proxies transparentes para contornar bloqueios de navegadores no GitHub Pages/servidores externos. Caso prefira, você também pode utilizar o botão <strong>"Carregar JSON Local"</strong> para importar arquivos previamente baixados.
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente em <code>campolargo.atende.net</code>. Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar arquivos previamente baixados.
 </div>
 
 </main>
@@ -285,12 +285,6 @@ Dados provenientes da API de Dados Abertos do município.
 
 <script>
 const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
-
-// Lista de proxies para fallback automático caso um falhe
-const PROXIES = [
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
-];
 
 let dados = [];
 let dadosFiltrados = [];
@@ -352,29 +346,6 @@ function mostrarLoading(sim){
   $("loading").classList.toggle("d-none",!sim);
 }
 
-async function fetchComFallback(targetUrl) {
-  // Tentativa 1: Requisição direta
-  try {
-    const res = await fetch(targetUrl, { headers: { "Accept": "application/json" } });
-    if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn("Requisição direta bloqueada por CORS/Rede. Tentando proxies...", e);
-  }
-
-  // Tentativa 2 e 3: Proxies CORS
-  for (let i = 0; i < PROXIES.length; i++) {
-    try {
-      const proxyUrl = PROXIES[i](targetUrl);
-      const res = await fetch(proxyUrl);
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn(`Proxy ${i+1} falhou.`, e);
-    }
-  }
-
-  throw new Error("Todas as tentativas de conexão (direta e proxies CORS) falharam.");
-}
-
 async function consultarAPI(){
   const inicio = $("dataInicial").value;
   const fim = $("dataFinal").value;
@@ -389,28 +360,36 @@ async function consultarAPI(){
     return;
   }
 
-  const url = `${API_URL}?dataInicial=${encodeURIComponent(dataBR(inicio))}&dataFinal=${encodeURIComponent(dataBR(fim))}`;
+  // Formata a data para DD/MM/AAAA sem usar encodeURIComponent para manter as barras normais
+  const url = `${API_URL}?dataInicial=${dataBR(inicio)}&dataFinal=${dataBR(fim)}`;
 
   mostrarLoading(true);
-  mostrarStatus("Consultando dados da API de Campo Largo...");
+  mostrarStatus(`Buscando URL: ${url}`);
 
   try {
-    const resultado = await fetchComFallback(url);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      }
+    });
 
-    if(resultado.status && resultado.status !== "ok"){
-      throw new Error(resultado.mensagem || "A API retornou status diferente de ok.");
+    if (!response.ok) {
+      throw new Error(`Erro ${response.status}: A API recusou os parâmetros fornecidos.`);
     }
 
-    if(!Array.isArray(resultado.retorno)){
-      throw new Error("A resposta não possui o array 'retorno'.");
+    const resultado = await response.json();
+
+    if (resultado.status !== "ok" || !Array.isArray(resultado.retorno)) {
+      throw new Error(resultado.mensagem || "A resposta da API não contém registros válidos.");
     }
 
     processarDados(resultado.retorno);
-    mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados com sucesso.`, "success");
+    mostrarStatus(`Consulta realizada com sucesso! ${dados.length.toLocaleString("pt-BR")} registros carregados.`, "success");
 
-  } catch(erro) {
-    console.error("Erro:", erro);
-    mostrarStatus("Não foi possível acessar a API pelos servidores públicos. Tente carregar um arquivo JSON local pelo botão 'Carregar JSON Local'.", "danger");
+  } catch (erro) {
+    console.error("Erro na consulta:", erro);
+    mostrarStatus(`Falha ao conectar com a API: ${erro.message}`, "danger");
   } finally {
     mostrarLoading(false);
   }
