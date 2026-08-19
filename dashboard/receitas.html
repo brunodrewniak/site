@@ -25,7 +25,15 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .kpi .valor{font-size:1.45rem;font-weight:700;color:var(--verde-escuro)}
 .chart-box{height:360px;position:relative;}
 .table-responsive{max-height:600px}
-.table thead th{position:sticky;top:0;z-index:2}
+.table thead th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  cursor:pointer;
+  user-select:none;
+  white-space: nowrap; /* Impede a quebra de linha no cabeçalho */
+}
+.table thead th:hover{background-color:var(--verde) !important;color:#fff}
 .status{font-size:.92rem}
 .small-muted{font-size:.82rem;color:#6c757d}
 .btn-primary{background-color:var(--verde);border-color:var(--verde)}
@@ -191,7 +199,7 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/receitas</code>
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 <div>
 <h5 class="mb-1">Detalhamento das receitas</h5>
-<div class="small-muted">Os valores são apresentados conforme o retorno da API.</div>
+<div class="small-muted">Clique nos cabeçalhos das colunas para ordenar os dados.</div>
 </div>
 <span id="contadorTabela" class="badge text-bg-primary">0 registros</span>
 </div>
@@ -200,9 +208,9 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/receitas</code>
 <table class="table table-hover table-sm align-middle">
 <thead class="table-dark">
 <tr>
-<th>Código Conta</th>
-<th>Descrição da Conta</th>
-<th>Valor Arrecadado</th>
+<th onclick="ordenarPor('contaCodigo')">Código Conta <i id="icon-contaCodigo" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('contaDescricao')">Descrição da Conta <i id="icon-contaDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorArrecadado')">Valor Arrecadado <i id="icon-valorArrecadado" class="bi bi-arrow-down-up small"></i></th>
 </tr>
 </thead>
 <tbody id="tbody"></tbody>
@@ -230,6 +238,10 @@ const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/receitas";
 let dados = [];
 let dadosFiltrados = [];
 let graficos = {};
+
+// Controle de ordenação da tabela
+let colunaOrdenacao = "";
+let direcaoOrdenacao = "asc";
 
 const $ = id => document.getElementById(id);
 
@@ -355,6 +367,66 @@ function aplicarFiltros(){
       || String(item.contaCodigo).toLowerCase().includes(conta);
     return okConta;
   });
+
+  if (colunaOrdenacao) {
+    aplicarOrdenacao();
+  }
+}
+
+function ordenarPor(coluna) {
+  if (colunaOrdenacao === coluna) {
+    direcaoOrdenacao = direcaoOrdenacao === "asc" ? "desc" : "asc";
+  } else {
+    colunaOrdenacao = coluna;
+    direcaoOrdenacao = "asc";
+  }
+
+  aplicarOrdenacao();
+  atualizarIconesOrdenacao();
+  atualizarTabela();
+}
+
+function aplicarOrdenacao() {
+  dadosFiltrados.sort((a, b) => {
+    let valA = a[colunaOrdenacao];
+    let valB = b[colunaOrdenacao];
+
+    if (typeof valA === "number" && typeof valB === "number") {
+      return direcaoOrdenacao === "asc" ? valA - valB : valB - valA;
+    }
+
+    valA = String(valA ?? "").toLowerCase();
+    valB = String(valB ?? "").toLowerCase();
+
+    if (direcaoOrdenacao === "asc") {
+      return valA.localeCompare(valB, "pt-BR");
+    } else {
+      return valB.localeCompare(valA, "pt-BR");
+    }
+  });
+}
+
+function atualizarIconesOrdenacao() {
+  const colunas = ['contaCodigo', 'contaDescricao', 'valorArrecadado'];
+
+  colunas.forEach(col => {
+    const icon = $(`icon-${col}`);
+    if (!icon) return;
+
+    if (col === colunaOrdenacao) {
+      if (direcaoOrdenacao === "asc") {
+        icon.className = typeof dadosFiltrados[0]?.[col] === "number" 
+          ? "bi bi-sort-numeric-down" 
+          : "bi bi-sort-alpha-down";
+      } else {
+        icon.className = typeof dadosFiltrados[0]?.[col] === "number" 
+          ? "bi bi-sort-numeric-down-alt" 
+          : "bi bi-sort-alpha-down-alt";
+      }
+    } else {
+      icon.className = "bi bi-arrow-down-up small opacity-50";
+    }
+  });
 }
 
 function soma(campo){
@@ -452,6 +524,9 @@ function atualizarTabela(){
 
 function limparFiltros(){
   $("filtroConta").value = "";
+  colunaOrdenacao = "";
+  direcaoOrdenacao = "asc";
+  atualizarIconesOrdenacao();
   atualizarDashboard();
 }
 
