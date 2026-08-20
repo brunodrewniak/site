@@ -10,283 +10,324 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- SheetJS (leitura de XLSX no navegador) -->
+<!-- SheetJS -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
-:root{
-  --azul:#0d6efd;
-  --azul-escuro:#073b6f;
-  --fundo:#f4f7fb;
+:root {
+  --vermelho: #bf1b20;
+  --azul-escuro: #1e3c72;
+  --azul-gradiente: linear-gradient(135deg, #1e3c72, #2a5298);
+  --fundo: #f4f6f9;
 }
-body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
-.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
-.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
-.kpi{border-left:5px solid var(--azul)}
-.kpi .valor{font-size:1.35rem;font-weight:700;color:var(--azul-escuro)}
-.chart-box{height:360px;position:relative;}
-.table-responsive{max-height:600px}
-.table thead th{position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;white-space:nowrap;}
-.table thead th:hover{background-color:#343a40;}
-.status{font-size:.92rem}
-.small-muted{font-size:.82rem;color:#6c757d}
+
+body {
+  background-color: var(--fundo);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Navbar & Header */
+.navbar {
+  background-color: var(--azul-escuro) !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+
+.hero {
+  background: var(--azul-gradiente);
+  color: #fff;
+  border-bottom: 4px solid var(--vermelho);
+}
+
+.badge-vermelho {
+  background-color: var(--vermelho);
+  color: #fff;
+}
+
+/* Cards & KPIs */
+.card {
+  border: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border-radius: 8px;
+}
+
+.card-title-custom {
+  color: var(--azul-escuro);
+  font-weight: 700;
+}
+
+.kpi {
+  border-left: 5px solid var(--vermelho);
+}
+
+.kpi .valor {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--azul-escuro);
+}
+
+/* Botões */
+.btn-primary-custom {
+  background-color: var(--vermelho);
+  border-color: var(--vermelho);
+  color: #fff;
+}
+
+.btn-primary-custom:hover {
+  background-color: #a01419;
+  border-color: #a01419;
+  color: #fff;
+}
+
+.btn-outline-custom {
+  color: var(--azul-escuro);
+  border-color: var(--azul-escuro);
+}
+
+.btn-outline-custom:hover {
+  background-color: var(--azul-escuro);
+  color: #fff;
+}
+
+/* Tabela & Gráficos */
+.chart-box {
+  height: 340px;
+  position: relative;
+}
+
+.table-responsive {
+  max-height: 550px;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  background-color: var(--azul-escuro) !important;
+  color: #fff;
+}
+
+.status {
+  font-size: 0.92rem;
+}
+
+.small-muted {
+  font-size: 0.82rem;
+  color: #6c757d;
+}
 </style>
 </head>
 
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
-<div class="container">
-<a class="navbar-brand fw-bold" href="#">
-<i class="bi bi-bar-chart-line"></i> BI de Custos
-</a>
-<div class="text-white small">Campo Largo - PR</div>
-</div>
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
+      <i class="bi bi-bar-chart-line-fill text-danger"></i> BI de Custos
+    </a>
+    <span class="text-white-50 small">Campo Largo - PR</span>
+  </div>
 </nav>
 
-<header class="hero py-5">
-<div class="container">
-<div class="row align-items-center">
-<div class="col-lg-9">
-<span class="badge bg-light text-primary mb-3">SISTEMA DE CUSTOS</span>
-<h1 class="display-5 fw-bold">Dashboard de Custos por Objeto</h1>
-<p class="lead mb-0">
-Custos apropriados por Secretaria, Departamento e Item de Custo, direto da planilha publicada.
-</p>
-</div>
-</div>
-</div>
+<header class="hero py-4 mb-4">
+  <div class="container">
+    <span class="badge badge-vermelho mb-2">SISTEMA DE CUSTOS</span>
+    <h1 class="h2 fw-bold mb-1">Dashboard de Custos por Objeto</h1>
+    <p class="mb-0 opacity-75">Custos apropriados por Secretaria, Departamento e Item de Custo.</p>
+  </div>
 </header>
 
-<main class="container py-4">
+<main class="container py-2">
 
-<div id="status" class="alert alert-info status">
-Aguardando consulta...
-</div>
+  <div id="status" class="alert alert-info status">
+    Aguardando consulta...
+  </div>
 
-<div class="card mb-4">
-<div class="card-body">
-<h5 class="card-title mb-3">Período e filtros</h5>
+  <!-- Filtros -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title-custom h6 mb-3">Período e Filtros</h5>
 
-<div class="row g-3">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label fw-semibold small">Data Inicial</label>
+          <input type="date" id="dataInicial" class="form-control form-control-sm">
+        </div>
 
-<div class="col-md-2">
-<label class="form-label fw-semibold">Data inicial</label>
-<input type="date" id="dataInicial" class="form-control">
-</div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold small">Data Final</label>
+          <input type="date" id="dataFinal" class="form-control form-control-sm">
+        </div>
 
-<div class="col-md-2">
-<label class="form-label fw-semibold">Data final</label>
-<input type="date" id="dataFinal" class="form-control">
-</div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Secretaria</label>
+          <select id="filtroSecretaria" class="form-select form-select-sm">
+            <option value="">Todas</option>
+          </select>
+        </div>
 
-<div class="col-md-3">
-<label class="form-label fw-semibold">Secretaria</label>
-<select id="filtroSecretaria" class="form-select">
-<option value="">Todas</option>
-</select>
-</div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Departamento</label>
+          <select id="filtroDepartamento" class="form-select form-select-sm">
+            <option value="">Todos</option>
+          </select>
+        </div>
 
-<div class="col-md-3">
-<label class="form-label fw-semibold">Departamento</label>
-<select id="filtroDepartamento" class="form-select">
-<option value="">Todos</option>
-</select>
-</div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold small">Item de Custo</label>
+          <select id="filtroItem" class="form-select form-select-sm">
+            <option value="">Todos</option>
+          </select>
+        </div>
 
-<div class="col-md-2">
-<label class="form-label fw-semibold">Item de Custo</label>
-<select id="filtroItem" class="form-select">
-<option value="">Todos</option>
-</select>
-</div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">Buscar Unidade / Objeto</label>
+          <input type="text" id="filtroBusca" class="form-control form-control-sm" placeholder="Ex: CMEI, Escola, Secretaria...">
+        </div>
 
-<div class="col-md-4">
-<label class="form-label fw-semibold">Buscar Unidade / Objeto</label>
-<input type="text" id="filtroBusca" class="form-control" placeholder="Ex: CMEI, Escola, Secretaria...">
-</div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button id="btnConsultar" class="btn btn-primary-custom btn-sm w-100">
+            <i class="bi bi-cloud-download me-1"></i> Atualizar do link
+          </button>
+        </div>
+      </div>
 
-<div class="col-md-2 d-flex align-items-end">
-<button id="btnConsultar" class="btn btn-primary w-100">
-<i class="bi bi-cloud-download"></i> Atualizar do link
-</button>
-</div>
+      <div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+        <button id="btnLimpar" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-eraser me-1"></i> Limpar Filtros
+        </button>
+        <button id="btnCsv" class="btn btn-outline-custom btn-sm">
+          <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar CSV
+        </button>
 
-</div>
+        <label class="btn btn-outline-custom btn-sm mb-0">
+          <i class="bi bi-file-earmark-excel me-1"></i> Carregar XLSX Local
+          <input type="file" id="inputXlsx" accept=".xlsx,.xls" style="display: none;">
+        </label>
+      </div>
 
-<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
-<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">
-<i class="bi bi-eraser"></i> Limpar filtros
-</button>
-<button id="btnCsv" class="btn btn-outline-primary btn-sm">
-<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
-</button>
+    </div>
+  </div>
 
-<label class="btn btn-outline-primary btn-sm mb-0">
-<i class="bi bi-file-earmark-excel"></i> Carregar XLSX Local
-<input type="file" id="inputXlsx" accept=".xlsx,.xls" style="display: none;">
-</label>
-</div>
+  <div id="loading" class="text-center py-4 d-none">
+    <div class="spinner-border text-danger" role="status"></div>
+    <div class="mt-2 text-muted small">Consultando e processando dados...</div>
+  </div>
 
-<div class="small-muted mt-3">
-Fonte: planilha publicada do Google Sheets (aba "Dados", cruzada com "Secretarias", "Departamentos" e "Objetos").
-</div>
+  <!-- Cards de KPI -->
+  <section class="row g-3 mb-4">
+    <div class="col-md-4 col-lg-2">
+      <div class="card kpi h-100"><div class="card-body py-3">
+        <div class="text-muted small">Total Apropriado</div>
+        <div id="totalValor" class="valor">R$ 0,00</div>
+      </div></div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+      <div class="card kpi h-100"><div class="card-body py-3">
+        <div class="text-muted small">Registros</div>
+        <div id="quantidade" class="valor">0</div>
+      </div></div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+      <div class="card kpi h-100"><div class="card-body py-3">
+        <div class="text-muted small">Secretarias</div>
+        <div id="totalSecretarias" class="valor">0</div>
+      </div></div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+      <div class="card kpi h-100"><div class="card-body py-3">
+        <div class="text-muted small">Itens de Custo</div>
+        <div id="totalItens" class="valor">0</div>
+      </div></div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+      <div class="card kpi h-100"><div class="card-body py-3">
+        <div class="text-muted small">Unidades/Objetos</div>
+        <div id="totalObjetos" class="valor">0</div>
+      </div></div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+      <div class="card h-100"><div class="card-body py-3">
+        <div class="text-muted small">Média / Lançamento</div>
+        <div id="valorMedio" class="valor">R$ 0,00</div>
+      </div></div>
+    </div>
+  </section>
 
-</div>
-</div>
+  <!-- Gráficos com Paleta Estendida Multicor -->
+  <section class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <h5 class="card-title-custom h6 mb-3">Evolução Mensal do Custo</h5>
+        <div class="chart-box"><canvas id="graficoMensal"></canvas></div>
+      </div></div>
+    </div>
 
-<div id="loading" class="text-center py-4 d-none">
-<div class="spinner-border text-primary" role="status"></div>
-<div class="mt-2 text-muted">Consultando a planilha...</div>
-</div>
+    <div class="col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <h5 class="card-title-custom h6 mb-3">Custo por Secretaria</h5>
+        <div class="chart-box"><canvas id="graficoSecretaria"></canvas></div>
+      </div></div>
+    </div>
 
-<section class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <h5 class="card-title-custom h6 mb-3">Top 10 Itens de Custo</h5>
+        <div class="chart-box"><canvas id="graficoItem"></canvas></div>
+      </div></div>
+    </div>
 
-<div class="col-md-6 col-xl">
-<div class="card kpi h-100">
-<div class="card-body">
-<div class="text-muted small">Total Apropriado</div>
-<div id="totalValor" class="valor">R$ 0,00</div>
-</div>
-</div>
-</div>
+    <div class="col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <h5 class="card-title-custom h6 mb-3">Top 10 Departamentos</h5>
+        <div class="chart-box"><canvas id="graficoDepartamento"></canvas></div>
+      </div></div>
+    </div>
+  </section>
 
-<div class="col-md-6 col-xl">
-<div class="card kpi h-100">
-<div class="card-body">
-<div class="text-muted small">Registros</div>
-<div id="quantidade" class="valor">0</div>
-</div>
-</div>
-</div>
+  <!-- Tabela de Dados -->
+  <section class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h5 class="card-title-custom h6 mb-0">Detalhamento dos Custos</h5>
+        <span id="contadorTabela" class="badge bg-secondary">0 registros</span>
+      </div>
 
-<div class="col-md-6 col-xl">
-<div class="card kpi h-100">
-<div class="card-body">
-<div class="text-muted small">Secretarias</div>
-<div id="totalSecretarias" class="valor">0</div>
-</div>
-</div>
-</div>
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th onclick="ordenarPor('data')">Data <i id="icon-data" class="bi bi-arrow-down-up small"></i></th>
+              <th onclick="ordenarPor('secretaria')">Secretaria <i id="icon-secretaria" class="bi bi-arrow-down-up small"></i></th>
+              <th onclick="ordenarPor('departamento')">Departamento <i id="icon-departamento" class="bi bi-arrow-down-up small"></i></th>
+              <th onclick="ordenarPor('objetoNome')">Unidade / Objeto <i id="icon-objetoNome" class="bi bi-arrow-down-up small"></i></th>
+              <th onclick="ordenarPor('itemCusto')">Item de Custo <i id="icon-itemCusto" class="bi bi-arrow-down-up small"></i></th>
+              <th onclick="ordenarPor('valor')">Valor Apropriado <i id="icon-valor" class="bi bi-arrow-down-up small"></i></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
 
-<div class="col-md-6 col-xl">
-<div class="card kpi h-100">
-<div class="card-body">
-<div class="text-muted small">Itens de Custo</div>
-<div id="totalItens" class="valor">0</div>
-</div>
-</div>
-</div>
+      <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+        <div class="small-muted" id="paginaInfo">Página 1</div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" id="btnPagAnterior"><i class="bi bi-chevron-left"></i> Anterior</button>
+          <button class="btn btn-outline-secondary" id="btnPagProxima">Próxima <i class="bi bi-chevron-right"></i></button>
+        </div>
+      </div>
 
-<div class="col-md-6 col-xl">
-<div class="card kpi h-100">
-<div class="card-body">
-<div class="text-muted small">Unidades/Objetos</div>
-<div id="totalObjetos" class="valor">0</div>
-</div>
-</div>
-</div>
-
-<div class="col-md-6 col-xl">
-<div class="card h-100">
-<div class="card-body">
-<div class="text-muted small">Valor Médio / Lançamento</div>
-<div id="valorMedio" class="valor">R$ 0,00</div>
-</div>
-</div>
-</div>
-
-</section>
-
-<section class="row g-4 mb-4">
-
-<div class="col-lg-6">
-<div class="card">
-<div class="card-body">
-<h5 class="card-title mb-3">Evolução Mensal do Custo</h5>
-<div class="chart-box"><canvas id="graficoMensal"></canvas></div>
-</div>
-</div>
-</div>
-
-<div class="col-lg-6">
-<div class="card">
-<div class="card-body">
-<h5 class="card-title mb-3">Custo por Secretaria</h5>
-<div class="chart-box"><canvas id="graficoSecretaria"></canvas></div>
-</div>
-</div>
-</div>
-
-<div class="col-lg-6">
-<div class="card">
-<div class="card-body">
-<h5 class="card-title mb-3">Top 10 Itens de Custo</h5>
-<div class="chart-box"><canvas id="graficoItem"></canvas></div>
-</div>
-</div>
-</div>
-
-<div class="col-lg-6">
-<div class="card">
-<div class="card-body">
-<h5 class="card-title mb-3">Top 10 Departamentos</h5>
-<div class="chart-box"><canvas id="graficoDepartamento"></canvas></div>
-</div>
-</div>
-</div>
-
-</section>
-
-<section class="card mb-4">
-<div class="card-body">
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-<div>
-<h5 class="mb-1">Detalhamento dos custos</h5>
-<div class="small-muted">Clique nos cabeçalhos para classificar. Tabela paginada por desempenho.</div>
-</div>
-<span id="contadorTabela" class="badge text-bg-primary">0 registros</span>
-</div>
-
-<div class="table-responsive">
-<table class="table table-hover table-sm align-middle">
-<thead class="table-dark">
-<tr>
-<th onclick="ordenarPor('data')">Data <i id="icon-data" class="bi bi-arrow-down-up small"></i></th>
-<th onclick="ordenarPor('secretaria')">Secretaria <i id="icon-secretaria" class="bi bi-arrow-down-up small"></i></th>
-<th onclick="ordenarPor('departamento')">Departamento <i id="icon-departamento" class="bi bi-arrow-down-up small"></i></th>
-<th onclick="ordenarPor('objetoNome')">Unidade / Objeto <i id="icon-objetoNome" class="bi bi-arrow-down-up small"></i></th>
-<th onclick="ordenarPor('itemCusto')">Item de Custo <i id="icon-itemCusto" class="bi bi-arrow-down-up small"></i></th>
-<th onclick="ordenarPor('valor')">Valor Apropriado <i id="icon-valor" class="bi bi-arrow-down-up small"></i></th>
-</tr>
-</thead>
-<tbody id="tbody"></tbody>
-</table>
-</div>
-
-<div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-<div class="small-muted" id="paginaInfo">Página 1</div>
-<div class="btn-group btn-group-sm">
-<button class="btn btn-outline-secondary" id="btnPagAnterior"><i class="bi bi-chevron-left"></i> Anterior</button>
-<button class="btn btn-outline-secondary" id="btnPagProxima">Próxima <i class="bi bi-chevron-right"></i></button>
-</div>
-</div>
-
-</div>
-</section>
-
-<div class="alert alert-info small">
-<strong>Consulta direta à planilha:</strong> os dados são buscados diretamente do link publicado do Google Sheets (formato .xlsx, com todas as abas). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar XLSX Local"</strong> para importar o arquivo baixado.
-</div>
+    </div>
+  </section>
 
 </main>
 
-<footer class="bg-dark text-white py-4">
-<div class="container text-center small">
-BI de Custos — Campo Largo/PR<br>
-Dados provenientes da planilha de custos por objeto do município.
-</div>
+<footer class="bg-dark text-white py-3">
+  <div class="container text-center small text-white-50">
+    BI de Custos — Campo Largo/PR
+  </div>
 </footer>
 
 <script>
@@ -306,26 +347,26 @@ let direcaoOrdenacao = "asc";
 let paginaAtual = 1;
 const ITENS_POR_PAGINA = 50;
 
+// Paleta completa estendida para gráficos
+const PALETA_CORES = [
+  "#20c997", "#fd7e14", "#0dcaf0", "#6f42c1", "#ffc107", 
+  "#198754", "#d63384", "#0d6efd", "#e83e8c", "#6c757d", 
+  "#17a2b8", "#28a745", "#ff851b", "#b10dc9", "#39ccd7"
+];
+
 const $ = id => document.getElementById(id);
 
 function moeda(valor){
-  return new Intl.NumberFormat("pt-BR",{
-    style:"currency",
-    currency:"BRL"
-  }).format(Number(valor)||0);
+  return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0);
 }
 
 function numero(valor){
-  if(typeof valor === "number"){
-    return Number.isFinite(valor) ? valor : 0;
-  }
-  if(valor === null || valor === undefined || valor === ""){
-    return 0;
-  }
+  if(typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
+  if(!valor) return 0;
   let texto = String(valor).replace("R$","").trim();
   if(texto.includes(".") && texto.includes(",")){
     texto = texto.replace(/\./g,"").replace(",",".");
-  }else if(texto.includes(",")){
+  } else if(texto.includes(",")){
     texto = texto.replace(",",".");
   }
   const n = Number(texto);
@@ -335,7 +376,6 @@ function numero(valor){
 function paraData(valor){
   if(valor instanceof Date && !isNaN(valor)) return valor;
   if(typeof valor === "number"){
-    // serial Excel
     const epoch = new Date(Date.UTC(1899,11,30));
     return new Date(epoch.getTime() + valor*86400000);
   }
@@ -364,14 +404,10 @@ function dataBRExibir(data){
 
 function escapeHtml(valor){
   return String(valor ?? "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
-function mostrarStatus(texto,tipo="info"){
+function mostrarStatus(texto, tipo="info"){
   const el = $("status");
   el.className = "alert alert-" + tipo + " status";
   el.textContent = texto;
@@ -387,16 +423,14 @@ async function consultarLink(){
 
   try {
     const response = await fetch(PUB_XLSX_URL);
-    if(!response.ok){
-      throw new Error(`Erro ${response.status} ao buscar a planilha.`);
-    }
+    if(!response.ok) throw new Error(`Erro ${response.status} ao buscar a planilha.`);
     const buffer = await response.arrayBuffer();
     const workbook = XLSX.read(buffer, { type:"array", cellDates:true });
     processarWorkbook(workbook);
-    mostrarStatus(`Consulta realizada com sucesso! ${dados.length.toLocaleString("pt-BR")} registros carregados do link.`, "success");
+    mostrarStatus(`Consulta realizada com sucesso! ${dados.length.toLocaleString("pt-BR")} registros carregados.`, "success");
   } catch(erro){
     console.error("Erro na consulta:", erro);
-    mostrarStatus(`Falha ao conectar com o link (possível bloqueio de CORS): ${erro.message}. Utilize "Carregar XLSX Local".`, "danger");
+    mostrarStatus(`Falha de conexão/CORS ao buscar dados online. Utilize a opção "Carregar XLSX Local".`, "danger");
   } finally {
     mostrarLoading(false);
   }
@@ -631,6 +665,7 @@ function agruparPorMes(){
 }
 
 function atualizarGraficos(){
+  // Evolução Mensal (Linha vibrante com gradiente de área)
   const mensal = agruparPorMes();
   destruirGrafico("mensal");
   graficos.mensal = new Chart($("graficoMensal"), {
@@ -643,10 +678,11 @@ function atualizarGraficos(){
       datasets:[{
         label:"Custo Total (R$)",
         data: mensal.map(([,valor])=>valor),
-        borderColor:"#0d6efd",
-        backgroundColor:"rgba(13,110,253,.15)",
+        borderColor:"#fd7e14",
+        backgroundColor:"rgba(253, 126, 20, 0.15)",
         fill:true,
-        tension:.25
+        tension:.3,
+        borderWidth: 2
       }]
     },
     options:{
@@ -656,6 +692,7 @@ function atualizarGraficos(){
     }
   });
 
+  // Custo por Secretaria (Doughnut Multicor)
   const secretaria = agrupar("secretaria", 12);
   destruirGrafico("secretaria");
   graficos.secretaria = new Chart($("graficoSecretaria"), {
@@ -664,7 +701,7 @@ function atualizarGraficos(){
       labels: secretaria.map(item=>item[0]),
       datasets:[{
         data: secretaria.map(item=>item[1]),
-        backgroundColor: ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6c757d","#6f42c1","#fd7e14","#20c997","#073b6f","#d63384","#adb5bd"]
+        backgroundColor: PALETA_CORES
       }]
     },
     options:{
@@ -674,13 +711,18 @@ function atualizarGraficos(){
     }
   });
 
+  // Top 10 Itens de Custo (Barras Horizontais com variação de cores)
   const item = agrupar("itemCusto", 10);
   destruirGrafico("item");
   graficos.item = new Chart($("graficoItem"), {
     type:"bar",
     data:{
       labels: item.map(i=>i[0]),
-      datasets:[{ label:"Valor Apropriado", backgroundColor:"#0dcaf0", data: item.map(i=>i[1]) }]
+      datasets:[{ 
+        label:"Valor Apropriado", 
+        backgroundColor: PALETA_CORES.slice(0, 10), 
+        data: item.map(i=>i[1]) 
+      }]
     },
     options:{
       indexAxis:"y",
@@ -690,13 +732,18 @@ function atualizarGraficos(){
     }
   });
 
+  // Top 10 Departamentos (Barras Horizontais com variação de cores)
   const departamento = agrupar("departamento", 10);
   destruirGrafico("departamento");
   graficos.departamento = new Chart($("graficoDepartamento"), {
     type:"bar",
     data:{
       labels: departamento.map(d=>d[0]),
-      datasets:[{ label:"Valor Apropriado", backgroundColor:"#073b6f", data: departamento.map(d=>d[1]) }]
+      datasets:[{ 
+        label:"Valor Apropriado", 
+        backgroundColor: PALETA_CORES.slice(2, 12), 
+        data: departamento.map(d=>d[1]) 
+      }]
     },
     options:{
       indexAxis:"y",
@@ -751,7 +798,6 @@ function exportarCSV(){
   }
 
   const cabecalho = ["Data","Secretaria","Departamento","Objeto de Custo","Unidade/Objeto","Item de Custo","Valor Apropriado"];
-
   const linhas = dadosFiltrados.map(item=>[
     dataBRExibir(item.data), item.secretaria, item.departamento,
     item.objetoCodigo, item.objetoNome, item.itemCusto, item.valor
@@ -772,7 +818,7 @@ function exportarCSV(){
   URL.revokeObjectURL(url);
 }
 
-// Leitor de arquivo XLSX local (fallback caso o link seja bloqueado por CORS)
+// Leitor de arquivo XLSX local (Fallback)
 $("inputXlsx").addEventListener("change", function(e){
   const file = e.target.files[0];
   if(!file) return;
@@ -806,7 +852,7 @@ $("dataFinal").addEventListener("change", atualizarDashboard);
 $("btnPagAnterior").addEventListener("click", ()=>{ if(paginaAtual>1){ paginaAtual--; atualizarTabela(); } });
 $("btnPagProxima").addEventListener("click", ()=>{ paginaAtual++; atualizarTabela(); });
 
-// Inicia consulta ao carregar a página
+// Inicializa a requisição ao carregar
 consultarLink();
 </script>
 
