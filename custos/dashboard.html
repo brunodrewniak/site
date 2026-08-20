@@ -3,173 +3,275 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard de Execução de Custos | Campo Largo</title>
+<title>Dashboard de Custos — Campo Largo</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.3/papaparse.min.js"></script>
 <style>
-:root{--amarelo:#d9ea37;--amarelo-escuro:#8c9b00;--grafite:#1f2421;--fundo:#f8f9fa}
-body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-.navbar{background:var(--grafite)!important;box-shadow:0 2px 12px #0002}.hero{background:linear-gradient(135deg,var(--grafite),#343a40);color:#fff}
-.card{border:0;box-shadow:0 4px 18px #00000012}.kpi{border-left:5px solid var(--amarelo-escuro)}
-.kpi .valor{font-size:1.45rem;font-weight:700;color:var(--grafite)}.chart-box{height:330px;position:relative}
-.table-responsive{max-height:620px}.table thead th{position:sticky;top:0;z-index:2;background:var(--grafite)!important;color:#fff;white-space:nowrap;cursor:pointer}
-.table thead th:hover{background:var(--amarelo-escuro)!important}.btn-amarelo{background:var(--amarelo);color:var(--grafite);font-weight:600;border:0}
-.btn-amarelo:hover{background:var(--amarelo-escuro);color:#fff}.badge-amarelo{background:var(--amarelo);color:var(--grafite);font-weight:600}
-.small-muted{font-size:.82rem;color:#6c757d}
+:root{--y:#d9ea37;--y2:#8c9b00;--g:#1f2421;--g2:#343a40;--bg:#f5f6f7}
+body{background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{background:var(--g)!important;box-shadow:0 2px 14px #0003}.hero{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff}
+.card{border:0;border-radius:14px;box-shadow:0 4px 18px #00000012}.kpi{border-left:5px solid var(--y2)}
+.kpi .t{font-size:.8rem;color:#6c757d}.kpi .v{font-size:1.35rem;font-weight:750;color:var(--g)}
+.chart{height:320px;position:relative}.table-responsive{max-height:650px}
+.table thead th{position:sticky;top:0;z-index:3;background:var(--g)!important;color:#fff;white-space:nowrap;cursor:pointer}
+.table thead th:hover{background:var(--y2)!important}.btn-y{background:var(--y);color:var(--g);font-weight:700;border:0}
+.btn-y:hover{background:var(--y2);color:#fff}.badge-y{background:var(--y);color:var(--g);font-weight:700}
 </style>
 </head>
 <body>
-<nav class="navbar navbar-dark sticky-top"><div class="container">
+<nav class="navbar navbar-dark sticky-top"><div class="container-fluid px-4">
 <span class="navbar-brand fw-bold"><i class="bi bi-bar-chart-fill"></i> Transparência de Custos</span>
 <span class="text-white small">Campo Largo - PR</span>
 </div></nav>
 
-<header class="hero py-5"><div class="container">
-<span class="badge bg-light text-dark mb-3">DADOS ABERTOS • GOOGLE SHEETS</span>
+<header class="hero py-5"><div class="container-fluid px-4">
+<span class="badge bg-light text-dark mb-3">DADOS PUBLICADOS • GOOGLE SHEETS (CSV)</span>
 <h1 class="display-5 fw-bold">Dashboard de Execução de Custos</h1>
-<p class="lead mb-0">Painel atualizado diretamente da planilha Google Sheets.</p>
+<p class="lead mb-0">Dados carregados via integração CSV com o Google Sheets.</p>
 </div></header>
 
-<main class="container py-4">
-<div id="status" class="alert alert-info">Carregando dados...</div>
+<main class="container-fluid px-4 py-4">
+<div id="status" class="alert alert-info">Carregando dados da planilha pública...</div>
 
 <div class="card mb-4"><div class="card-body">
-<h5 class="card-title">Filtros</h5>
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
+<span id="atualizado" class="small text-muted"></span>
+</div>
 <div class="row g-3">
-<div class="col-md-3"><label class="form-label fw-semibold">Busca geral</label><input id="busca" class="form-control" placeholder="Objeto, item, data..."></div>
-<div class="col-md-2"><label class="form-label fw-semibold">Mês</label><select id="mes" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-md-3"><label class="form-label fw-semibold">Objeto de custo</label><select id="objeto" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-md-2"><label class="form-label fw-semibold">Item de custo</label><select id="item" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-md-2 d-flex align-items-end"><button id="limpar" class="btn btn-outline-secondary w-100">Limpar filtros</button></div>
+<div class="col-lg-3 col-md-6"><label class="form-label fw-semibold">Busca geral</label><input id="busca" class="form-control" placeholder="Digite para pesquisar..."></div>
+<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Secretaria</label><select id="secretaria" class="form-select"><option value="">Todas</option></select></div>
+<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Departamento</label><select id="departamento" class="form-select"><option value="">Todos</option></select></div>
+<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Objeto</label><select id="objeto" class="form-select"><option value="">Todos</option></select></div>
+<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Item</label><select id="item" class="form-select"><option value="">Todos</option></select></div>
+<div class="col-lg-1 col-md-6 d-flex align-items-end"><button id="limpar" class="btn btn-outline-secondary w-100" title="Limpar"><i class="bi bi-x-circle"></i></button></div>
 </div>
 <div class="mt-3">
-<button id="atualizar" class="btn btn-amarelo"><i class="bi bi-arrow-clockwise"></i> Atualizar planilha</button>
+<button id="atualizar" class="btn btn-y"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
 <button id="csv" class="btn btn-outline-secondary ms-2"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
 </div>
-<div class="small-muted mt-2">Fonte: aba <strong>Dados</strong> da planilha Google Sheets. A atualização é feita diretamente pelo endpoint GViz do Google.</div>
+<div class="small text-muted mt-2">Fonte: publicação CSV pública do Google Sheets.</div>
 </div></div>
 
 <section class="row g-3 mb-4">
-<div class="col-md-3"><div class="card kpi h-100"><div class="card-body"><div class="text-muted small">Valor apropriado</div><div id="total" class="valor">R$ 0,00</div></div></div></div>
-<div class="col-md-3"><div class="card kpi h-100"><div class="card-body"><div class="text-muted small">Registros</div><div id="registros" class="valor">0</div></div></div></div>
-<div class="col-md-3"><div class="card kpi h-100"><div class="card-body"><div class="text-muted small">Objetos</div><div id="objetos" class="valor">0</div></div></div></div>
-<div class="col-md-3"><div class="card kpi h-100"><div class="card-body"><div class="text-muted small">Itens de custo</div><div id="itens" class="valor">0</div></div></div></div>
+<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Valor apropriado</div><div id="total" class="v">R$ 0,00</div></div></div></div>
+<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Registros</div><div id="reg" class="v">0</div></div></div></div>
+<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Secretarias</div><div id="secs" class="v">0</div></div></div></div>
+<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Departamentos</div><div id="deps" class="v">0</div></div></div></div>
+<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Objetos</div><div id="objs" class="v">0</div></div></div></div>
+<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Itens</div><div id="itens" class="v">0</div></div></div></div>
 </section>
 
 <section class="row g-4 mb-4">
-<div class="col-lg-7"><div class="card"><div class="card-body"><h5>Valor por mês</h5><div class="chart-box"><canvas id="grafMes"></canvas></div></div></div></div>
-<div class="col-lg-5"><div class="card"><div class="card-body"><h5>Top 10 itens de custo</h5><div class="chart-box"><canvas id="grafItem"></canvas></div></div></div></div>
+<div class="col-xl-7"><div class="card h-100"><div class="card-body"><h5>Valor por mês</h5><div class="chart"><canvas id="mes"></canvas></div></div></div></div>
+<div class="col-xl-5"><div class="card h-100"><div class="card-body"><h5>Top 10 itens</h5><div class="chart"><canvas id="itemChart"></canvas></div></div></div></div>
+<div class="col-xl-6"><div class="card h-100"><div class="card-body"><h5>Top 10 objetos</h5><div class="chart"><canvas id="objChart"></canvas></div></div></div></div>
+<div class="col-xl-6"><div class="card h-100"><div class="card-body"><h5>Valor por secretaria</h5><div class="chart"><canvas id="secChart"></canvas></div></div></div></div>
 </section>
 
 <section class="card mb-4"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="mb-1">Lançamentos</h5><div class="small-muted">Clique no cabeçalho para ordenar.</div></div><span id="contador" class="badge badge-amarelo">0 registros</span></div>
+<div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="mb-1">Detalhamento</h5><div class="small text-muted">Clique no cabeçalho para ordenar.</div></div><span id="contador" class="badge badge-y">0 registros</span></div>
 <div class="table-responsive"><table class="table table-hover table-sm align-middle"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
 </div></section>
 </main>
 
-<footer class="bg-dark text-white py-4"><div class="container text-center small">Dashboard de Transparência de Custos — Campo Largo/PR<br>Dados provenientes da planilha Google Sheets.</div></footer>
+<footer class="bg-dark text-white py-4 text-center small">Dashboard de Transparência de Custos — Campo Largo/PR</footer>
 
 <script>
-const SHEET_ID="1eOtkT4WCD2CQCg-dkvM4td1n_S_kDhrm2Re2rT7jQwg";
-const SHEET_NAME="Dados";
-const SHEET_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}&t=${Date.now()}`;
+const PUBLIC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=csv";
 
-let dados=[],filtrados=[],colunas=[],ordenacao="",direcao="asc",charts={};
-const $=id=>document.getElementById(id);
-const dinheiro=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0);
-const numero=v=>new Intl.NumberFormat("pt-BR").format(v);
-const norm=s=>String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+let dados=[], filtrados=[], colunas=[], charts={}, ord="", dir="asc";
 
-function campo(lista){return colunas.find(c=>lista.some(x=>norm(c).includes(norm(x))))}
-function num(v){
- if(typeof v==="number")return v;
- let s=String(v??"").trim().replace(/[R$\s]/g,"");
- if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");
- return Number(s)||0;
+const $=x=>document.getElementById(x);
+const money=x=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(x)||0);
+const nfmt=x=>new Intl.NumberFormat("pt-BR").format(x||0);
+const norm=x=>String(x??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+const num=x=>{if(typeof x==="number")return x;let s=String(x??"").replace(/[R$\s]/g,"").trim();if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");return Number(s)||0};
+const esc=x=>String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const campo=a=>colunas.find(c=>a.some(p=>norm(c).includes(norm(p))));
+
+function status(cls,msg){$("status").className="alert "+cls;$("status").innerHTML=msg}
+
+// Parser simples e eficiente para CSV
+function parseCSV(text) {
+  const lines = [];
+  let row = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (char === '"' && inQuotes && nextChar === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      row.push(current.trim());
+      current = '';
+    } else if ((char === '\r' || char === '\n') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') i++;
+      row.push(current.trim());
+      if (row.some(c => c !== '')) lines.push(row);
+      row = [];
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current || row.length) {
+    row.push(current.trim());
+    if (row.some(c => c !== '')) lines.push(row);
+  }
+  return lines;
 }
+
 async function carregar(){
- $("status").className="alert alert-info";
- $("status").textContent="Atualizando a aba Dados...";
- try{
-   const r=await fetch(SHEET_URL,{cache:"no-store"});
-   if(!r.ok)throw new Error("HTTP "+r.status);
-   const txt=await r.text();
-   const p=Papa.parse(txt,{header:true,skipEmptyLines:true});
-   dados=p.data; colunas=p.meta.fields||Object.keys(dados[0]||{});
-   montarFiltros(); atualizar();
-   $("status").className="alert alert-success";
-   $("status").textContent=`Atualizado com sucesso: ${numero(dados.length)} registros.`;
- }catch(e){
-   console.error(e);
-   $("status").className="alert alert-danger";
-   $("status").innerHTML=`<strong>Não foi possível carregar a planilha.</strong><br>${e.message}<br><span class="small">Verifique se a planilha está compartilhada como "Qualquer pessoa com o link — Leitor".</span>`;
- }
+  status("alert-info","<strong>Carregando...</strong> Baixando dados via CSV do Google Sheets.");
+  try{
+    const r = await fetch(PUBLIC_CSV_URL + "&t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const text = await r.text();
+    
+    const parsed = parseCSV(text);
+    if (parsed.length < 2) throw new Error("A planilha não contém linhas suficientes de dados.");
+
+    colunas = parsed[0].map((x, i) => x || ("Coluna " + (i + 1)));
+    dados = parsed.slice(1).map(row => {
+      let obj = {};
+      colunas.forEach((col, idx) => {
+        obj[col] = row[idx] ?? "";
+      });
+      return obj;
+    });
+
+    if (!dados.length) throw new Error("Nenhum registro legível encontrado.");
+
+    montarFiltros();
+    atualizar();
+    $("atualizado").textContent = "Atualizado em " + new Date().toLocaleString("pt-BR");
+    status("alert-success", `<i class="bi bi-check-circle"></i> Dados carregados com sucesso: <strong>${nfmt(dados.length)}</strong> registros.`);
+  } catch(e) {
+    console.error(e);
+    status("alert-danger", `<strong>Erro ao carregar os dados CSV:</strong> ${esc(e.message)}`);
+  }
 }
-function montarSelect(id,c){
- const el=$(id);
- const vals=[...new Set(dados.map(x=>x[c]).filter(x=>String(x).trim()))].sort((a,b)=>String(a).localeCompare(String(b),"pt-BR"));
- el.innerHTML='<option value="">Todos</option>'+vals.map(v=>`<option value="${String(v).replace(/"/g,"&quot;")}">${String(v)}</option>`).join("");
+
+function select(id, c){
+  if(!c) return;
+  const vals = [...new Set(dados.map(x => x[c]).filter(x => String(x).trim()))].sort((a,b) => String(a).localeCompare(String(b), "pt-BR"));
+  $(id).innerHTML = '<option value="">Todos</option>' + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
 }
+
 function montarFiltros(){
- const cm=campo(["mes","mês","data"]),co=campo(["objeto de custo","objeto"]),ci=campo(["item de custo","item"]);
- if(cm)montarSelect("mes",cm); if(co)montarSelect("objeto",co); if(ci)montarSelect("item",ci);
+  select("secretaria", campo(["secretaria"]));
+  select("departamento", campo(["departamento"]));
+  select("objeto", campo(["objeto de custo", "objeto"]));
+  select("item", campo(["item de custo", "item"]));
 }
+
 function aplicar(){
- const b=norm($("busca").value),m=$("mes").value,o=$("objeto").value,i=$("item").value;
- const cm=campo(["mes","mês","data"]),co=campo(["objeto de custo","objeto"]),ci=campo(["item de custo","item"]);
- filtrados=dados.filter(x=>{
-   if(b&&!Object.values(x).some(v=>norm(v).includes(b)))return false;
-   if(m&&cm&&String(x[cm])!==m)return false;
-   if(o&&co&&String(x[co])!==o)return false;
-   if(i&&ci&&String(x[ci])!==i)return false;
-   return true;
- });
- if(ordenacao)ordenar();
+  const b=norm($("busca").value), s=$("secretaria").value, d=$("departamento").value, o=$("objeto").value, i=$("item").value;
+  const cs=campo(["secretaria"]), cd=campo(["departamento"]), co=campo(["objeto de custo","objeto"]), ci=campo(["item de custo","item"]);
+  
+  filtrados = dados.filter(x => {
+    if (b && !Object.values(x).some(v => norm(v).includes(b))) return false;
+    if (s && cs && String(x[cs]) !== s) return false;
+    if (d && cd && String(x[cd]) !== d) return false;
+    if (o && co && String(x[co]) !== o) return false;
+    if (i && ci && String(x[ci]) !== i) return false;
+    return true;
+  });
+  if (ord) ordenar();
 }
-function atualizar(){aplicar();cards();graficos();tabela()}
-function cards(){
- const cv=campo(["valor apropriado","valor"]),co=campo(["objeto de custo","objeto"]),ci=campo(["item de custo","item"]);
- $("total").textContent=dinheiro(filtrados.reduce((s,x)=>s+num(x[cv]),0));
- $("registros").textContent=numero(filtrados.length);
- $("objetos").textContent=numero(co?new Set(filtrados.map(x=>x[co]).filter(Boolean)).size:0);
- $("itens").textContent=numero(ci?new Set(filtrados.map(x=>x[ci]).filter(Boolean)).size:0);
- $("contador").textContent=numero(filtrados.length)+" registros";
+
+function atualizar(){ aplicar(); kpis(); graficos(); tabela(); }
+
+function kpis(){
+  const cv=campo(["valor apropriado","valor","custo","remuneracao","salario"]), cs=campo(["secretaria"]), cd=campo(["departamento"]), co=campo(["objeto de custo","objeto"]), ci=campo(["item de custo","item","cargo"]);
+  $("total").textContent = money(filtrados.reduce((s, x) => s + num(x[cv]), 0));
+  $("reg").textContent = nfmt(filtrados.length);
+  $("secs").textContent = nfmt(cs ? new Set(filtrados.map(x => x[cs]).filter(Boolean)).size : 0);
+  $("deps").textContent = nfmt(cd ? new Set(filtrados.map(x => x[cd]).filter(Boolean)).size : 0);
+  $("objs").textContent = nfmt(co ? new Set(filtrados.map(x => x[co]).filter(Boolean)).size : 0);
+  $("itens").textContent = nfmt(ci ? new Set(filtrados.map(x => x[ci]).filter(Boolean)).size : 0);
+  $("contador").textContent = nfmt(filtrados.length) + " registros";
 }
-function agrupar(c,limite){
- const cv=campo(["valor apropriado","valor"]),m={};
- filtrados.forEach(x=>{let k=String(x[c]||"Não informado");m[k]=(m[k]||0)+num(x[cv])});
- return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,limite);
+
+function group(c, lim=10){
+  const cv=campo(["valor apropriado","valor","custo","remuneracao","salario"]), m={};
+  filtrados.forEach(x => {
+    const k = String(x[c] || "Não informado");
+    m[k] = (m[k] || 0) + num(x[cv]);
+  });
+  return Object.entries(m).sort((a,b) => b[1] - a[1]).slice(0, lim);
 }
+
 function graficos(){
- Object.values(charts).forEach(c=>c.destroy());charts={};
- const cm=campo(["mes","mês","data"]),ci=campo(["item de custo","item"]);
- if(cm){const g=agrupar(cm,30);charts.m=new Chart($("grafMes"),{type:"bar",data:{labels:g.map(x=>x[0]),datasets:[{label:"Valor",data:g.map(x=>x[1]),backgroundColor:"#8c9b00"}]},options:{responsive:true,maintainAspectRatio:false}})}
- if(ci){const g=agrupar(ci,10);charts.i=new Chart($("grafItem"),{type:"bar",data:{labels:g.map(x=>x[0]),datasets:[{label:"Valor",data:g.map(x=>x[1]),backgroundColor:"#8c9b00"}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false}})}
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+  const cm=campo(["mes","mês","data"]), ci=campo(["item de custo","item","cargo"]), co=campo(["objeto de custo","objeto","vinculo"]), cs=campo(["secretaria","departamento"]);
+  const make = (id, a, h=false) => new Chart($(id), {
+    type: "bar",
+    data: { labels: a.map(x => x[0]), datasets: [{ label: "Valor", data: a.map(x => x[1]), backgroundColor: "#8c9b00" }] },
+    options: { indexAxis: h ? "y" : "x", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+  
+  if (cm) charts.mes = make("mes", group(cm, 30));
+  if (ci) charts.item = make("itemChart", group(ci, 10), true);
+  if (co) charts.obj = make("objChart", group(co, 10), true);
+  if (cs) charts.sec = make("secChart", group(cs, 15), true);
 }
+
 function ordenar(){
- filtrados.sort((a,b)=>{
-   const A=a[ordenacao],B=b[ordenacao],na=num(A),nb=num(B);
-   if(String(A).trim()&&String(B).trim()&&!isNaN(na)&&!isNaN(nb)&&/[\d]/.test(String(A)+String(B)))return direcao==="asc"?na-nb:nb-na;
-   return direcao==="asc"?String(A??"").localeCompare(String(B??""),"pt-BR"):String(B??"").localeCompare(String(A??""),"pt-BR");
- });
+  filtrados.sort((a,b) => {
+    const A = a[ord], B = b[ord], na = num(A), nb = num(B);
+    if (String(A).trim() && String(B).trim() && !isNaN(na) && !isNaN(nb)) {
+      return dir === "asc" ? na - nb : nb - na;
+    }
+    return dir === "asc" ? String(A??"").localeCompare(String(B??""), "pt-BR") : String(B??"").localeCompare(String(A??""), "pt-BR");
+  });
 }
-function ordenarPor(c){if(ordenacao===c)direcao=direcao==="asc"?"desc":"asc";else{ordenacao=c;direcao="asc"}ordenar();tabela()}
-function esc(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+
+function ordenarPor(c){
+  if (ord === c) dir = dir === "asc" ? "desc" : "asc";
+  else { ord = c; dir = "asc"; }
+  ordenar();
+  tabela();
+}
+
 function tabela(){
- $("thead").innerHTML=colunas.map(c=>`<th onclick="ordenarPor('${String(c).replace(/'/g,"\\'")}')">${esc(c)} <i class="bi bi-arrow-down-up small"></i></th>`).join("");
- $("tbody").innerHTML=filtrados.length?filtrados.map(x=>"<tr>"+colunas.map(c=>`<td>${esc(x[c])}</td>`).join("")+"</tr>").join(""):`<tr><td colspan="${colunas.length}" class="text-center">Nenhum registro encontrado.</td></tr>`;
+  $("thead").innerHTML = colunas.map(c => `<th onclick="ordenarPor('${String(c).replace(/'/g, "\\'")}')">${esc(c)} <i class="bi bi-arrow-down-up small"></i></th>`).join("");
+  $("tbody").innerHTML = filtrados.length 
+    ? filtrados.map(x => "<tr>" + colunas.map(c => `<td>${esc(x[c])}</td>`).join("") + "</tr>").join("")
+    : `<tr><td colspan="${colunas.length}" class="text-center py-4">Nenhum registro encontrado.</td></tr>`;
 }
+
 function exportar(){
- if(!filtrados.length)return;
- const rows=[colunas,...filtrados.map(x=>colunas.map(c=>x[c]))];
- const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\n");
- const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="dashboard_custos.csv";a.click();
+  const rows = [colunas, ...filtrados.map(x => colunas.map(c => x[c]))];
+  const csv = rows.map(r => r.map(v => `"${String(v??"").replace(/"/g, '""')}"`).join(";")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv" }));
+  a.download = "dashboard_custos.csv";
+  a.click();
 }
-$("atualizar").onclick=carregar;$("busca").oninput=atualizar;$("mes").onchange=atualizar;$("objeto").onchange=atualizar;$("item").onchange=atualizar;
-$("limpar").onclick=()=>{$("busca").value="";$("mes").value="";$("objeto").value="";$("item").value="";ordenacao="";atualizar()};
-$("csv").onclick=exportar;
+
+$("atualizar").onclick = carregar;
+$("csv").onclick = exportar;
+$("busca").oninput = atualizar;
+$("secretaria").onchange = atualizar;
+$("departamento").onchange = atualizar;
+$("objeto").onchange = atualizar;
+$("item").onchange = atualizar;
+$("limpar").onclick = () => {
+  $("busca").value = ""; $("secretaria").value = ""; $("departamento").value = "";
+  $("objeto").value = ""; $("item").value = ""; ord = "";
+  atualizar();
+};
+
 carregar();
 </script>
 </body>
