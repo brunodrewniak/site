@@ -3,276 +3,163 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard de Custos — Campo Largo</title>
+<title>Dashboard Dinâmico — BI Campo Largo</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-:root{--y:#d9ea37;--y2:#8c9b00;--g:#1f2421;--g2:#343a40;--bg:#f5f6f7}
-body{background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-.navbar{background:var(--g)!important;box-shadow:0 2px 14px #0003}.hero{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff}
-.card{border:0;border-radius:14px;box-shadow:0 4px 18px #00000012}.kpi{border-left:5px solid var(--y2)}
-.kpi .t{font-size:.8rem;color:#6c757d}.kpi .v{font-size:1.35rem;font-weight:750;color:var(--g)}
-.chart{height:320px;position:relative}.table-responsive{max-height:650px}
-.table thead th{position:sticky;top:0;z-index:3;background:var(--g)!important;color:#fff;white-space:nowrap;cursor:pointer}
-.table thead th:hover{background:var(--y2)!important}.btn-y{background:var(--y);color:var(--g);font-weight:700;border:0}
-.btn-y:hover{background:var(--y2);color:#fff}.badge-y{background:var(--y);color:var(--g);font-weight:700}
+  :root { --g1: #1f2421; --g2: #343a40; --y2: #8c9b00; --bg: #f8f9fa; }
+  body { background: var(--bg); font-family: system-ui, -apple-system, sans-serif; }
+  .navbar { background: var(--g1) !important; }
+  .hero { background: linear-gradient(135deg, var(--g1), var(--g2)); color: #fff; }
+  .card-kpi { border: 0; border-left: 5px solid var(--y2); box-shadow: 0 4px 12px #0000000d; }
+  .kpi-title { font-size: .8rem; color: #6c757d; text-transform: uppercase; font-weight: 600; }
+  .kpi-value { font-size: 1.35rem; font-weight: 700; color: var(--g1); }
+  .chart-box { height: 320px; position: relative; }
 </style>
 </head>
 <body>
-<nav class="navbar navbar-dark sticky-top"><div class="container-fluid px-4">
-<span class="navbar-brand fw-bold"><i class="bi bi-bar-chart-fill"></i> Transparência de Custos</span>
-<span class="text-white small">Campo Largo - PR</span>
+
+<nav class="navbar navbar-dark"><div class="container-fluid px-4">
+  <span class="navbar-brand fw-bold"><i class="bi bi-graph-up-arrow"></i> BI de Custos Municipal</span>
 </div></nav>
 
-<header class="hero py-5"><div class="container-fluid px-4">
-<span class="badge bg-light text-dark mb-3">DADOS PUBLICADOS • GOOGLE SHEETS (CSV)</span>
-<h1 class="display-5 fw-bold">Dashboard de Execução de Custos</h1>
-<p class="lead mb-0">Dados carregados via integração CSV com o Google Sheets.</p>
+<header class="hero py-4 mb-4"><div class="container-fluid px-4">
+  <h1 class="display-6 fw-bold">Painel Conectado ao Google Sheets</h1>
+  <p class="lead mb-0">Atualização em tempo real sincronizada com as abas da planilha pública.</p>
 </div></header>
 
-<main class="container-fluid px-4 py-4">
-<div id="status" class="alert alert-info">Carregando dados da planilha pública...</div>
-
+<main class="container-fluid px-4 mb-5">
 <div class="card mb-4"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3">
-<h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
-<span id="atualizado" class="small text-muted"></span>
-</div>
-<div class="row g-3">
-<div class="col-lg-3 col-md-6"><label class="form-label fw-semibold">Busca geral</label><input id="busca" class="form-control" placeholder="Digite para pesquisar..."></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Secretaria</label><select id="secretaria" class="form-select"><option value="">Todas</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Departamento</label><select id="departamento" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Objeto</label><select id="objeto" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Item</label><select id="item" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-1 col-md-6 d-flex align-items-end"><button id="limpar" class="btn btn-outline-secondary w-100" title="Limpar"><i class="bi bi-x-circle"></i></button></div>
-</div>
-<div class="mt-3">
-<button id="atualizar" class="btn btn-y"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
-<button id="csv" class="btn btn-outline-secondary ms-2"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
-</div>
-<div class="small text-muted mt-2">Fonte: publicação CSV pública do Google Sheets.</div>
+  <div class="row g-3 align-items-center">
+    <div class="col-md-5">
+      <label class="form-label fw-bold text-success"><i class="bi bi-layers-fill"></i> Selecionar Base / Aba:</label>
+      <select id="seletorAba" class="form-select form-select-lg border-success fw-bold">
+        <option value="BI_Dados">BI_Dados (Lançamentos de Custos)</option>
+        <option value="BI_Objetos">BI_Objetos (Estrutura de Custos)</option>
+        <option value="BI_Secretarias">BI_Secretarias (Órgãos)</option>
+        <option value="BI_Quantidades">BI_Quantidades (Escolas/Alunos)</option>
+      </select>
+    </div>
+    <div class="col-md-7 text-end">
+      <span id="statusText" class="badge bg-secondary p-2 me-2">Aguardando</span>
+      <button id="btnAtualizar" class="btn btn-success fw-bold"><i class="bi bi-arrow-clockwise"></i> Recarregar Dados</button>
+    </div>
+  </div>
 </div></div>
 
-<section class="row g-3 mb-4">
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Valor apropriado</div><div id="total" class="v">R$ 0,00</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Registros</div><div id="reg" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Secretarias</div><div id="secs" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Departamentos</div><div id="deps" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Objetos</div><div id="objs" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Itens</div><div id="itens" class="v">0</div></div></div></div>
-</section>
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="card card-kpi p-3"><div class="kpi-title">Total Registros</div><div id="kpiTotal" class="kpi-value">0</div></div></div>
+  <div class="col-md-3"><div class="card card-kpi p-3"><div class="kpi-title">Soma do Valor</div><div id="kpiSoma" class="kpi-value">R$ 0,00</div></div></div>
+  <div class="col-md-3"><div class="card card-kpi p-3"><div class="kpi-title">Categorias Únicas</div><div id="kpiCategorias" class="kpi-value">0</div></div></div>
+  <div class="col-md-3"><div class="card card-kpi p-3"><div class="kpi-title">Última Sincronização</div><div id="kpiData" class="kpi-value" style="font-size:1rem;">-</div></div></div>
+</div>
 
-<section class="row g-4 mb-4">
-<div class="col-xl-7"><div class="card h-100"><div class="card-body"><h5>Valor por mês</h5><div class="chart"><canvas id="mes"></canvas></div></div></div></div>
-<div class="col-xl-5"><div class="card h-100"><div class="card-body"><h5>Top 10 itens</h5><div class="chart"><canvas id="itemChart"></canvas></div></div></div></div>
-<div class="col-xl-6"><div class="card h-100"><div class="card-body"><h5>Top 10 objetos</h5><div class="chart"><canvas id="objChart"></canvas></div></div></div></div>
-<div class="col-xl-6"><div class="card h-100"><div class="card-body"><h5>Valor por secretaria</h5><div class="chart"><canvas id="secChart"></canvas></div></div></div></div>
-</section>
+<div class="row g-4 mb-4">
+  <div class="col-lg-8"><div class="card p-3 shadow-sm"><h5 class="fw-bold mb-3">Top Categorias / Itens</h5><div class="chart-box"><canvas id="chartPrincipal"></canvas></div></div></div>
+  <div class="col-lg-4"><div class="card p-3 shadow-sm"><h5 class="fw-bold mb-3">Distribuição Proporcional</h5><div class="chart-box"><canvas id="chartRosca"></canvas></div></div></div>
+</div>
 
-<section class="card mb-4"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="mb-1">Detalhamento</h5><div class="small text-muted">Clique no cabeçalho para ordenar.</div></div><span id="contador" class="badge badge-y">0 registros</span></div>
-<div class="table-responsive"><table class="table table-hover table-sm align-middle"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
-</div></section>
+<div class="card shadow-sm"><div class="card-body">
+  <h5 class="fw-bold mb-3">Tabela do Banco de Dados</h5>
+  <div class="table-responsive" style="max-height:400px">
+    <table class="table table-hover table-striped align-middle"><thead class="table-dark" id="thead"></thead><tbody id="tbody"></tbody></table>
+  </div>
+</div></div>
 </main>
 
-<footer class="bg-dark text-white py-4 text-center small">Dashboard de Transparência de Custos — Campo Largo/PR</footer>
-
 <script>
-const PUBLIC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=csv";
+const SPREADSHEET_KEY = "2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy";
+let chart1 = null, chart2 = null;
 
-let dados=[], filtrados=[], colunas=[], charts={}, ord="", dir="asc";
+const fmtMoney = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+const fmtNum = v => new Intl.NumberFormat('pt-BR').format(v || 0);
 
-const $=x=>document.getElementById(x);
-const money=x=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(x)||0);
-const nfmt=x=>new Intl.NumberFormat("pt-BR").format(x||0);
-const norm=x=>String(x??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
-const num=x=>{if(typeof x==="number")return x;let s=String(x??"").replace(/[R$\s]/g,"").trim();if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");return Number(s)||0};
-const esc=x=>String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const campo=a=>colunas.find(c=>a.some(p=>norm(c).includes(norm(p))));
+async function carregarDados() {
+  const aba = document.getElementById("seletorAba").value;
+  const statusEl = document.getElementById("statusText");
+  statusEl.className = "badge bg-warning p-2 me-2";
+  statusEl.textContent = "Carregando...";
 
-function status(cls,msg){$("status").className="alert "+cls;$("status").innerHTML=msg}
+  const url = `https://docs.google.com/spreadsheets/d/e/${SPREADSHEET_KEY}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(aba)}&t=${Date.now()}`;
 
-// Parser simples e eficiente para CSV
-function parseCSV(text) {
-  const lines = [];
-  let row = [];
-  let current = '';
-  let inQuotes = false;
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    const jsonStr = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+    const json = JSON.parse(jsonStr);
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-
-    if (char === '"' && inQuotes && nextChar === '"') {
-      current += '"';
-      i++;
-    } else if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      row.push(current.trim());
-      current = '';
-    } else if ((char === '\r' || char === '\n') && !inQuotes) {
-      if (char === '\r' && nextChar === '\n') i++;
-      row.push(current.trim());
-      if (row.some(c => c !== '')) lines.push(row);
-      row = [];
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  if (current || row.length) {
-    row.push(current.trim());
-    if (row.some(c => c !== '')) lines.push(row);
-  }
-  return lines;
-}
-
-async function carregar(){
-  status("alert-info","<strong>Carregando...</strong> Baixando dados via CSV do Google Sheets.");
-  try{
-    const r = await fetch(PUBLIC_CSV_URL + "&t=" + Date.now(), { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const text = await r.text();
-    
-    const parsed = parseCSV(text);
-    if (parsed.length < 2) throw new Error("A planilha não contém linhas suficientes de dados.");
-
-    colunas = parsed[0].map((x, i) => x || ("Coluna " + (i + 1)));
-    dados = parsed.slice(1).map(row => {
-      let obj = {};
-      colunas.forEach((col, idx) => {
-        obj[col] = row[idx] ?? "";
+    const cols = json.table.cols.map((c, i) => c.label || c.id || `Coluna ${i+1}`);
+    const rows = json.table.rows.map(r => {
+      let item = {};
+      cols.forEach((c, i) => {
+        const val = r.c[i];
+        item[c] = val ? (val.f !== undefined ? val.f : val.v) : "";
       });
-      return obj;
+      return item;
     });
 
-    if (!dados.length) throw new Error("Nenhum registro legível encontrado.");
-
-    montarFiltros();
-    atualizar();
-    $("atualizado").textContent = "Atualizado em " + new Date().toLocaleString("pt-BR");
-    status("alert-success", `<i class="bi bi-check-circle"></i> Dados carregados com sucesso: <strong>${nfmt(dados.length)}</strong> registros.`);
-  } catch(e) {
-    console.error(e);
-    status("alert-danger", `<strong>Erro ao carregar os dados CSV:</strong> ${esc(e.message)}`);
+    renderizar(cols, rows);
+    statusEl.className = "badge bg-success p-2 me-2";
+    statusEl.textContent = "Sincronizado";
+  } catch (err) {
+    statusEl.className = "badge bg-danger p-2 me-2";
+    statusEl.textContent = "Erro na conexão";
   }
 }
 
-function select(id, c){
-  if(!c) return;
-  const vals = [...new Set(dados.map(x => x[c]).filter(x => String(x).trim()))].sort((a,b) => String(a).localeCompare(String(b), "pt-BR"));
-  $(id).innerHTML = '<option value="">Todos</option>' + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
-}
+function renderizar(cols, rows) {
+  document.getElementById("kpiTotal").textContent = fmtNum(rows.length);
+  document.getElementById("kpiData").textContent = new Date().toLocaleTimeString('pt-BR');
 
-function montarFiltros(){
-  select("secretaria", campo(["secretaria"]));
-  select("departamento", campo(["departamento"]));
-  select("objeto", campo(["objeto de custo", "objeto"]));
-  select("item", campo(["item de custo", "item"]));
-}
+  const colValor = cols.find(c => /valor|alunos|professores/i.test(c));
+  const colGrupo = cols.find(c => /item|descrição|secretaria|departamento|nome/i.test(c)) || cols[0];
 
-function aplicar(){
-  const b=norm($("busca").value), s=$("secretaria").value, d=$("departamento").value, o=$("objeto").value, i=$("item").value;
-  const cs=campo(["secretaria"]), cd=campo(["departamento"]), co=campo(["objeto de custo","objeto"]), ci=campo(["item de custo","item"]);
-  
-  filtrados = dados.filter(x => {
-    if (b && !Object.values(x).some(v => norm(v).includes(b))) return false;
-    if (s && cs && String(x[cs]) !== s) return false;
-    if (d && cd && String(x[cd]) !== d) return false;
-    if (o && co && String(x[co]) !== o) return false;
-    if (i && ci && String(x[ci]) !== i) return false;
-    return true;
+  let somaTotal = 0;
+  let agrupado = {};
+
+  rows.forEach(r => {
+    let rawVal = r[colValor];
+    let num = typeof rawVal === 'number' ? rawVal : parseFloat(String(rawVal).replace(/[R$\\s]/g, '').replace(',', '.')) || 0;
+    somaTotal += num;
+
+    let chave = String(r[colGrupo] || "Outros").trim();
+    agrupado[chave] = (agrupado[chave] || 0) + num;
   });
-  if (ord) ordenar();
-}
 
-function atualizar(){ aplicar(); kpis(); graficos(); tabela(); }
+  document.getElementById("kpiSoma").textContent = colValor ? fmtMoney(somaTotal) : "N/A";
+  document.getElementById("kpiCategorias").textContent = fmtNum(Object.keys(agrupado).length);
 
-function kpis(){
-  const cv=campo(["valor apropriado","valor","custo","remuneracao","salario"]), cs=campo(["secretaria"]), cd=campo(["departamento"]), co=campo(["objeto de custo","objeto"]), ci=campo(["item de custo","item","cargo"]);
-  $("total").textContent = money(filtrados.reduce((s, x) => s + num(x[cv]), 0));
-  $("reg").textContent = nfmt(filtrados.length);
-  $("secs").textContent = nfmt(cs ? new Set(filtrados.map(x => x[cs]).filter(Boolean)).size : 0);
-  $("deps").textContent = nfmt(cd ? new Set(filtrados.map(x => x[cd]).filter(Boolean)).size : 0);
-  $("objs").textContent = nfmt(co ? new Set(filtrados.map(x => x[co]).filter(Boolean)).size : 0);
-  $("itens").textContent = nfmt(ci ? new Set(filtrados.map(x => x[ci]).filter(Boolean)).size : 0);
-  $("contador").textContent = nfmt(filtrados.length) + " registros";
-}
+  const top10 = Object.entries(agrupado).sort((a,b) => b[1] - a[1]).slice(0, 10);
 
-function group(c, lim=10){
-  const cv=campo(["valor apropriado","valor","custo","remuneracao","salario"]), m={};
-  filtrados.forEach(x => {
-    const k = String(x[c] || "Não informado");
-    m[k] = (m[k] || 0) + num(x[cv]);
+  if (chart1) chart1.destroy();
+  if (chart2) chart2.destroy();
+
+  chart1 = new Chart(document.getElementById('chartPrincipal'), {
+    type: 'bar',
+    data: {
+      labels: top10.map(x => x[0]),
+      datasets: [{ label: colValor || 'Registros', data: top10.map(x => x[1]), backgroundColor: '#8c9b00' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
   });
-  return Object.entries(m).sort((a,b) => b[1] - a[1]).slice(0, lim);
-}
 
-function graficos(){
-  Object.values(charts).forEach(c => c.destroy());
-  charts = {};
-  const cm=campo(["mes","mês","data"]), ci=campo(["item de custo","item","cargo"]), co=campo(["objeto de custo","objeto","vinculo"]), cs=campo(["secretaria","departamento"]);
-  const make = (id, a, h=false) => new Chart($(id), {
-    type: "bar",
-    data: { labels: a.map(x => x[0]), datasets: [{ label: "Valor", data: a.map(x => x[1]), backgroundColor: "#8c9b00" }] },
-    options: { indexAxis: h ? "y" : "x", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  chart2 = new Chart(document.getElementById('chartRosca'), {
+    type: 'doughnut',
+    data: {
+      labels: top10.slice(0, 5).map(x => x[0]),
+      datasets: [{ data: top10.slice(0, 5).map(x => x[1]), backgroundColor: ['#1f2421','#343a40','#8c9b00','#d9ea37','#6c757d'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
   });
-  
-  if (cm) charts.mes = make("mes", group(cm, 30));
-  if (ci) charts.item = make("itemChart", group(ci, 10), true);
-  if (co) charts.obj = make("objChart", group(co, 10), true);
-  if (cs) charts.sec = make("secChart", group(cs, 15), true);
+
+  document.getElementById("thead").innerHTML = `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
+  document.getElementById("tbody").innerHTML = rows.slice(0, 50).map(r => `<tr>${cols.map(c => `<td>${r[c] ?? ''}</td>`).join('')}</tr>`).join('');
 }
 
-function ordenar(){
-  filtrados.sort((a,b) => {
-    const A = a[ord], B = b[ord], na = num(A), nb = num(B);
-    if (String(A).trim() && String(B).trim() && !isNaN(na) && !isNaN(nb)) {
-      return dir === "asc" ? na - nb : nb - na;
-    }
-    return dir === "asc" ? String(A??"").localeCompare(String(B??""), "pt-BR") : String(B??"").localeCompare(String(A??""), "pt-BR");
-  });
-}
-
-function ordenarPor(c){
-  if (ord === c) dir = dir === "asc" ? "desc" : "asc";
-  else { ord = c; dir = "asc"; }
-  ordenar();
-  tabela();
-}
-
-function tabela(){
-  $("thead").innerHTML = colunas.map(c => `<th onclick="ordenarPor('${String(c).replace(/'/g, "\\'")}')">${esc(c)} <i class="bi bi-arrow-down-up small"></i></th>`).join("");
-  $("tbody").innerHTML = filtrados.length 
-    ? filtrados.map(x => "<tr>" + colunas.map(c => `<td>${esc(x[c])}</td>`).join("") + "</tr>").join("")
-    : `<tr><td colspan="${colunas.length}" class="text-center py-4">Nenhum registro encontrado.</td></tr>`;
-}
-
-function exportar(){
-  const rows = [colunas, ...filtrados.map(x => colunas.map(c => x[c]))];
-  const csv = rows.map(r => r.map(v => `"${String(v??"").replace(/"/g, '""')}"`).join(";")).join("\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv" }));
-  a.download = "dashboard_custos.csv";
-  a.click();
-}
-
-$("atualizar").onclick = carregar;
-$("csv").onclick = exportar;
-$("busca").oninput = atualizar;
-$("secretaria").onchange = atualizar;
-$("departamento").onchange = atualizar;
-$("objeto").onchange = atualizar;
-$("item").onchange = atualizar;
-$("limpar").onclick = () => {
-  $("busca").value = ""; $("secretaria").value = ""; $("departamento").value = "";
-  $("objeto").value = ""; $("item").value = ""; ord = "";
-  atualizar();
-};
-
-carregar();
+document.getElementById("seletorAba").addEventListener("change", carregarDados);
+document.getElementById("btnAtualizar").addEventListener("click", carregarDados);
+carregarDados();
 </script>
 </body>
 </html>
