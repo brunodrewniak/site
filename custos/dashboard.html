@@ -16,24 +16,26 @@
 <style>
 :root {
   --vermelho: #bf1b20;
-  --azul-escuro: #1e3c72;
-  --azul-gradiente: linear-gradient(135deg, #1e3c72, #2a5298);
-  --fundo: #f4f6f9;
+  --vermelho-escuro: #961317;
+  --escuro: #212529;
+  --fundo: #f8f9fa;
 }
 
 body {
   background-color: var(--fundo);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--escuro);
 }
 
 /* Navbar & Header */
 .navbar {
-  background-color: var(--azul-escuro) !important;
+  background-color: var(--escuro) !important;
   box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  border-bottom: 3px solid var(--vermelho);
 }
 
 .hero {
-  background: var(--azul-gradiente);
+  background: linear-gradient(135deg, #1a1d20, #2c3036);
   color: #fff;
   border-bottom: 4px solid var(--vermelho);
 }
@@ -51,7 +53,7 @@ body {
 }
 
 .card-title-custom {
-  color: var(--azul-escuro);
+  color: var(--escuro);
   font-weight: 700;
 }
 
@@ -62,7 +64,7 @@ body {
 .kpi .valor {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--azul-escuro);
+  color: var(--escuro);
 }
 
 /* Botões */
@@ -73,18 +75,28 @@ body {
 }
 
 .btn-primary-custom:hover {
-  background-color: #a01419;
-  border-color: #a01419;
+  background-color: var(--vermelho-escuro);
+  border-color: var(--vermelho-escuro);
   color: #fff;
 }
 
 .btn-outline-custom {
-  color: var(--azul-escuro);
-  border-color: var(--azul-escuro);
+  color: var(--escuro);
+  border-color: var(--escuro);
 }
 
 .btn-outline-custom:hover {
-  background-color: var(--azul-escuro);
+  background-color: var(--escuro);
+  color: #fff;
+}
+
+.btn-outline-vermelho {
+  color: var(--vermelho);
+  border-color: var(--vermelho);
+}
+
+.btn-outline-vermelho:hover {
+  background-color: var(--vermelho);
   color: #fff;
 }
 
@@ -105,7 +117,7 @@ body {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
-  background-color: var(--azul-escuro) !important;
+  background-color: var(--escuro) !important;
   color: #fff;
 }
 
@@ -202,7 +214,7 @@ body {
           <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar CSV
         </button>
 
-        <label class="btn btn-outline-custom btn-sm mb-0">
+        <label class="btn btn-outline-vermelho btn-sm mb-0">
           <i class="bi bi-file-earmark-excel me-1"></i> Carregar XLSX Local
           <input type="file" id="inputXlsx" accept=".xlsx,.xls" style="display: none;">
         </label>
@@ -292,7 +304,7 @@ body {
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h5 class="card-title-custom h6 mb-0">Detalhamento dos Custos</h5>
-        <span id="contadorTabela" class="badge bg-secondary">0 registros</span>
+        <span id="contadorTabela" class="badge badge-vermelho">0 registros</span>
       </div>
 
       <div class="table-responsive">
@@ -347,7 +359,7 @@ let direcaoOrdenacao = "asc";
 let paginaAtual = 1;
 const ITENS_POR_PAGINA = 50;
 
-// Paleta completa estendida para gráficos
+// Paleta completa estendida para os gráficos
 const PALETA_CORES = [
   "#20c997", "#fd7e14", "#0dcaf0", "#6f42c1", "#ffc107", 
   "#198754", "#d63384", "#0d6efd", "#e83e8c", "#6c757d", 
@@ -665,7 +677,7 @@ function agruparPorMes(){
 }
 
 function atualizarGraficos(){
-  // Evolução Mensal (Linha vibrante com gradiente de área)
+  // Evolução Mensal (Linha vibrante com área)
   const mensal = agruparPorMes();
   destruirGrafico("mensal");
   graficos.mensal = new Chart($("graficoMensal"), {
@@ -678,8 +690,8 @@ function atualizarGraficos(){
       datasets:[{
         label:"Custo Total (R$)",
         data: mensal.map(([,valor])=>valor),
-        borderColor:"#fd7e14",
-        backgroundColor:"rgba(253, 126, 20, 0.15)",
+        borderColor:"#bf1b20",
+        backgroundColor:"rgba(191, 27, 32, 0.12)",
         fill:true,
         tension:.3,
         borderWidth: 2
