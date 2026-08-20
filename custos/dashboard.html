@@ -26,13 +26,13 @@ body{background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,
 </div></nav>
 
 <header class="hero py-5"><div class="container-fluid px-4">
-<span class="badge bg-light text-dark mb-3">DADOS CONECTADOS • GOOGLE VISUALIZATION API</span>
+<span class="badge bg-light text-dark mb-3">DADOS PUBLICADOS • GOOGLE SHEETS (CSV)</span>
 <h1 class="display-5 fw-bold">Dashboard de Execução de Custos</h1>
-<p class="lead mb-0">Conexão direta à planilha pública via endpoint de consulta nativo.</p>
+<p class="lead mb-0">Dados carregados via integração CSV com o Google Sheets.</p>
 </div></header>
 
 <main class="container-fluid px-4 py-4">
-<div id="status" class="alert alert-info">Conectando à planilha do Google Sheets...</div>
+<div id="status" class="alert alert-info">Carregando dados da planilha pública...</div>
 
 <div class="card mb-4"><div class="card-body">
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -51,6 +51,7 @@ body{background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,
 <button id="atualizar" class="btn btn-y"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
 <button id="csv" class="btn btn-outline-secondary ms-2"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
 </div>
+<div class="small text-muted mt-2">Fonte: publicação CSV pública do Google Sheets.</div>
 </div></div>
 
 <section class="row g-3 mb-4">
@@ -78,8 +79,7 @@ body{background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,
 <footer class="bg-dark text-white py-4 text-center small">Dashboard de Transparência de Custos — Campo Largo/PR</footer>
 
 <script>
-// Endpoint de consulta nativo do Google (CORS liberado nativamente pelo Google)
-const GVIZ_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/gviz/tq?tqx=out:json";
+const PUBLIC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=csv";
 
 let dados=[], filtrados=[], colunas=[], charts={}, ord="", dir="asc";
 
@@ -93,42 +93,70 @@ const campo=a=>colunas.find(c=>a.some(p=>norm(c).includes(norm(p))));
 
 function status(cls,msg){$("status").className="alert "+cls;$("status").innerHTML=msg}
 
+// Parser simples e eficiente para CSV
+function parseCSV(text) {
+  const lines = [];
+  let row = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (char === '"' && inQuotes && nextChar === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      row.push(current.trim());
+      current = '';
+    } else if ((char === '\r' || char === '\n') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') i++;
+      row.push(current.trim());
+      if (row.some(c => c !== '')) lines.push(row);
+      row = [];
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current || row.length) {
+    row.push(current.trim());
+    if (row.some(c => c !== '')) lines.push(row);
+  }
+  return lines;
+}
+
 async function carregar(){
-  status("alert-info","<strong>Carregando...</strong> Baixando dados diretamente do Google Sheets.");
+  status("alert-info","<strong>Carregando...</strong> Baixando dados via CSV do Google Sheets.");
   try{
-    const r = await fetch(GVIZ_URL + "&t=" + Date.now(), { cache: "no-store" });
+    const r = await fetch(PUBLIC_CSV_URL + "&t=" + Date.now(), { cache: "no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
-    
     const text = await r.text();
-    // O endpoint retorna uma função JS "google.visualization.Query.setResponse({...});"
-    // Extrai o JSON de dentro da chamada
-    const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-    const json = JSON.parse(jsonText);
+    
+    const parsed = parseCSV(text);
+    if (parsed.length < 2) throw new Error("A planilha não contém linhas suficientes de dados.");
 
-    if (json.status === "error") throw new Error(json.errors[0].detailed_message);
-
-    const table = json.table;
-    colunas = table.cols.map((col, idx) => col.label || col.id || ("Coluna " + (idx + 1)));
-
-    dados = table.rows.map(row => {
+    colunas = parsed[0].map((x, i) => x || ("Coluna " + (i + 1)));
+    dados = parsed.slice(1).map(row => {
       let obj = {};
       colunas.forEach((col, idx) => {
-        const cell = row.c[idx];
-        // Extrai o valor formatado 'f' ou o valor simples 'v'
-        obj[col] = cell ? (cell.f !== undefined ? cell.f : cell.v) : "";
+        obj[col] = row[idx] ?? "";
       });
       return obj;
     });
 
-    if (!dados.length) throw new Error("A planilha não contém dados.");
+    if (!dados.length) throw new Error("Nenhum registro legível encontrado.");
 
     montarFiltros();
     atualizar();
     $("atualizado").textContent = "Atualizado em " + new Date().toLocaleString("pt-BR");
-    status("alert-success", `<i class="bi bi-check-circle"></i> Conexão estabelecida com sucesso: <strong>${nfmt(dados.length)}</strong> registros carregados.`);
+    status("alert-success", `<i class="bi bi-check-circle"></i> Dados carregados com sucesso: <strong>${nfmt(dados.length)}</strong> registros.`);
   } catch(e) {
     console.error(e);
-    status("alert-danger", `<strong>Erro na conexão com o Google Sheets:</strong> ${esc(e.message)}`);
+    status("alert-danger", `<strong>Erro ao carregar os dados CSV:</strong> ${esc(e.message)}`);
   }
 }
 
