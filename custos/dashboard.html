@@ -3,276 +3,812 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard de Custos — Campo Largo</title>
+<title>BI de Custos | Campo Largo</title>
+
+<!-- Bootstrap 5 & Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- SheetJS (leitura de XLSX no navegador) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <style>
-:root{--y:#d9ea37;--y2:#8c9b00;--g:#1f2421;--g2:#343a40;--bg:#f5f6f7}
-body{background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-.navbar{background:var(--g)!important;box-shadow:0 2px 14px #0003}.hero{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff}
-.card{border:0;border-radius:14px;box-shadow:0 4px 18px #00000012}.kpi{border-left:5px solid var(--y2)}
-.kpi .t{font-size:.8rem;color:#6c757d}.kpi .v{font-size:1.35rem;font-weight:750;color:var(--g)}
-.chart{height:320px;position:relative}.table-responsive{max-height:650px}
-.table thead th{position:sticky;top:0;z-index:3;background:var(--g)!important;color:#fff;white-space:nowrap;cursor:pointer}
-.table thead th:hover{background:var(--y2)!important}.btn-y{background:var(--y);color:var(--g);font-weight:700;border:0}
-.btn-y:hover{background:var(--y2);color:#fff}.badge-y{background:var(--y);color:var(--g);font-weight:700}
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi .valor{font-size:1.35rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:360px;position:relative;}
+.table-responsive{max-height:600px}
+.table thead th{position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;white-space:nowrap;}
+.table thead th:hover{background-color:#343a40;}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
 </style>
 </head>
+
 <body>
-<nav class="navbar navbar-dark sticky-top"><div class="container-fluid px-4">
-<span class="navbar-brand fw-bold"><i class="bi bi-bar-chart-fill"></i> Transparência de Custos</span>
-<span class="text-white small">Campo Largo - PR</span>
-</div></nav>
 
-<header class="hero py-5"><div class="container-fluid px-4">
-<span class="badge bg-light text-dark mb-3">DADOS PUBLICADOS • GOOGLE SHEETS (CSV)</span>
-<h1 class="display-5 fw-bold">Dashboard de Execução de Custos</h1>
-<p class="lead mb-0">Dados carregados via integração CSV com o Google Sheets.</p>
-</div></header>
-
-<main class="container-fluid px-4 py-4">
-<div id="status" class="alert alert-info">Carregando dados da planilha pública...</div>
-
-<div class="card mb-4"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3">
-<h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
-<span id="atualizado" class="small text-muted"></span>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-bar-chart-line"></i> BI de Custos
+</a>
+<div class="text-white small">Campo Largo - PR</div>
 </div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">SISTEMA DE CUSTOS</span>
+<h1 class="display-5 fw-bold">Dashboard de Custos por Objeto</h1>
+<p class="lead mb-0">
+Custos apropriados por Secretaria, Departamento e Item de Custo, direto da planilha publicada.
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e filtros</h5>
+
 <div class="row g-3">
-<div class="col-lg-3 col-md-6"><label class="form-label fw-semibold">Busca geral</label><input id="busca" class="form-control" placeholder="Digite para pesquisar..."></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Secretaria</label><select id="secretaria" class="form-select"><option value="">Todas</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Departamento</label><select id="departamento" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Objeto</label><select id="objeto" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Item</label><select id="item" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-1 col-md-6 d-flex align-items-end"><button id="limpar" class="btn btn-outline-secondary w-100" title="Limpar"><i class="bi bi-x-circle"></i></button></div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Data inicial</label>
+<input type="date" id="dataInicial" class="form-control">
 </div>
-<div class="mt-3">
-<button id="atualizar" class="btn btn-y"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
-<button id="csv" class="btn btn-outline-secondary ms-2"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Data final</label>
+<input type="date" id="dataFinal" class="form-control">
 </div>
-<div class="small text-muted mt-2">Fonte: publicação CSV pública do Google Sheets.</div>
-</div></div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Secretaria</label>
+<select id="filtroSecretaria" class="form-select">
+<option value="">Todas</option>
+</select>
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Departamento</label>
+<select id="filtroDepartamento" class="form-select">
+<option value="">Todos</option>
+</select>
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Item de Custo</label>
+<select id="filtroItem" class="form-select">
+<option value="">Todos</option>
+</select>
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Buscar Unidade / Objeto</label>
+<input type="text" id="filtroBusca" class="form-control" placeholder="Ex: CMEI, Escola, Secretaria...">
+</div>
+
+<div class="col-md-2 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100">
+<i class="bi bi-cloud-download"></i> Atualizar do link
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-eraser"></i> Limpar filtros
+</button>
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-earmark-excel"></i> Carregar XLSX Local
+<input type="file" id="inputXlsx" accept=".xlsx,.xls" style="display: none;">
+</label>
+</div>
+
+<div class="small-muted mt-3">
+Fonte: planilha publicada do Google Sheets (aba "Dados", cruzada com "Secretarias", "Departamentos" e "Objetos").
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a planilha...</div>
+</div>
 
 <section class="row g-3 mb-4">
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Valor apropriado</div><div id="total" class="v">R$ 0,00</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Registros</div><div id="reg" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Secretarias</div><div id="secs" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Departamentos</div><div id="deps" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Objetos</div><div id="objs" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Itens</div><div id="itens" class="v">0</div></div></div></div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Total Apropriado</div>
+<div id="totalValor" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Registros</div>
+<div id="quantidade" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Secretarias</div>
+<div id="totalSecretarias" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Itens de Custo</div>
+<div id="totalItens" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Unidades/Objetos</div>
+<div id="totalObjetos" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Valor Médio / Lançamento</div>
+<div id="valorMedio" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
 </section>
 
 <section class="row g-4 mb-4">
-<div class="col-xl-7"><div class="card h-100"><div class="card-body"><h5>Valor por mês</h5><div class="chart"><canvas id="mes"></canvas></div></div></div></div>
-<div class="col-xl-5"><div class="card h-100"><div class="card-body"><h5>Top 10 itens</h5><div class="chart"><canvas id="itemChart"></canvas></div></div></div></div>
-<div class="col-xl-6"><div class="card h-100"><div class="card-body"><h5>Top 10 objetos</h5><div class="chart"><canvas id="objChart"></canvas></div></div></div></div>
-<div class="col-xl-6"><div class="card h-100"><div class="card-body"><h5>Valor por secretaria</h5><div class="chart"><canvas id="secChart"></canvas></div></div></div></div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Evolução Mensal do Custo</h5>
+<div class="chart-box"><canvas id="graficoMensal"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Custo por Secretaria</h5>
+<div class="chart-box"><canvas id="graficoSecretaria"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Top 10 Itens de Custo</h5>
+<div class="chart-box"><canvas id="graficoItem"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Top 10 Departamentos</h5>
+<div class="chart-box"><canvas id="graficoDepartamento"></canvas></div>
+</div>
+</div>
+</div>
+
 </section>
 
-<section class="card mb-4"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="mb-1">Detalhamento</h5><div class="small text-muted">Clique no cabeçalho para ordenar.</div></div><span id="contador" class="badge badge-y">0 registros</span></div>
-<div class="table-responsive"><table class="table table-hover table-sm align-middle"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
-</div></section>
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<div>
+<h5 class="mb-1">Detalhamento dos custos</h5>
+<div class="small-muted">Clique nos cabeçalhos para classificar. Tabela paginada por desempenho.</div>
+</div>
+<span id="contadorTabela" class="badge text-bg-primary">0 registros</span>
+</div>
+
+<div class="table-responsive">
+<table class="table table-hover table-sm align-middle">
+<thead class="table-dark">
+<tr>
+<th onclick="ordenarPor('data')">Data <i id="icon-data" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('secretaria')">Secretaria <i id="icon-secretaria" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('departamento')">Departamento <i id="icon-departamento" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('objetoNome')">Unidade / Objeto <i id="icon-objetoNome" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('itemCusto')">Item de Custo <i id="icon-itemCusto" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valor')">Valor Apropriado <i id="icon-valor" class="bi bi-arrow-down-up small"></i></th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+<div class="small-muted" id="paginaInfo">Página 1</div>
+<div class="btn-group btn-group-sm">
+<button class="btn btn-outline-secondary" id="btnPagAnterior"><i class="bi bi-chevron-left"></i> Anterior</button>
+<button class="btn btn-outline-secondary" id="btnPagProxima">Próxima <i class="bi bi-chevron-right"></i></button>
+</div>
+</div>
+
+</div>
+</section>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à planilha:</strong> os dados são buscados diretamente do link publicado do Google Sheets (formato .xlsx, com todas as abas). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar XLSX Local"</strong> para importar o arquivo baixado.
+</div>
+
 </main>
 
-<footer class="bg-dark text-white py-4 text-center small">Dashboard de Transparência de Custos — Campo Largo/PR</footer>
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+BI de Custos — Campo Largo/PR<br>
+Dados provenientes da planilha de custos por objeto do município.
+</div>
+</footer>
 
 <script>
-const PUBLIC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=csv";
+const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=xlsx";
 
-let dados=[], filtrados=[], colunas=[], charts={}, ord="", dir="asc";
+let dados = [];
+let dadosFiltrados = [];
+let graficos = {};
 
-const $=x=>document.getElementById(x);
-const money=x=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(x)||0);
-const nfmt=x=>new Intl.NumberFormat("pt-BR").format(x||0);
-const norm=x=>String(x??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
-const num=x=>{if(typeof x==="number")return x;let s=String(x??"").replace(/[R$\s]/g,"").trim();if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");return Number(s)||0};
-const esc=x=>String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const campo=a=>colunas.find(c=>a.some(p=>norm(c).includes(norm(p))));
+let secMap = {};
+let deptMap = {};
+let objMap = {};
 
-function status(cls,msg){$("status").className="alert "+cls;$("status").innerHTML=msg}
+let colunaOrdenacao = "";
+let direcaoOrdenacao = "asc";
 
-// Parser simples e eficiente para CSV
-function parseCSV(text) {
-  const lines = [];
-  let row = [];
-  let current = '';
-  let inQuotes = false;
+let paginaAtual = 1;
+const ITENS_POR_PAGINA = 50;
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
+const $ = id => document.getElementById(id);
 
-    if (char === '"' && inQuotes && nextChar === '"') {
-      current += '"';
-      i++;
-    } else if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      row.push(current.trim());
-      current = '';
-    } else if ((char === '\r' || char === '\n') && !inQuotes) {
-      if (char === '\r' && nextChar === '\n') i++;
-      row.push(current.trim());
-      if (row.some(c => c !== '')) lines.push(row);
-      row = [];
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  if (current || row.length) {
-    row.push(current.trim());
-    if (row.some(c => c !== '')) lines.push(row);
-  }
-  return lines;
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{
+    style:"currency",
+    currency:"BRL"
+  }).format(Number(valor)||0);
 }
 
-async function carregar(){
-  status("alert-info","<strong>Carregando...</strong> Baixando dados via CSV do Google Sheets.");
-  try{
-    const r = await fetch(PUBLIC_CSV_URL + "&t=" + Date.now(), { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const text = await r.text();
-    
-    const parsed = parseCSV(text);
-    if (parsed.length < 2) throw new Error("A planilha não contém linhas suficientes de dados.");
+function numero(valor){
+  if(typeof valor === "number"){
+    return Number.isFinite(valor) ? valor : 0;
+  }
+  if(valor === null || valor === undefined || valor === ""){
+    return 0;
+  }
+  let texto = String(valor).replace("R$","").trim();
+  if(texto.includes(".") && texto.includes(",")){
+    texto = texto.replace(/\./g,"").replace(",",".");
+  }else if(texto.includes(",")){
+    texto = texto.replace(",",".");
+  }
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : 0;
+}
 
-    colunas = parsed[0].map((x, i) => x || ("Coluna " + (i + 1)));
-    dados = parsed.slice(1).map(row => {
-      let obj = {};
-      colunas.forEach((col, idx) => {
-        obj[col] = row[idx] ?? "";
-      });
-      return obj;
+function paraData(valor){
+  if(valor instanceof Date && !isNaN(valor)) return valor;
+  if(typeof valor === "number"){
+    // serial Excel
+    const epoch = new Date(Date.UTC(1899,11,30));
+    return new Date(epoch.getTime() + valor*86400000);
+  }
+  if(typeof valor === "string"){
+    const d = new Date(valor);
+    if(!isNaN(d)) return d;
+  }
+  return null;
+}
+
+function dataISO(data){
+  if(!data) return "";
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth()+1).padStart(2,"0");
+  const dia = String(data.getDate()).padStart(2,"0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function dataBRExibir(data){
+  if(!data) return "";
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth()+1).padStart(2,"0");
+  const dia = String(data.getDate()).padStart(2,"0");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function mostrarStatus(texto,tipo="info"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none",!sim);
+}
+
+async function consultarLink(){
+  mostrarLoading(true);
+  mostrarStatus(`Buscando dados em: ${PUB_XLSX_URL}`);
+
+  try {
+    const response = await fetch(PUB_XLSX_URL);
+    if(!response.ok){
+      throw new Error(`Erro ${response.status} ao buscar a planilha.`);
+    }
+    const buffer = await response.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type:"array", cellDates:true });
+    processarWorkbook(workbook);
+    mostrarStatus(`Consulta realizada com sucesso! ${dados.length.toLocaleString("pt-BR")} registros carregados do link.`, "success");
+  } catch(erro){
+    console.error("Erro na consulta:", erro);
+    mostrarStatus(`Falha ao conectar com o link (possível bloqueio de CORS): ${erro.message}. Utilize "Carregar XLSX Local".`, "danger");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function processarWorkbook(workbook){
+  const abaDados = workbook.Sheets["Dados"];
+  const abaSecretarias = workbook.Sheets["Secretarias"];
+  const abaDepartamentos = workbook.Sheets["Departamentos"];
+  const abaObjetos = workbook.Sheets["Objetos"];
+
+  if(!abaDados) throw new Error('Aba "Dados" não encontrada na planilha.');
+
+  secMap = {};
+  if(abaSecretarias){
+    XLSX.utils.sheet_to_json(abaSecretarias).forEach(r=>{
+      const cod = r["Objeto de Custo - Secretaria"];
+      if(cod) secMap[String(cod).trim()] = { nome: r["Secretaria"] || "", abrev: r["Abreviado"] || "" };
+    });
+  }
+
+  deptMap = {};
+  if(abaDepartamentos){
+    XLSX.utils.sheet_to_json(abaDepartamentos).forEach(r=>{
+      const cod = r["Objeto de Custo - Departamento"];
+      if(cod) deptMap[String(cod).trim()] = r["Departamento"] || "";
+    });
+  }
+
+  objMap = {};
+  if(abaObjetos){
+    XLSX.utils.sheet_to_json(abaObjetos).forEach(r=>{
+      const cod = r["Objeto de Custo"];
+      if(cod) objMap[String(cod).trim()] = r["Descrição"] || "";
+    });
+  }
+
+  const linhas = XLSX.utils.sheet_to_json(abaDados, { defval:null });
+  processarDados(linhas);
+}
+
+function processarDados(linhas){
+  dados = linhas
+    .filter(r => r["Objeto de Custo"])
+    .map(r => {
+      const codigo = String(r["Objeto de Custo"]).trim();
+      const partes = codigo.split(".");
+      const secCod = partes.slice(0,2).join(".");
+      const deptCod = partes.slice(0,3).join(".");
+      const sec = secMap[secCod] || {};
+      return {
+        data: paraData(r["Data"]),
+        objetoCodigo: codigo,
+        objetoNome: objMap[codigo] || codigo,
+        secretariaCodigo: secCod,
+        secretaria: sec.nome || "Não identificado",
+        departamentoCodigo: deptCod,
+        departamento: deptMap[deptCod] || "Não identificado",
+        itemCusto: r["Item de Custo"] || "Não informado",
+        valor: numero(r["Valor Apropriado"])
+      };
     });
 
-    if (!dados.length) throw new Error("Nenhum registro legível encontrado.");
+  preencherFiltros();
+  ajustarDatasPadrao();
+  paginaAtual = 1;
+  atualizarDashboard();
+}
 
-    montarFiltros();
-    atualizar();
-    $("atualizado").textContent = "Atualizado em " + new Date().toLocaleString("pt-BR");
-    status("alert-success", `<i class="bi bi-check-circle"></i> Dados carregados com sucesso: <strong>${nfmt(dados.length)}</strong> registros.`);
-  } catch(e) {
-    console.error(e);
-    status("alert-danger", `<strong>Erro ao carregar os dados CSV:</strong> ${esc(e.message)}`);
+function ajustarDatasPadrao(){
+  const datasValidas = dados.map(d=>d.data).filter(Boolean);
+  if(!datasValidas.length) return;
+  const min = new Date(Math.min(...datasValidas));
+  const max = new Date(Math.max(...datasValidas));
+  $("dataInicial").value = dataISO(min);
+  $("dataFinal").value = dataISO(max);
+}
+
+function preencherFiltros(){
+  const secretarias = [...new Map(dados.map(d=>[d.secretariaCodigo, d.secretaria])).entries()]
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1]),"pt-BR"));
+
+  $("filtroSecretaria").innerHTML = `<option value="">Todas</option>` +
+    secretarias.map(([cod,nome])=> `<option value="${escapeHtml(cod)}">${escapeHtml(nome)}</option>`).join("");
+
+  const itens = [...new Set(dados.map(d=>d.itemCusto))].sort((a,b)=>String(a).localeCompare(String(b),"pt-BR"));
+  $("filtroItem").innerHTML = `<option value="">Todos</option>` +
+    itens.map(i=> `<option value="${escapeHtml(i)}">${escapeHtml(i)}</option>`).join("");
+
+  atualizarFiltroDepartamento();
+}
+
+function atualizarFiltroDepartamento(){
+  const secSelecionada = $("filtroSecretaria").value;
+  const base = secSelecionada ? dados.filter(d=>d.secretariaCodigo === secSelecionada) : dados;
+
+  const departamentos = [...new Map(base.map(d=>[d.departamentoCodigo, d.departamento])).entries()]
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1]),"pt-BR"));
+
+  const atual = $("filtroDepartamento").value;
+  $("filtroDepartamento").innerHTML = `<option value="">Todos</option>` +
+    departamentos.map(([cod,nome])=> `<option value="${escapeHtml(cod)}">${escapeHtml(nome)}</option>`).join("");
+
+  if(departamentos.some(([cod])=>cod===atual)){
+    $("filtroDepartamento").value = atual;
   }
 }
 
-function select(id, c){
-  if(!c) return;
-  const vals = [...new Set(dados.map(x => x[c]).filter(x => String(x).trim()))].sort((a,b) => String(a).localeCompare(String(b), "pt-BR"));
-  $(id).innerHTML = '<option value="">Todos</option>' + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
-}
+function aplicarFiltros(){
+  const inicio = $("dataInicial").value;
+  const fim = $("dataFinal").value;
+  const secretaria = $("filtroSecretaria").value;
+  const departamento = $("filtroDepartamento").value;
+  const item = $("filtroItem").value;
+  const busca = $("filtroBusca").value.toLowerCase().trim();
 
-function montarFiltros(){
-  select("secretaria", campo(["secretaria"]));
-  select("departamento", campo(["departamento"]));
-  select("objeto", campo(["objeto de custo", "objeto"]));
-  select("item", campo(["item de custo", "item"]));
-}
-
-function aplicar(){
-  const b=norm($("busca").value), s=$("secretaria").value, d=$("departamento").value, o=$("objeto").value, i=$("item").value;
-  const cs=campo(["secretaria"]), cd=campo(["departamento"]), co=campo(["objeto de custo","objeto"]), ci=campo(["item de custo","item"]);
-  
-  filtrados = dados.filter(x => {
-    if (b && !Object.values(x).some(v => norm(v).includes(b))) return false;
-    if (s && cs && String(x[cs]) !== s) return false;
-    if (d && cd && String(x[cd]) !== d) return false;
-    if (o && co && String(x[co]) !== o) return false;
-    if (i && ci && String(x[ci]) !== i) return false;
-    return true;
+  dadosFiltrados = dados.filter(d=>{
+    const dataStr = d.data ? dataISO(d.data) : "";
+    const okInicio = !inicio || (dataStr && dataStr >= inicio);
+    const okFim = !fim || (dataStr && dataStr <= fim);
+    const okSecretaria = !secretaria || d.secretariaCodigo === secretaria;
+    const okDepartamento = !departamento || d.departamentoCodigo === departamento;
+    const okItem = !item || d.itemCusto === item;
+    const okBusca = !busca ||
+      String(d.objetoNome).toLowerCase().includes(busca) ||
+      String(d.departamento).toLowerCase().includes(busca) ||
+      String(d.secretaria).toLowerCase().includes(busca);
+    return okInicio && okFim && okSecretaria && okDepartamento && okItem && okBusca;
   });
-  if (ord) ordenar();
+
+  if(colunaOrdenacao){
+    aplicarOrdenacao();
+  }
 }
 
-function atualizar(){ aplicar(); kpis(); graficos(); tabela(); }
-
-function kpis(){
-  const cv=campo(["valor apropriado","valor","custo","remuneracao","salario"]), cs=campo(["secretaria"]), cd=campo(["departamento"]), co=campo(["objeto de custo","objeto"]), ci=campo(["item de custo","item","cargo"]);
-  $("total").textContent = money(filtrados.reduce((s, x) => s + num(x[cv]), 0));
-  $("reg").textContent = nfmt(filtrados.length);
-  $("secs").textContent = nfmt(cs ? new Set(filtrados.map(x => x[cs]).filter(Boolean)).size : 0);
-  $("deps").textContent = nfmt(cd ? new Set(filtrados.map(x => x[cd]).filter(Boolean)).size : 0);
-  $("objs").textContent = nfmt(co ? new Set(filtrados.map(x => x[co]).filter(Boolean)).size : 0);
-  $("itens").textContent = nfmt(ci ? new Set(filtrados.map(x => x[ci]).filter(Boolean)).size : 0);
-  $("contador").textContent = nfmt(filtrados.length) + " registros";
+function ordenarPor(coluna){
+  if(colunaOrdenacao === coluna){
+    direcaoOrdenacao = direcaoOrdenacao === "asc" ? "desc" : "asc";
+  } else {
+    colunaOrdenacao = coluna;
+    direcaoOrdenacao = "asc";
+  }
+  aplicarOrdenacao();
+  atualizarIconesOrdenacao();
+  paginaAtual = 1;
+  atualizarTabela();
 }
 
-function group(c, lim=10){
-  const cv=campo(["valor apropriado","valor","custo","remuneracao","salario"]), m={};
-  filtrados.forEach(x => {
-    const k = String(x[c] || "Não informado");
-    m[k] = (m[k] || 0) + num(x[cv]);
-  });
-  return Object.entries(m).sort((a,b) => b[1] - a[1]).slice(0, lim);
-}
+function aplicarOrdenacao(){
+  dadosFiltrados.sort((a,b)=>{
+    let valA = a[colunaOrdenacao];
+    let valB = b[colunaOrdenacao];
 
-function graficos(){
-  Object.values(charts).forEach(c => c.destroy());
-  charts = {};
-  const cm=campo(["mes","mês","data"]), ci=campo(["item de custo","item","cargo"]), co=campo(["objeto de custo","objeto","vinculo"]), cs=campo(["secretaria","departamento"]);
-  const make = (id, a, h=false) => new Chart($(id), {
-    type: "bar",
-    data: { labels: a.map(x => x[0]), datasets: [{ label: "Valor", data: a.map(x => x[1]), backgroundColor: "#8c9b00" }] },
-    options: { indexAxis: h ? "y" : "x", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-  });
-  
-  if (cm) charts.mes = make("mes", group(cm, 30));
-  if (ci) charts.item = make("itemChart", group(ci, 10), true);
-  if (co) charts.obj = make("objChart", group(co, 10), true);
-  if (cs) charts.sec = make("secChart", group(cs, 15), true);
-}
-
-function ordenar(){
-  filtrados.sort((a,b) => {
-    const A = a[ord], B = b[ord], na = num(A), nb = num(B);
-    if (String(A).trim() && String(B).trim() && !isNaN(na) && !isNaN(nb)) {
-      return dir === "asc" ? na - nb : nb - na;
+    if(colunaOrdenacao === "data"){
+      valA = valA ? valA.getTime() : 0;
+      valB = valB ? valB.getTime() : 0;
+      return direcaoOrdenacao === "asc" ? valA - valB : valB - valA;
     }
-    return dir === "asc" ? String(A??"").localeCompare(String(B??""), "pt-BR") : String(B??"").localeCompare(String(A??""), "pt-BR");
+
+    if(typeof valA === "number" && typeof valB === "number"){
+      return direcaoOrdenacao === "asc" ? valA - valB : valB - valA;
+    }
+
+    valA = String(valA ?? "").toLowerCase();
+    valB = String(valB ?? "").toLowerCase();
+    return direcaoOrdenacao === "asc" ? valA.localeCompare(valB,"pt-BR") : valB.localeCompare(valA,"pt-BR");
   });
 }
 
-function ordenarPor(c){
-  if (ord === c) dir = dir === "asc" ? "desc" : "asc";
-  else { ord = c; dir = "asc"; }
-  ordenar();
-  tabela();
+function atualizarIconesOrdenacao(){
+  const colunas = ["data","secretaria","departamento","objetoNome","itemCusto","valor"];
+  colunas.forEach(col=>{
+    const icon = $(`icon-${col}`);
+    if(!icon) return;
+    if(col === colunaOrdenacao){
+      const numerica = col === "valor" || col === "data";
+      if(direcaoOrdenacao === "asc"){
+        icon.className = numerica ? "bi bi-sort-numeric-down" : "bi bi-sort-alpha-down";
+      } else {
+        icon.className = numerica ? "bi bi-sort-numeric-down-alt" : "bi bi-sort-alpha-down-alt";
+      }
+    } else {
+      icon.className = "bi bi-arrow-down-up small opacity-50";
+    }
+  });
 }
 
-function tabela(){
-  $("thead").innerHTML = colunas.map(c => `<th onclick="ordenarPor('${String(c).replace(/'/g, "\\'")}')">${esc(c)} <i class="bi bi-arrow-down-up small"></i></th>`).join("");
-  $("tbody").innerHTML = filtrados.length 
-    ? filtrados.map(x => "<tr>" + colunas.map(c => `<td>${esc(x[c])}</td>`).join("") + "</tr>").join("")
-    : `<tr><td colspan="${colunas.length}" class="text-center py-4">Nenhum registro encontrado.</td></tr>`;
+function soma(campo){
+  return dadosFiltrados.reduce((total,item)=> total + (typeof item[campo]==="number" ? item[campo] : 0), 0);
 }
 
-function exportar(){
-  const rows = [colunas, ...filtrados.map(x => colunas.map(c => x[c]))];
-  const csv = rows.map(r => r.map(v => `"${String(v??"").replace(/"/g, '""')}"`).join(";")).join("\n");
+function atualizarDashboard(){
+  aplicarFiltros();
+  atualizarCards();
+  atualizarGraficos();
+  paginaAtual = 1;
+  atualizarTabela();
+}
+
+function atualizarCards(){
+  const total = soma("valor");
+  $("totalValor").textContent = moeda(total);
+  $("quantidade").textContent = dadosFiltrados.length.toLocaleString("pt-BR");
+  $("totalSecretarias").textContent = new Set(dadosFiltrados.map(d=>d.secretariaCodigo)).size.toLocaleString("pt-BR");
+  $("totalItens").textContent = new Set(dadosFiltrados.map(d=>d.itemCusto)).size.toLocaleString("pt-BR");
+  $("totalObjetos").textContent = new Set(dadosFiltrados.map(d=>d.objetoCodigo)).size.toLocaleString("pt-BR");
+  $("valorMedio").textContent = moeda(dadosFiltrados.length ? total/dadosFiltrados.length : 0);
+  $("contadorTabela").textContent = `${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
+}
+
+function destruirGrafico(nome){
+  if(graficos[nome]) graficos[nome].destroy();
+}
+
+function agrupar(campo, limite=10){
+  const mapa = {};
+  dadosFiltrados.forEach(item=>{
+    const chave = item[campo] || "Não informado";
+    mapa[chave] = (mapa[chave] || 0) + item.valor;
+  });
+  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,limite);
+}
+
+function agruparPorMes(){
+  const mapa = {};
+  dadosFiltrados.forEach(item=>{
+    if(!item.data) return;
+    const chave = `${item.data.getFullYear()}-${String(item.data.getMonth()+1).padStart(2,"0")}`;
+    mapa[chave] = (mapa[chave] || 0) + item.valor;
+  });
+  return Object.entries(mapa).sort((a,b)=> a[0].localeCompare(b[0]));
+}
+
+function atualizarGraficos(){
+  const mensal = agruparPorMes();
+  destruirGrafico("mensal");
+  graficos.mensal = new Chart($("graficoMensal"), {
+    type:"line",
+    data:{
+      labels: mensal.map(([chave])=>{
+        const [ano,mes] = chave.split("-");
+        return `${mes}/${ano}`;
+      }),
+      datasets:[{
+        label:"Custo Total (R$)",
+        data: mensal.map(([,valor])=>valor),
+        borderColor:"#0d6efd",
+        backgroundColor:"rgba(13,110,253,.15)",
+        fill:true,
+        tension:.25
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } }
+    }
+  });
+
+  const secretaria = agrupar("secretaria", 12);
+  destruirGrafico("secretaria");
+  graficos.secretaria = new Chart($("graficoSecretaria"), {
+    type:"doughnut",
+    data:{
+      labels: secretaria.map(item=>item[0]),
+      datasets:[{
+        data: secretaria.map(item=>item[1]),
+        backgroundColor: ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6c757d","#6f42c1","#fd7e14","#20c997","#073b6f","#d63384","#adb5bd"]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } } }
+    }
+  });
+
+  const item = agrupar("itemCusto", 10);
+  destruirGrafico("item");
+  graficos.item = new Chart($("graficoItem"), {
+    type:"bar",
+    data:{
+      labels: item.map(i=>i[0]),
+      datasets:[{ label:"Valor Apropriado", backgroundColor:"#0dcaf0", data: item.map(i=>i[1]) }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } }
+    }
+  });
+
+  const departamento = agrupar("departamento", 10);
+  destruirGrafico("departamento");
+  graficos.departamento = new Chart($("graficoDepartamento"), {
+    type:"bar",
+    data:{
+      labels: departamento.map(d=>d[0]),
+      datasets:[{ label:"Valor Apropriado", backgroundColor:"#073b6f", data: departamento.map(d=>d[1]) }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } }
+    }
+  });
+}
+
+function atualizarTabela(){
+  const tbody = $("tbody");
+  const totalPaginas = Math.max(1, Math.ceil(dadosFiltrados.length / ITENS_POR_PAGINA));
+  if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+  const inicio = (paginaAtual-1) * ITENS_POR_PAGINA;
+  const pagina = dadosFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
+
+  tbody.innerHTML = pagina.map(item=>`
+    <tr>
+      <td>${escapeHtml(dataBRExibir(item.data))}</td>
+      <td>${escapeHtml(item.secretaria)}</td>
+      <td>${escapeHtml(item.departamento)}</td>
+      <td>${escapeHtml(item.objetoNome)}</td>
+      <td>${escapeHtml(item.itemCusto)}</td>
+      <td><strong>${moeda(item.valor)}</strong></td>
+    </tr>
+  `).join("");
+
+  $("paginaInfo").textContent = `Página ${paginaAtual} de ${totalPaginas} (${dadosFiltrados.length.toLocaleString("pt-BR")} registros)`;
+  $("btnPagAnterior").disabled = paginaAtual <= 1;
+  $("btnPagProxima").disabled = paginaAtual >= totalPaginas;
+}
+
+function limparFiltros(){
+  $("filtroSecretaria").value = "";
+  $("filtroDepartamento").value = "";
+  $("filtroItem").value = "";
+  $("filtroBusca").value = "";
+  ajustarDatasPadrao();
+  atualizarFiltroDepartamento();
+  colunaOrdenacao = "";
+  direcaoOrdenacao = "asc";
+  atualizarIconesOrdenacao();
+  atualizarDashboard();
+}
+
+function exportarCSV(){
+  if(!dadosFiltrados.length){
+    alert("Não existem dados para exportar.");
+    return;
+  }
+
+  const cabecalho = ["Data","Secretaria","Departamento","Objeto de Custo","Unidade/Objeto","Item de Custo","Valor Apropriado"];
+
+  const linhas = dadosFiltrados.map(item=>[
+    dataBRExibir(item.data), item.secretaria, item.departamento,
+    item.objetoCodigo, item.objetoNome, item.itemCusto, item.valor
+  ]);
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(valor=> `"${String(valor ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv" }));
-  a.download = "dashboard_custos.csv";
+  a.href = url;
+  a.download = "custos_campo_largo.csv";
+  document.body.appendChild(a);
   a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
-$("atualizar").onclick = carregar;
-$("csv").onclick = exportar;
-$("busca").oninput = atualizar;
-$("secretaria").onchange = atualizar;
-$("departamento").onchange = atualizar;
-$("objeto").onchange = atualizar;
-$("item").onchange = atualizar;
-$("limpar").onclick = () => {
-  $("busca").value = ""; $("secretaria").value = ""; $("departamento").value = "";
-  $("objeto").value = ""; $("item").value = ""; ord = "";
-  atualizar();
-};
+// Leitor de arquivo XLSX local (fallback caso o link seja bloqueado por CORS)
+$("inputXlsx").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
 
-carregar();
+  mostrarLoading(true);
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const workbook = XLSX.read(evt.target.result, { type:"array", cellDates:true });
+      processarWorkbook(workbook);
+      mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo local "${file.name}".`, "success");
+    } catch(err){
+      console.error(err);
+      mostrarStatus("Erro ao processar o arquivo XLSX selecionado.", "danger");
+    } finally {
+      mostrarLoading(false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+$("btnConsultar").addEventListener("click", consultarLink);
+$("btnLimpar").addEventListener("click", limparFiltros);
+$("btnCsv").addEventListener("click", exportarCSV);
+$("filtroSecretaria").addEventListener("change", ()=>{ atualizarFiltroDepartamento(); atualizarDashboard(); });
+$("filtroDepartamento").addEventListener("change", atualizarDashboard);
+$("filtroItem").addEventListener("change", atualizarDashboard);
+$("filtroBusca").addEventListener("input", atualizarDashboard);
+$("dataInicial").addEventListener("change", atualizarDashboard);
+$("dataFinal").addEventListener("change", atualizarDashboard);
+$("btnPagAnterior").addEventListener("click", ()=>{ if(paginaAtual>1){ paginaAtual--; atualizarTabela(); } });
+$("btnPagProxima").addEventListener("click", ()=>{ paginaAtual++; atualizarTabela(); });
+
+// Inicia consulta ao carregar a página
+consultarLink();
 </script>
+
 </body>
 </html>
