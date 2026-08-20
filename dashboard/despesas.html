@@ -3,242 +3,733 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard de Custos — Campo Largo</title>
+<title>Dashboard de Contabilidade Pública | Campo Largo</title>
+
+<!-- Bootstrap 5 & Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- SheetJS para leitura de arquivos Excel (.xlsx) -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <style>
-:root{--y:#d9ea37;--y2:#8c9b00;--g:#1f2421;--g2:#343a40;--bg:#f5f6f7}
-body{background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-.navbar{background:var(--g)!important;box-shadow:0 2px 14px #0003}.hero{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff}
-.card{border:0;border-radius:14px;box-shadow:0 4px 18px #00000012}.kpi{border-left:5px solid var(--y2)}
-.kpi .t{font-size:.8rem;color:#6c757d}.kpi .v{font-size:1.35rem;font-weight:750;color:var(--g)}
-.chart{height:320px;position:relative}.table-responsive{max-height:650px}
-.table thead th{position:sticky;top:0;z-index:3;background:var(--g)!important;color:#fff;white-space:nowrap;cursor:pointer}
-.table thead th:hover{background:var(--y2)!important}.btn-y{background:var(--y);color:var(--g);font-weight:700;border:0}
-.btn-y:hover{background:var(--y2);color:#fff}.badge-y{background:var(--y);color:var(--g);font-weight:700}
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi .valor{font-size:1.45rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:360px;position:relative;}
+.table-responsive{max-height:600px}
+.table thead th{position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;}
+.table thead th:hover{background-color:#343a40;}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
 </style>
 </head>
+
 <body>
-<nav class="navbar navbar-dark sticky-top"><div class="container-fluid px-4">
-<span class="navbar-brand fw-bold"><i class="bi bi-bar-chart-fill"></i> Transparência de Custos</span>
-<span class="text-white small">Campo Largo - PR</span>
-</div></nav>
 
-<header class="hero py-5"><div class="container-fluid px-4">
-<span class="badge bg-light text-dark mb-3">DADOS PUBLICADOS • XLSX + SHEETJS</span>
-<h1 class="display-5 fw-bold">Dashboard de Execução de Custos</h1>
-<p class="lead mb-0">Dados processados em formato Excel (.xlsx) nativo.</p>
-</div></header>
-
-<main class="container-fluid px-4 py-4">
-<div id="status" class="alert alert-info">Carregando planilha Excel do Google Sheets...</div>
-
-<div class="card mb-4"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3">
-<h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
-<span id="atualizado" class="small text-muted"></span>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-bank"></i> Contabilidade Pública
+</a>
+<div class="text-white small">Campo Largo - PR</div>
 </div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">DADOS ABERTOS</span>
+<h1 class="display-5 fw-bold">Dashboard de Despesas Públicas</h1>
+<p class="lead mb-0">
+Consulta direta aos dados de despesas disponibilizados pelo Município de Campo Largo.
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e filtros</h5>
+
 <div class="row g-3">
-<div class="col-lg-3 col-md-6"><label class="form-label fw-semibold">Busca geral</label><input id="busca" class="form-control" placeholder="Digite para pesquisar..."></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Secretaria</label><select id="secretaria" class="form-select"><option value="">Todas</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Departamento</label><select id="departamento" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Objeto</label><select id="objeto" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-2 col-md-6"><label class="form-label fw-semibold">Item</label><select id="item" class="form-select"><option value="">Todos</option></select></div>
-<div class="col-lg-1 col-md-6 d-flex align-items-end"><button id="limpar" class="btn btn-outline-secondary w-100" title="Limpar"><i class="bi bi-x-circle"></i></button></div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Data inicial</label>
+<input type="date" id="dataInicial" class="form-control" value="2026-01-01">
 </div>
-<div class="mt-3">
-<button id="atualizar" class="btn btn-y"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
-<button id="csv" class="btn btn-outline-secondary ms-2"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Data final</label>
+<input type="date" id="dataFinal" class="form-control" value="2026-12-31">
 </div>
-<div class="small text-muted mt-2">Fonte: publicação XLSX do Google Sheets.</div>
-</div></div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Credor</label>
+<input type="text" id="filtroCredor" class="form-control" placeholder="Nome do credor">
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Órgão</label>
+<select id="filtroOrgao" class="form-select">
+<option value="">Todos</option>
+</select>
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Unidade</label>
+<select id="filtroUnidade" class="form-select">
+<option value="">Todas</option>
+</select>
+</div>
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100">
+<i class="bi bi-search"></i>
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnLimpar" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-eraser"></i> Limpar filtros
+</button>
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+</div>
+
+<div class="small-muted mt-3">
+API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
 
 <section class="row g-3 mb-4">
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Valor apropriado</div><div id="total" class="v">R$ 0,00</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Registros</div><div id="reg" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Secretarias</div><div id="secs" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Departamentos</div><div id="deps" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Objetos</div><div id="objs" class="v">0</div></div></div></div>
-<div class="col-xl-2 col-md-4 col-6"><div class="card kpi h-100"><div class="card-body"><div class="t">Itens</div><div id="itens" class="v">0</div></div></div></div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Empenhado</div>
+<div id="totalEmpenhado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Anulado</div>
+<div id="totalAnulado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Liquidado</div>
+<div id="totalLiquidado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Retido</div>
+<div id="totalRetido" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Pago</div>
+<div id="totalPago" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Registros</div>
+<div id="quantidade" class="valor">0</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Credores</div>
+<div id="credores" class="valor">0</div>
+</div>
+</div>
+</div>
+
 </section>
 
 <section class="row g-4 mb-4">
-<div class="col-xl-7"><div class="card h-100"><div class="card-body"><h5>Valor por mês</h5><div class="chart"><canvas id="mes"></canvas></div></div></div></div>
-<div class="col-xl-5"><div class="card h-100"><div class="card-body"><h5>Top 10 itens</h5><div class="chart"><canvas id="itemChart"></canvas></div></div></div></div>
-<div class="col-xl-6"><div class="card h-100"><div class="card-body"><h5>Top 10 objetos</h5><div class="chart"><canvas id="objChart"></canvas></div></div></div></div>
-<div class="col-xl-6"><div class="card h-100"><div class="card-body"><h5>Valor por secretaria</h5><div class="chart"><canvas id="secChart"></canvas></div></div></div></div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Empenhado x Liquidado x Pago</h5>
+<div class="chart-box"><canvas id="graficoValores"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Despesas por Órgão</h5>
+<div class="chart-box"><canvas id="graficoOrgao"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Despesas por Unidade</h5>
+<div class="chart-box"><canvas id="graficoUnidade"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<h5 class="card-title mb-3">Top 10 Credores</h5>
+<div class="chart-box"><canvas id="graficoCredores"></canvas></div>
+</div>
+</div>
+</div>
+
 </section>
 
-<section class="card mb-4"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="mb-1">Detalhamento</h5><div class="small text-muted">Clique no cabeçalho para ordenar.</div></div><span id="contador" class="badge badge-y">0 registros</span></div>
-<div class="table-responsive"><table class="table table-hover table-sm align-middle"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
-</div></section>
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<div>
+<h5 class="mb-1">Detalhamento das despesas</h5>
+<div class="small-muted">Os valores são apresentados conforme o retorno da API. Clique nos cabeçalhos para classificar.</div>
+</div>
+<span id="contadorTabela" class="badge text-bg-primary">0 registros</span>
+</div>
+
+<div class="table-responsive">
+<table class="table table-hover table-sm align-middle">
+<thead class="table-dark">
+<tr>
+<th onclick="ordenarPor('orgaoDescricao')">Órgão <i id="icon-orgaoDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('unidadeDescricao')">Unidade <i id="icon-unidadeDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('fonteRecursoDescricao')">Fonte <i id="icon-fonteRecursoDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('cpfCnpjCredor')">CPF/CNPJ <i id="icon-cpfCnpjCredor" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('nomeCredor')">Credor <i id="icon-nomeCredor" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorEmpenhado')">Empenhado <i id="icon-valorEmpenhado" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorAnulado')">Anulado <i id="icon-valorAnulado" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorLiquidado')">Liquidado <i id="icon-valorLiquidado" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorRetido')">Retido <i id="icon-valorRetido" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('valorPago')">Pago <i id="icon-valorPago" class="bi bi-arrow-down-up small"></i></th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente em <code>campolargo.atende.net</code>. Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar arquivos previamente baixados.
+</div>
+
 </main>
 
-<footer class="bg-dark text-white py-4 text-center small">Dashboard de Transparência de Custos — Campo Largo/PR</footer>
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Dashboard de Contabilidade Pública — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do município.
+</div>
+</footer>
 
 <script>
-const ORIGINAL_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=xlsx";
+const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
 
-let dados=[], filtrados=[], colunas=[], charts={}, ord="", dir="asc";
+let dados = [];
+let dadosFiltrados = [];
+let graficos = {};
 
-const $=x=>document.getElementById(x);
-const money=x=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(x)||0);
-const nfmt=x=>new Intl.NumberFormat("pt-BR").format(x||0);
-const norm=x=>String(x??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
-const num=x=>{if(typeof x==="number")return x;let s=String(x??"").replace(/[R$\s]/g,"").trim();if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");return Number(s)||0};
-const esc=x=>String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const campo=a=>colunas.find(c=>a.some(p=>norm(c).includes(norm(p))));
+// Controle de ordenação da tabela
+let colunaOrdenacao = "";
+let direcaoOrdenacao = "asc"; // 'asc' ou 'desc'
 
-function status(cls,msg){$("status").className="alert "+cls;$("status").innerHTML=msg}
+const $ = id => document.getElementById(id);
 
-async function carregar(){
-  status("alert-info","<strong>Carregando...</strong> Baixando arquivo .XLSX via Proxy CORS.");
-  try{
-    const targetUrl = ORIGINAL_XLSX_URL + "&t=" + Date.now();
-    const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(targetUrl);
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{
+    style:"currency",
+    currency:"BRL"
+  }).format(Number(valor)||0);
+}
 
-    const r = await fetch(proxyUrl, { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    
-    const arrayBuffer = await r.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    
-    // Converte a aba para lista de objetos JSON
-    dados = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+function numero(valor){
+  if(typeof valor === "number"){
+    return Number.isFinite(valor) ? valor : 0;
+  }
 
-    if (!dados.length) throw new Error("A planilha XLSX não contém registros.");
+  if(valor === null || valor === undefined || valor === ""){
+    return 0;
+  }
 
-    colunas = Object.keys(dados[0]);
+  let texto = String(valor)
+    .replace("R$","")
+    .trim();
 
-    montarFiltros();
-    atualizar();
-    $("atualizado").textContent = "Atualizado em " + new Date().toLocaleString("pt-BR");
-    status("alert-success", `<i class="bi bi-check-circle"></i> Planilha XLSX processada com sucesso: <strong>${nfmt(dados.length)}</strong> registros.`);
-  } catch(e) {
-    console.error(e);
-    status("alert-danger", `<strong>Erro ao carregar o arquivo XLSX:</strong> ${esc(e.message)}`);
+  if(texto.includes(".") && texto.includes(",")){
+    texto = texto.replace(/\./g,"").replace(",",".");
+  }else if(texto.includes(",")){
+    texto = texto.replace(",",".");
+  }
+
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function dataBR(data){
+  const [ano,mes,dia] = data.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function mostrarStatus(texto,tipo="info"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none",!sim);
+}
+
+async function consultarAPI(){
+  const inicio = $("dataInicial").value;
+  const fim = $("dataFinal").value;
+
+  if(!inicio || !fim){
+    mostrarStatus("Informe as duas datas.","warning");
+    return;
+  }
+
+  if(inicio > fim){
+    mostrarStatus("A data inicial não pode ser maior que a data final.","warning");
+    return;
+  }
+
+  // Formata a data para DD/MM/AAAA sem usar encodeURIComponent para manter as barras normais
+  const url = `${API_URL}?dataInicial=${dataBR(inicio)}&dataFinal=${dataBR(fim)}`;
+
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ${response.status}: A API recusou os parâmetros fornecidos.`);
+    }
+
+    const resultado = await response.json();
+
+    if (resultado.status !== "ok" || !Array.isArray(resultado.retorno)) {
+      throw new Error(resultado.mensagem || "A resposta da API não contém registros válidos.");
+    }
+
+    processarDados(resultado.retorno);
+    mostrarStatus(`Consulta realizada com sucesso! ${dados.length.toLocaleString("pt-BR")} registros carregados.`, "success");
+
+  } catch (erro) {
+    console.error("Erro na consulta:", erro);
+    mostrarStatus(`Falha ao conectar com a API: ${erro.message}`, "danger");
+  } finally {
+    mostrarLoading(false);
   }
 }
 
-function select(id, c){
-  if(!c) return;
-  const vals = [...new Set(dados.map(x => x[c]).filter(x => String(x).trim()))].sort((a,b) => String(a).localeCompare(String(b), "pt-BR"));
-  $(id).innerHTML = '<option value="">Todos</option>' + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+function processarDados(lista) {
+  dados = lista.map(item => ({
+    orgaoCodigo: item.orgaoCodigo ?? "",
+    orgaoDescricao: item.orgaoDescricao ?? "",
+    unidadeCodigo: item.unidadeCodigo ?? "",
+    unidadeDescricao: item.unidadeDescricao ?? "",
+    fonteRecurso: item.fonteRecurso ?? "",
+    fonteRecursoDescricao: item.fonteRecursoDescricao ?? "",
+    cpfCnpjCredor: item.cpfCnpjCredor ?? "",
+    nomeCredor: item.nomeCredor ?? "",
+    valorEmpenhado: numero(item.valorEmpenhado),
+    valorAnulado: numero(item.valorAnulado),
+    valorLiquidado: numero(item.valorLiquidado),
+    valorRetido: numero(item.valorRetido),
+    valorPago: numero(item.valorPago)
+  }));
+
+  preencherFiltros();
+  atualizarDashboard();
 }
 
-function montarFiltros(){
-  select("secretaria", campo(["secretaria"]));
-  select("departamento", campo(["departamento"]));
-  select("objeto", campo(["objeto de custo", "objeto"]));
-  select("item", campo(["item de custo", "item"]));
+function preencherFiltros(){
+  const orgaos = [...new Map(dados.map(item => [item.orgaoCodigo, item.orgaoDescricao])).entries()]
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
+
+  const unidades = [...new Map(dados.map(item => [item.unidadeCodigo, item.unidadeDescricao])).entries()]
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
+
+  $("filtroOrgao").innerHTML = `<option value="">Todos</option>` +
+    orgaos.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
+
+  $("filtroUnidade").innerHTML = `<option value="">Todas</option>` +
+    unidades.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
 }
 
-function aplicar(){
-  const b=norm($("busca").value), s=$("secretaria").value, d=$("departamento").value, o=$("objeto").value, i=$("item").value;
-  const cs=campo(["secretaria"]), cd=campo(["departamento"]), co=campo(["objeto de custo","objeto"]), ci=campo(["item de custo","item"]);
-  
-  filtrados = dados.filter(x => {
-    if (b && !Object.values(x).some(v => norm(v).includes(b))) return false;
-    if (s && cs && String(x[cs]) !== s) return false;
-    if (d && cd && String(x[cd]) !== d) return false;
-    if (o && co && String(x[co]) !== o) return false;
-    if (i && ci && String(x[ci]) !== i) return false;
-    return true;
+function aplicarFiltros(){
+  const credor = $("filtroCredor").value.toLowerCase().trim();
+  const orgao = $("filtroOrgao").value;
+  const unidade = $("filtroUnidade").value;
+
+  dadosFiltrados = dados.filter(item => {
+    const okCredor = !credor || String(item.nomeCredor).toLowerCase().includes(credor);
+    const okOrgao = !orgao || String(item.orgaoCodigo) === orgao;
+    const okUnidade = !unidade || String(item.unidadeCodigo) === unidade;
+    return okCredor && okOrgao && okUnidade;
   });
-  if (ord) ordenar();
+
+  if (colunaOrdenacao) {
+    aplicarOrdenacao();
+  }
 }
 
-function atualizar(){ aplicar(); kpis(); graficos(); tabela(); }
+function ordenarPor(coluna) {
+  if (colunaOrdenacao === coluna) {
+    direcaoOrdenacao = direcaoOrdenacao === "asc" ? "desc" : "asc";
+  } else {
+    colunaOrdenacao = coluna;
+    direcaoOrdenacao = "asc";
+  }
 
-function kpis(){
-  const cv=campo(["valor apropriado","valor","custo","remuneracao","salario"]), cs=campo(["secretaria"]), cd=campo(["departamento"]), co=campo(["objeto de custo","objeto"]), ci=campo(["item de custo","item","cargo"]);
-  $("total").textContent = money(filtrados.reduce((s, x) => s + num(x[cv]), 0));
-  $("reg").textContent = nfmt(filtrados.length);
-  $("secs").textContent = nfmt(cs ? new Set(filtrados.map(x => x[cs]).filter(Boolean)).size : 0);
-  $("deps").textContent = nfmt(cd ? new Set(filtrados.map(x => x[cd]).filter(Boolean)).size : 0);
-  $("objs").textContent = nfmt(co ? new Set(filtrados.map(x => x[co]).filter(Boolean)).size : 0);
-  $("itens").textContent = nfmt(ci ? new Set(filtrados.map(x => x[ci]).filter(Boolean)).size : 0);
-  $("contador").textContent = nfmt(filtrados.length) + " registros";
+  aplicarOrdenacao();
+  atualizarIconesOrdenacao();
+  atualizarTabela();
 }
 
-function group(c, lim=10){
-  const cv=campo(["valor apropriado","valor","custo","remuneracao","salario"]), m={};
-  filtrados.forEach(x => {
-    const k = String(x[c] || "Não informado");
-    m[k] = (m[k] || 0) + num(x[cv]);
-  });
-  return Object.entries(m).sort((a,b) => b[1] - a[1]).slice(0, lim);
-}
+function aplicarOrdenacao() {
+  dadosFiltrados.sort((a, b) => {
+    let valA = a[colunaOrdenacao];
+    let valB = b[colunaOrdenacao];
 
-function graficos(){
-  Object.values(charts).forEach(c => c.destroy());
-  charts = {};
-  const cm=campo(["mes","mês","data"]), ci=campo(["item de custo","item","cargo"]), co=campo(["objeto de custo","objeto","vinculo"]), cs=campo(["secretaria","departamento"]);
-  const make = (id, a, h=false) => new Chart($(id), {
-    type: "bar",
-    data: { labels: a.map(x => x[0]), datasets: [{ label: "Valor", data: a.map(x => x[1]), backgroundColor: "#8c9b00" }] },
-    options: { indexAxis: h ? "y" : "x", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-  });
-  
-  if (cm) charts.mes = make("mes", group(cm, 30));
-  if (ci) charts.item = make("itemChart", group(ci, 10), true);
-  if (co) charts.obj = make("objChart", group(co, 10), true);
-  if (cs) charts.sec = make("secChart", group(cs, 15), true);
-}
-
-function ordenar(){
-  filtrados.sort((a,b) => {
-    const A = a[ord], B = b[ord], na = num(A), nb = num(B);
-    if (String(A).trim() && String(B).trim() && !isNaN(na) && !isNaN(nb)) {
-      return dir === "asc" ? na - nb : nb - na;
+    if (typeof valA === "number" && typeof valB === "number") {
+      return direcaoOrdenacao === "asc" ? valA - valB : valB - valA;
     }
-    return dir === "asc" ? String(A??"").localeCompare(String(B??""), "pt-BR") : String(B??"").localeCompare(String(A??""), "pt-BR");
+
+    valA = String(valA ?? "").toLowerCase();
+    valB = String(valB ?? "").toLowerCase();
+
+    if (direcaoOrdenacao === "asc") {
+      return valA.localeCompare(valB, "pt-BR");
+    } else {
+      return valB.localeCompare(valA, "pt-BR");
+    }
   });
 }
 
-function ordenarPor(c){
-  if (ord === c) dir = dir === "asc" ? "desc" : "asc";
-  else { ord = c; dir = "asc"; }
-  ordenar();
-  tabela();
+function atualizarIconesOrdenacao() {
+  const colunas = [
+    'orgaoDescricao', 'unidadeDescricao', 'fonteRecursoDescricao',
+    'cpfCnpjCredor', 'nomeCredor', 'valorEmpenhado', 'valorAnulado',
+    'valorLiquidado', 'valorRetido', 'valorPago'
+  ];
+
+  colunas.forEach(col => {
+    const icon = $(`icon-${col}`);
+    if (!icon) return;
+
+    if (col === colunaOrdenacao) {
+      if (direcaoOrdenacao === "asc") {
+        icon.className = typeof dadosFiltrados[0]?.[col] === "number" 
+          ? "bi bi-sort-numeric-down" 
+          : "bi bi-sort-alpha-down";
+      } else {
+        icon.className = typeof dadosFiltrados[0]?.[col] === "number" 
+          ? "bi bi-sort-numeric-down-alt" 
+          : "bi bi-sort-alpha-down-alt";
+      }
+    } else {
+      icon.className = "bi bi-arrow-down-up small opacity-50";
+    }
+  });
 }
 
-function tabela(){
-  $("thead").innerHTML = colunas.map(c => `<th onclick="ordenarPor('${String(c).replace(/'/g, "\\'")}')">${esc(c)} <i class="bi bi-arrow-down-up small"></i></th>`).join("");
-  $("tbody").innerHTML = filtrados.length 
-    ? filtrados.map(x => "<tr>" + colunas.map(c => `<td>${esc(x[c])}</td>`).join("") + "</tr>").join("")
-    : `<tr><td colspan="${colunas.length}" class="text-center py-4">Nenhum registro encontrado.</td></tr>`;
+function soma(campo){
+  return dadosFiltrados.reduce((total,item)=> total + numero(item[campo]), 0);
 }
 
-function exportar(){
-  const rows = [colunas, ...filtrados.map(x => colunas.map(c => x[c]))];
-  const csv = rows.map(r => r.map(v => `"${String(v??"").replace(/"/g, '""')}"`).join(";")).join("\n");
+function atualizarDashboard(){
+  aplicarFiltros();
+  atualizarCards();
+  atualizarGraficos();
+  atualizarTabela();
+}
+
+function atualizarCards(){
+  $("totalEmpenhado").textContent = moeda(soma("valorEmpenhado"));
+  $("totalAnulado").textContent = moeda(soma("valorAnulado"));
+  $("totalLiquidado").textContent = moeda(soma("valorLiquidado"));
+  $("totalRetido").textContent = moeda(soma("valorRetido"));
+  $("totalPago").textContent = moeda(soma("valorPago"));
+  $("quantidade").textContent = dadosFiltrados.length.toLocaleString("pt-BR");
+  $("credores").textContent = new Set(dadosFiltrados.map(item=>item.nomeCredor).filter(Boolean)).size.toLocaleString("pt-BR");
+  $("contadorTabela").textContent = `${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
+}
+
+function destruirGrafico(nome){
+  if(graficos[nome]){
+    graficos[nome].destroy();
+  }
+}
+
+function agrupar(campo){
+  const mapa = {};
+  dadosFiltrados.forEach(item=>{
+    const chave = item[campo] || "Não informado";
+    mapa[chave] = (mapa[chave] || 0) + numero(item.valorPago);
+  });
+  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,10);
+}
+
+function atualizarGraficos(){
+  destruirGrafico("valores");
+  graficos.valores = new Chart($("graficoValores"), {
+    type:"bar",
+    data:{
+      labels:["Empenhado", "Liquidado", "Pago"],
+      datasets:[{
+        label:"Valor Total (R$)",
+        backgroundColor: ["#0d6efd", "#ffc107", "#198754"],
+        data:[soma("valorEmpenhado"), soma("valorLiquidado"), soma("valorPago")]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } }
+      }
+    }
+  });
+
+  const orgao = agrupar("orgaoDescricao");
+  destruirGrafico("orgao");
+  graficos.orgao = new Chart($("graficoOrgao"), {
+    type:"doughnut",
+    data:{
+      labels: orgao.map(item=>item[0]),
+      datasets:[{
+        data: orgao.map(item=>item[1]),
+        backgroundColor: ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6c757d","#6f42c1","#fd7e14","#20c997","#073b6f"]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } }
+      }
+    }
+  });
+
+  const unidade = agrupar("unidadeDescricao");
+  destruirGrafico("unidade");
+  graficos.unidade = new Chart($("graficoUnidade"), {
+    type:"bar",
+    data:{
+      labels: unidade.map(item=>item[0]),
+      datasets:[{
+        label:"Valor Pago",
+        backgroundColor: "#0dcaf0",
+        data: unidade.map(item=>item[1])
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } }
+      }
+    }
+  });
+
+  const credores = agrupar("nomeCredor");
+  destruirGrafico("credores");
+  graficos.credores = new Chart($("graficoCredores"), {
+    type:"bar",
+    data:{
+      labels: credores.map(item=>item[0]),
+      datasets:[{
+        label:"Valor Pago",
+        backgroundColor: "#073b6f",
+        data: credores.map(item=>item[1])
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } }
+      }
+    }
+  });
+}
+
+function atualizarTabela(){
+  const tbody = $("tbody");
+  tbody.innerHTML = dadosFiltrados.map(item=>`
+    <tr>
+      <td>${escapeHtml(item.orgaoDescricao)}</td>
+      <td>${escapeHtml(item.unidadeDescricao)}</td>
+      <td>${escapeHtml(item.fonteRecursoDescricao)}</td>
+      <td>${escapeHtml(item.cpfCnpjCredor)}</td>
+      <td><strong>${escapeHtml(item.nomeCredor)}</strong></td>
+      <td>${moeda(item.valorEmpenhado)}</td>
+      <td>${moeda(item.valorAnulado)}</td>
+      <td>${moeda(item.valorLiquidado)}</td>
+      <td>${moeda(item.valorRetido)}</td>
+      <td><strong>${moeda(item.valorPago)}</strong></td>
+    </tr>
+  `).join("");
+}
+
+function limparFiltros(){
+  $("filtroCredor").value = "";
+  $("filtroOrgao").value = "";
+  $("filtroUnidade").value = "";
+  colunaOrdenacao = "";
+  direcaoOrdenacao = "asc";
+  atualizarIconesOrdenacao();
+  atualizarDashboard();
+}
+
+function exportarCSV(){
+  if(!dadosFiltrados.length){
+    alert("Não existem dados para exportar.");
+    return;
+  }
+
+  const cabecalho = [
+    "Orgao Codigo","Orgao","Unidade Codigo","Unidade",
+    "Fonte Recurso","Fonte Recurso Descricao","CPF/CNPJ","Credor",
+    "Valor Empenhado","Valor Anulado","Valor Liquidado","Valor Retido","Valor Pago"
+  ];
+
+  const linhas = dadosFiltrados.map(item=>[
+    item.orgaoCodigo, item.orgaoDescricao, item.unidadeCodigo, item.unidadeDescricao,
+    item.fonteRecurso, item.fonteRecursoDescricao, item.cpfCnpjCredor, item.nomeCredor,
+    item.valorEmpenhado, item.valorAnulado, item.valorLiquidado, item.valorRetido, item.valorPago
+  ]);
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(valor=> `"${String(valor ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv" }));
-  a.download = "dashboard_custos.csv";
+  a.href = url;
+  a.download = "despesas_campo_largo.csv";
+  document.body.appendChild(a);
   a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
-$("atualizar").onclick = carregar;
-$("csv").onclick = exportar;
-$("busca").oninput = atualizar;
-$("secretaria").onchange = atualizar;
-$("departamento").onchange = atualizar;
-$("objeto").onchange = atualizar;
-$("item").onchange = atualizar;
-$("limpar").onclick = () => {
-  $("busca").value = ""; $("secretaria").value = ""; $("departamento").value = "";
-  $("objeto").value = ""; $("item").value = ""; ord = "";
-  atualizar();
-};
+// Leitor do arquivo JSON local
+$("inputJson").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
 
-carregar();
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.retorno;
+
+      if (!Array.isArray(lista)) {
+        throw new Error("Estrutura do arquivo JSON inválida.");
+      }
+
+      processarDados(lista);
+      mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado.", "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnLimpar").addEventListener("click", limparFiltros);
+$("btnCsv").addEventListener("click", exportarCSV);
+$("filtroCredor").addEventListener("input", atualizarDashboard);
+$("filtroOrgao").addEventListener("change", atualizarDashboard);
+$("filtroUnidade").addEventListener("change", atualizarDashboard);
+
+// Inicia consulta ao carregar a página
+consultarAPI();
 </script>
+
 </body>
 </html>
