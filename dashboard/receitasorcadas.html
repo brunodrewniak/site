@@ -130,25 +130,21 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/receitasOrcadas</
 </div>
 
 <section class="row g-3 mb-4">
-
-<div class="col-md-6">
-<div class="card kpi h-100">
-<div class="card-body">
-<div class="text-muted small">Total Orçado</div>
-<div id="totalOrcado" class="valor">R$ 0,00</div>
-</div>
-</div>
-</div>
-
-<div class="col-md-6">
-<div class="card h-100" style="border-left: 5px solid var(--roxo-escuro);">
-<div class="card-body">
-<div class="text-muted small">Total de Contas</div>
-<div id="totalContas" class="valor">0</div>
-</div>
-</div>
-</div>
-
+  <div class="col-md-3"><div class="card kpi h-100"><div class="card-body">
+    <div class="text-muted small">Total Orçado</div><div id="totalOrcado" class="valor">R$ 0,00</div>
+    <div class="small-muted mt-1">Receitas Brutas − Deduções</div>
+  </div></div></div>
+  <div class="col-md-3"><div class="card kpi h-100" ><div class="card-body">
+    <div class="text-muted small">Receitas Brutas</div><div id="totalReceitasBrutas" class="valor">R$ 0,00</div>
+    <div class="small-muted mt-1">Contas iniciadas com 4</div>
+  </div></div></div>
+  <div class="col-md-3"><div class="card kpi h-100" ><div class="card-body">
+    <div class="text-muted small">Deduções da Receita</div><div id="totalDeducoesReceita" class="valor">R$ 0,00</div>
+    <div class="small-muted mt-1">Contas iniciadas com 9</div>
+  </div></div></div>
+  <div class="col-md-3"><div class="card h-100" ><div class="card-body">
+    <div class="text-muted small">Total de Contas</div><div id="totalContas" class="valor">0</div>
+  </div></div></div>
 </section>
 
 <section class="row g-4 mb-4">
@@ -404,7 +400,19 @@ function atualizarDashboard(){
 }
 
 function atualizarCards(){
-  $("totalOrcado").textContent = moeda(soma("valorOrcado"));
+  const receitasBrutas = dadosFiltrados
+    .filter(item => item.contaCodigo.startsWith("4"))
+    .reduce((total, item) => total + numero(item.valorOrcado), 0);
+
+  const deducoesReceita = dadosFiltrados
+    .filter(item => item.contaCodigo.startsWith("9"))
+    .reduce((total, item) => total + numero(item.valorOrcado), 0);
+
+  const totalOrcado = receitasBrutas - deducoesReceita;
+
+  $("totalOrcado").textContent = moeda(totalOrcado);
+  $("totalReceitasBrutas").textContent = moeda(receitasBrutas);
+  $("totalDeducoesReceita").textContent = moeda(deducoesReceita);
   $("totalContas").textContent = new Set(dadosFiltrados.map(item => item.contaCodigo).filter(Boolean)).size.toLocaleString("pt-BR");
   $("contadorTabela").textContent = `${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
 }
