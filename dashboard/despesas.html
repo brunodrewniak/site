@@ -24,11 +24,14 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .kpi{border-left:5px solid var(--azul)}
 .kpi .valor{font-size:1.45rem;font-weight:700;color:var(--azul-escuro)}
 .chart-box{height:360px;position:relative;}
+.chart-box.chart-box-lg{height:420px;}
 .table-responsive{max-height:600px}
 .table thead th{position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;}
 .table thead th:hover{background-color:#343a40;}
 .status{font-size:.92rem}
 .small-muted{font-size:.82rem;color:#6c757d}
+.chart-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem}
+.metrica-btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
 </style>
 </head>
 
@@ -94,6 +97,13 @@ Aguardando consulta...
 <div class="col-md-2">
 <label class="form-label fw-semibold">Unidade</label>
 <select id="filtroUnidade" class="form-select">
+<option value="">Todas</option>
+</select>
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Fonte de Recurso</label>
+<select id="filtroFonte" class="form-select">
 <option value="">Todas</option>
 </select>
 </div>
@@ -237,6 +247,39 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 </div>
 </div>
 
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<div class="chart-header">
+<h5 class="card-title mb-0">Despesas por Fonte de Recurso</h5>
+<div class="btn-group btn-group-sm" role="group" aria-label="Métrica Fonte de Recurso">
+<button type="button" class="btn btn-outline-primary metrica-btn active" data-chart="fonte" data-metrica="valorEmpenhado">Empenhado</button>
+<button type="button" class="btn btn-outline-primary metrica-btn" data-chart="fonte" data-metrica="valorLiquidado">Liquidado</button>
+<button type="button" class="btn btn-outline-primary metrica-btn" data-chart="fonte" data-metrica="valorPago">Pago</button>
+</div>
+</div>
+<div class="chart-box"><canvas id="graficoFonte"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card">
+<div class="card-body">
+<div class="chart-header">
+<h5 class="card-title mb-0">Unidade x Fonte de Recurso</h5>
+<div class="btn-group btn-group-sm" role="group" aria-label="Métrica Unidade x Fonte">
+<button type="button" class="btn btn-outline-primary metrica-btn active" data-chart="unidadeFonte" data-metrica="valorEmpenhado">Empenhado</button>
+<button type="button" class="btn btn-outline-primary metrica-btn" data-chart="unidadeFonte" data-metrica="valorLiquidado">Liquidado</button>
+<button type="button" class="btn btn-outline-primary metrica-btn" data-chart="unidadeFonte" data-metrica="valorPago">Pago</button>
+</div>
+</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoUnidadeFonte"></canvas></div>
+<div class="small-muted mt-2">Top 10 unidades. Fontes de menor valor agrupadas em "Outras fontes".</div>
+</div>
+</div>
+</div>
+
 </section>
 
 <section class="card mb-4">
@@ -244,7 +287,7 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 <div>
 <h5 class="mb-1">Detalhamento das despesas</h5>
-<div class="small-muted">Os valores são apresentados conforme o retorno da API. Clique nos cabeçalhos para classificar.</div>
+<div class="small-muted">Os valores são apresentados conforme o retorno da API. Clique nos cabeçalhos para classificar. Tabela inicialmente ordenada por Fonte de Recurso (crescente).</div>
 </div>
 <span id="contadorTabela" class="badge text-bg-primary">0 registros</span>
 </div>
@@ -255,7 +298,7 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 <tr>
 <th onclick="ordenarPor('orgaoDescricao')">Órgão <i id="icon-orgaoDescricao" class="bi bi-arrow-down-up small"></i></th>
 <th onclick="ordenarPor('unidadeDescricao')">Unidade <i id="icon-unidadeDescricao" class="bi bi-arrow-down-up small"></i></th>
-<th onclick="ordenarPor('fonteRecursoDescricao')">Fonte <i id="icon-fonteRecursoDescricao" class="bi bi-arrow-down-up small"></i></th>
+<th onclick="ordenarPor('fonteRecursoDescricao')">Fonte de Recurso <i id="icon-fonteRecursoDescricao" class="bi bi-arrow-down-up small"></i></th>
 <th onclick="ordenarPor('cpfCnpjCredor')">CPF/CNPJ <i id="icon-cpfCnpjCredor" class="bi bi-arrow-down-up small"></i></th>
 <th onclick="ordenarPor('nomeCredor')">Credor <i id="icon-nomeCredor" class="bi bi-arrow-down-up small"></i></th>
 <th onclick="ordenarPor('valorEmpenhado')">Empenhado <i id="icon-valorEmpenhado" class="bi bi-arrow-down-up small"></i></th>
@@ -287,12 +330,19 @@ Dados provenientes da API de Dados Abertos do município.
 <script>
 const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
 
+const PALETA = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c"];
+const NOME_METRICA = { valorEmpenhado:"Empenhado", valorLiquidado:"Liquidado", valorPago:"Pago" };
+
 let dados = [];
 let dadosFiltrados = [];
 let graficos = {};
 
-// Controle de ordenação da tabela
-let colunaOrdenacao = "";
+// Métricas selecionáveis nos gráficos de Fonte de Recurso e Unidade x Fonte de Recurso
+let metricaFonte = "valorEmpenhado";
+let metricaUnidadeFonte = "valorEmpenhado";
+
+// Controle de ordenação da tabela (inicia ordenada por Fonte de Recurso, crescente)
+let colunaOrdenacao = "fonteRecursoDescricao";
 let direcaoOrdenacao = "asc"; // 'asc' ou 'desc'
 
 const $ = id => document.getElementById(id);
@@ -423,28 +473,43 @@ function processarDados(lista) {
 
 function preencherFiltros(){
   const orgaos = [...new Map(dados.map(item => [item.orgaoCodigo, item.orgaoDescricao])).entries()]
-    .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1]), "pt-BR"));
 
   const unidades = [...new Map(dados.map(item => [item.unidadeCodigo, item.unidadeDescricao])).entries()]
-    .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
+    .sort((a,b)=> String(a[1]).localeCompare(String(b[1]), "pt-BR"));
+
+  const fontes = [...new Map(dados.map(item => [item.fonteRecurso, item.fonteRecursoDescricao])).entries()]
+    .sort((a,b)=> {
+      const numA = Number(a[0]);
+      const numB = Number(b[0]);
+      if (Number.isFinite(numA) && Number.isFinite(numB)) {
+        return numA - numB;
+      }
+      return String(a[0]).localeCompare(String(b[0]), "pt-BR", { numeric:true });
+    });
 
   $("filtroOrgao").innerHTML = `<option value="">Todos</option>` +
     orgaos.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
 
   $("filtroUnidade").innerHTML = `<option value="">Todas</option>` +
     unidades.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
+
+  $("filtroFonte").innerHTML = `<option value="">Todas</option>` +
+    fontes.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(codigo)} - ${escapeHtml(nome)}</option>`).join("");
 }
 
 function aplicarFiltros(){
   const credor = $("filtroCredor").value.toLowerCase().trim();
   const orgao = $("filtroOrgao").value;
   const unidade = $("filtroUnidade").value;
+  const fonte = $("filtroFonte").value;
 
   dadosFiltrados = dados.filter(item => {
     const okCredor = !credor || String(item.nomeCredor).toLowerCase().includes(credor);
     const okOrgao = !orgao || String(item.orgaoCodigo) === orgao;
     const okUnidade = !unidade || String(item.unidadeCodigo) === unidade;
-    return okCredor && okOrgao && okUnidade;
+    const okFonte = !fonte || String(item.fonteRecurso) === fonte;
+    return okCredor && okOrgao && okUnidade && okFonte;
   });
 
   if (colunaOrdenacao) {
@@ -518,6 +583,7 @@ function soma(campo){
 
 function atualizarDashboard(){
   aplicarFiltros();
+  atualizarIconesOrdenacao();
   atualizarCards();
   atualizarGraficos();
   atualizarTabela();
@@ -540,16 +606,35 @@ function destruirGrafico(nome){
   }
 }
 
-function agrupar(campo){
+function agrupar(campo, metrica="valorPago", limite=10){
   const mapa = {};
   dadosFiltrados.forEach(item=>{
     const chave = item[campo] || "Não informado";
-    mapa[chave] = (mapa[chave] || 0) + numero(item.valorPago);
+    mapa[chave] = (mapa[chave] || 0) + numero(item[metrica]);
   });
-  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,limite);
 }
 
-function atualizarGraficos(){
+// Agrupamento com as menores fatias somadas em "Outras" (usado no gráfico de rosca por Fonte de Recurso)
+function agruparComOutras(campo, metrica, limite=8){
+  const mapa = {};
+  dadosFiltrados.forEach(item=>{
+    const chave = item[campo] || "Não informado";
+    mapa[chave] = (mapa[chave] || 0) + numero(item[metrica]);
+  });
+  const ordenado = Object.entries(mapa).sort((a,b)=>b[1]-a[1]);
+  const principais = ordenado.slice(0, limite);
+  const restante = ordenado.slice(limite);
+  if(restante.length){
+    const somaRestante = restante.reduce((tot,e)=>tot+e[1],0);
+    if(somaRestante > 0){
+      principais.push(["Outras", somaRestante]);
+    }
+  }
+  return principais;
+}
+
+function atualizarGraficoValores(){
   destruirGrafico("valores");
   graficos.valores = new Chart($("graficoValores"), {
     type:"bar",
@@ -569,8 +654,19 @@ function atualizarGraficos(){
       }
     }
   });
+}
 
-  const orgao = agrupar("orgaoDescricao");
+// Monta o rótulo do tooltip dos gráficos de rosca: rótulo, valor por extenso (completo) e percentual do total
+function rotuloRoscaComPercentual(ctx){
+  const total = ctx.dataset.data.reduce((tot, v)=> tot + (Number(v) || 0), 0);
+  const valor = Number(ctx.raw) || 0;
+  const percentual = total > 0 ? (valor / total) * 100 : 0;
+  const percentualFormatado = percentual.toLocaleString("pt-BR", { minimumFractionDigits:1, maximumFractionDigits:1 });
+  return `${ctx.label}: ${moeda(valor)} (${percentualFormatado}%)`;
+}
+
+function atualizarGraficoOrgao(){
+  const orgao = agrupar("orgaoDescricao", "valorPago", 10);
   destruirGrafico("orgao");
   graficos.orgao = new Chart($("graficoOrgao"), {
     type:"doughnut",
@@ -578,19 +674,21 @@ function atualizarGraficos(){
       labels: orgao.map(item=>item[0]),
       datasets:[{
         data: orgao.map(item=>item[1]),
-        backgroundColor: ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6c757d","#6f42c1","#fd7e14","#20c997","#073b6f"]
+        backgroundColor: PALETA
       }]
     },
     options:{
       responsive:true,
       maintainAspectRatio:false,
       plugins:{
-        tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } }
+        tooltip:{ callbacks:{ label: ctx => rotuloRoscaComPercentual(ctx) } }
       }
     }
   });
+}
 
-  const unidade = agrupar("unidadeDescricao");
+function atualizarGraficoUnidade(){
+  const unidade = agrupar("unidadeDescricao", "valorPago", 10);
   destruirGrafico("unidade");
   graficos.unidade = new Chart($("graficoUnidade"), {
     type:"bar",
@@ -611,8 +709,10 @@ function atualizarGraficos(){
       }
     }
   });
+}
 
-  const credores = agrupar("nomeCredor");
+function atualizarGraficoCredores(){
+  const credores = agrupar("nomeCredor", "valorPago", 10);
   destruirGrafico("credores");
   graficos.credores = new Chart($("graficoCredores"), {
     type:"bar",
@@ -633,6 +733,100 @@ function atualizarGraficos(){
       }
     }
   });
+}
+
+// Gráfico de rosca: Despesas por Fonte de Recurso, com métrica selecionável
+function atualizarGraficoFonte(){
+  const fonte = agruparComOutras("fonteRecursoDescricao", metricaFonte, 8);
+  destruirGrafico("fonte");
+  graficos.fonte = new Chart($("graficoFonte"), {
+    type:"doughnut",
+    data:{
+      labels: fonte.map(item=>item[0]),
+      datasets:[{
+        label: NOME_METRICA[metricaFonte],
+        data: fonte.map(item=>item[1]),
+        backgroundColor: PALETA
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{ callbacks:{ label: ctx => rotuloRoscaComPercentual(ctx) } }
+      }
+    }
+  });
+}
+
+// Gráfico de barras empilhadas: Unidade x Fonte de Recurso, com métrica selecionável
+function atualizarGraficoUnidadeFonte(){
+  const metrica = metricaUnidadeFonte;
+
+  // Top 10 unidades pela métrica selecionada
+  const unidades = agrupar("unidadeDescricao", metrica, 10).map(item=>item[0]);
+  const unidadesSet = new Set(unidades);
+
+  // Soma aninhada: fonte -> unidade -> valor
+  const aninhado = {};
+  const totalPorFonte = {};
+
+  dadosFiltrados.forEach(item=>{
+    const unidade = item.unidadeDescricao || "Não informado";
+    if(!unidadesSet.has(unidade)) return;
+    const fonte = item.fonteRecursoDescricao || "Não informado";
+    const valor = numero(item[metrica]);
+    aninhado[fonte] = aninhado[fonte] || {};
+    aninhado[fonte][unidade] = (aninhado[fonte][unidade] || 0) + valor;
+    totalPorFonte[fonte] = (totalPorFonte[fonte] || 0) + valor;
+  });
+
+  const fontesOrdenadas = Object.entries(totalPorFonte).sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+  const limiteFontes = 7;
+  const fontesPrincipais = fontesOrdenadas.slice(0, limiteFontes);
+  const fontesRestantes = fontesOrdenadas.slice(limiteFontes);
+
+  const datasets = fontesPrincipais.map((fonte, idx)=>({
+    label: fonte,
+    backgroundColor: PALETA[idx % PALETA.length],
+    data: unidades.map(u => (aninhado[fonte] && aninhado[fonte][u]) || 0)
+  }));
+
+  if(fontesRestantes.length){
+    datasets.push({
+      label:"Outras fontes",
+      backgroundColor:"#adb5bd",
+      data: unidades.map(u => fontesRestantes.reduce((tot,fonte)=> tot + ((aninhado[fonte] && aninhado[fonte][u]) || 0), 0))
+    });
+  }
+
+  destruirGrafico("unidadeFonte");
+  graficos.unidadeFonte = new Chart($("graficoUnidadeFonte"), {
+    type:"bar",
+    data:{ labels: unidades, datasets },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        x:{ stacked:true },
+        y:{ stacked:true }
+      },
+      plugins:{
+        legend:{ position:"bottom", labels:{ boxWidth:12, font:{ size:11 } } },
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moeda(ctx.raw)}` } }
+      }
+    }
+  });
+}
+
+function atualizarGraficos(){
+  atualizarGraficoValores();
+  atualizarGraficoOrgao();
+  atualizarGraficoUnidade();
+  atualizarGraficoCredores();
+  atualizarGraficoFonte();
+  atualizarGraficoUnidadeFonte();
 }
 
 function atualizarTabela(){
@@ -657,9 +851,9 @@ function limparFiltros(){
   $("filtroCredor").value = "";
   $("filtroOrgao").value = "";
   $("filtroUnidade").value = "";
-  colunaOrdenacao = "";
+  $("filtroFonte").value = "";
+  colunaOrdenacao = "fonteRecursoDescricao";
   direcaoOrdenacao = "asc";
-  atualizarIconesOrdenacao();
   atualizarDashboard();
 }
 
@@ -696,6 +890,25 @@ function exportarCSV(){
   URL.revokeObjectURL(url);
 }
 
+// Botões de métrica (Empenhado / Liquidado / Pago) dos gráficos de Fonte e Unidade x Fonte
+document.querySelectorAll(".metrica-btn").forEach(btn=>{
+  btn.addEventListener("click", function(){
+    const grafico = this.dataset.chart;
+    const metrica = this.dataset.metrica;
+
+    this.parentElement.querySelectorAll(".metrica-btn").forEach(b=>b.classList.remove("active"));
+    this.classList.add("active");
+
+    if(grafico === "fonte"){
+      metricaFonte = metrica;
+      atualizarGraficoFonte();
+    } else if(grafico === "unidadeFonte"){
+      metricaUnidadeFonte = metrica;
+      atualizarGraficoUnidadeFonte();
+    }
+  });
+});
+
 // Leitor do arquivo JSON local
 $("inputJson").addEventListener("change", function(e) {
   const file = e.target.files[0];
@@ -726,6 +939,7 @@ $("btnCsv").addEventListener("click", exportarCSV);
 $("filtroCredor").addEventListener("input", atualizarDashboard);
 $("filtroOrgao").addEventListener("change", atualizarDashboard);
 $("filtroUnidade").addEventListener("change", atualizarDashboard);
+$("filtroFonte").addEventListener("change", atualizarDashboard);
 
 // Inicia consulta ao carregar a página
 consultarAPI();
