@@ -32,6 +32,16 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .small-muted{font-size:.82rem;color:#6c757d}
 .chart-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem}
 .metrica-btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.filtro-multi{position:relative}
+.filtro-multi-btn{width:100%;background:#fff;border:1px solid #ced4da;border-radius:.375rem;padding:.375rem .75rem;font-size:1rem;text-align:left;color:#212529;display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+.filtro-multi-btn:hover{background:#fff}
+.filtro-multi-btn .filtro-multi-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filtro-multi-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:1050;min-width:100%;width:280px;max-width:90vw;background:#fff;border:1px solid rgba(0,0,0,.15);border-radius:.5rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.15);padding:.6rem;display:none}
+.filtro-multi-menu.show{display:block}
+.filtro-multi-lista{max-height:220px;overflow-y:auto}
+.filtro-multi-lista .form-check{padding-left:1.6rem;margin-bottom:.15rem}
+.filtro-multi-lista .form-check-label{font-size:.85rem;cursor:pointer}
+.filtro-multi-acoes{display:flex;justify-content:space-between;margin-bottom:.5rem;font-size:.8rem}
 </style>
 </head>
 
@@ -96,16 +106,38 @@ Aguardando consulta...
 
 <div class="col-md-2">
 <label class="form-label fw-semibold">Unidade</label>
-<select id="filtroUnidade" class="form-select">
-<option value="">Todas</option>
-</select>
+<div class="dropdown filtro-multi">
+<button type="button" class="filtro-multi-btn" id="btnFiltroUnidade">
+<span class="filtro-multi-label" id="labelFiltroUnidade">Todas</span>
+<i class="bi bi-caret-down-fill small"></i>
+</button>
+<div class="filtro-multi-menu" id="menuFiltroUnidade">
+<input type="text" class="form-control form-control-sm mb-2" id="buscaFiltroUnidade" placeholder="Buscar unidade...">
+<div class="filtro-multi-acoes">
+<a href="#" id="linkTodasUnidade">Selecionar todas</a>
+<a href="#" id="linkLimparUnidade">Limpar</a>
+</div>
+<div class="filtro-multi-lista" id="listaFiltroUnidade"></div>
+</div>
+</div>
 </div>
 
 <div class="col-md-2">
 <label class="form-label fw-semibold">Fonte de Recurso</label>
-<select id="filtroFonte" class="form-select">
-<option value="">Todas</option>
-</select>
+<div class="dropdown filtro-multi">
+<button type="button" class="filtro-multi-btn" id="btnFiltroFonte">
+<span class="filtro-multi-label" id="labelFiltroFonte">Todas</span>
+<i class="bi bi-caret-down-fill small"></i>
+</button>
+<div class="filtro-multi-menu" id="menuFiltroFonte">
+<input type="text" class="form-control form-control-sm mb-2" id="buscaFiltroFonte" placeholder="Buscar fonte...">
+<div class="filtro-multi-acoes">
+<a href="#" id="linkTodasFonte">Selecionar todas</a>
+<a href="#" id="linkLimparFonte">Limpar</a>
+</div>
+<div class="filtro-multi-lista" id="listaFiltroFonte"></div>
+</div>
+</div>
 </div>
 
 <div class="col-md-1 d-flex align-items-end">
@@ -363,6 +395,12 @@ let metricaUnidade = "valorEmpenhado";
 let metricaCredores = "valorEmpenhado";
 let unidadeExpandida = false;
 
+// Filtros de seleção múltipla (Unidade e Fonte de Recurso)
+let listaUnidades = []; // [ [codigo, nome], ... ]
+let listaFontes = [];   // [ [codigo, nome], ... ]
+let selecionadosUnidade = new Set();
+let selecionadosFonte = new Set();
+
 // Controle de ordenação da tabela (inicia ordenada por Fonte de Recurso, crescente)
 let colunaOrdenacao = "fonteRecursoDescricao";
 let direcaoOrdenacao = "asc"; // 'asc' ou 'desc'
@@ -497,10 +535,10 @@ function preencherFiltros(){
   const orgaos = [...new Map(dados.map(item => [item.orgaoCodigo, item.orgaoDescricao])).entries()]
     .sort((a,b)=> String(a[1]).localeCompare(String(b[1]), "pt-BR"));
 
-  const unidades = [...new Map(dados.map(item => [item.unidadeCodigo, item.unidadeDescricao])).entries()]
+  listaUnidades = [...new Map(dados.map(item => [item.unidadeCodigo, item.unidadeDescricao])).entries()]
     .sort((a,b)=> String(a[1]).localeCompare(String(b[1]), "pt-BR"));
 
-  const fontes = [...new Map(dados.map(item => [item.fonteRecurso, item.fonteRecursoDescricao])).entries()]
+  listaFontes = [...new Map(dados.map(item => [item.fonteRecurso, item.fonteRecursoDescricao])).entries()]
     .sort((a,b)=> {
       const numA = Number(a[0]);
       const numB = Number(b[0]);
@@ -513,24 +551,75 @@ function preencherFiltros(){
   $("filtroOrgao").innerHTML = `<option value="">Todos</option>` +
     orgaos.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
 
-  $("filtroUnidade").innerHTML = `<option value="">Todas</option>` +
-    unidades.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
+  selecionadosUnidade.clear();
+  selecionadosFonte.clear();
 
-  $("filtroFonte").innerHTML = `<option value="">Todas</option>` +
-    fontes.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(codigo)} - ${escapeHtml(nome)}</option>`).join("");
+  construirListaFiltro(
+    "listaFiltroUnidade",
+    listaUnidades.map(([codigo,nome])=>[codigo, nome]),
+    selecionadosUnidade,
+    () => { atualizarLabelFiltro("labelFiltroUnidade", selecionadosUnidade, listaUnidades.length, "Todas", "unidade(s) selecionada(s)"); atualizarDashboard(); }
+  );
+
+  construirListaFiltro(
+    "listaFiltroFonte",
+    listaFontes.map(([codigo,nome])=>[codigo, `${codigo} - ${nome}`]),
+    selecionadosFonte,
+    () => { atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)"); atualizarDashboard(); }
+  );
+
+  atualizarLabelFiltro("labelFiltroUnidade", selecionadosUnidade, listaUnidades.length, "Todas", "unidade(s) selecionada(s)");
+  atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)");
+}
+
+// Monta a lista de checkboxes de um filtro de seleção múltipla
+function construirListaFiltro(containerId, itens, selecionados, aoAlterar){
+  const container = $(containerId);
+  container.innerHTML = itens.map(([codigo,rotulo], idx) => {
+    const id = `${containerId}-item-${idx}`;
+    return `
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" value="${escapeHtml(codigo)}" id="${id}">
+        <label class="form-check-label" for="${id}">${escapeHtml(rotulo)}</label>
+      </div>`;
+  }).join("");
+
+  container.querySelectorAll('input[type="checkbox"]').forEach(chk=>{
+    chk.addEventListener("change", function(){
+      if(this.checked){ selecionados.add(this.value); } else { selecionados.delete(this.value); }
+      aoAlterar();
+    });
+  });
+}
+
+// Atualiza o texto do botão do filtro ("Todas", ou "N selecionada(s)")
+function atualizarLabelFiltro(labelId, selecionados, total, textoTodos, sufixo){
+  const el = $(labelId);
+  if(selecionados.size === 0 || selecionados.size === total){
+    el.textContent = textoTodos;
+  } else {
+    el.textContent = `${selecionados.size} ${sufixo}`;
+  }
+}
+
+// Filtra visualmente os itens da lista de checkboxes conforme o texto digitado
+function filtrarListaBusca(inputId, listaContainerId){
+  const termo = $(inputId).value.toLowerCase().trim();
+  $(listaContainerId).querySelectorAll(".form-check").forEach(div=>{
+    const texto = div.textContent.toLowerCase();
+    div.style.display = texto.includes(termo) ? "" : "none";
+  });
 }
 
 function aplicarFiltros(){
   const credor = $("filtroCredor").value.toLowerCase().trim();
   const orgao = $("filtroOrgao").value;
-  const unidade = $("filtroUnidade").value;
-  const fonte = $("filtroFonte").value;
 
   dadosFiltrados = dados.filter(item => {
     const okCredor = !credor || String(item.nomeCredor).toLowerCase().includes(credor);
     const okOrgao = !orgao || String(item.orgaoCodigo) === orgao;
-    const okUnidade = !unidade || String(item.unidadeCodigo) === unidade;
-    const okFonte = !fonte || String(item.fonteRecurso) === fonte;
+    const okUnidade = selecionadosUnidade.size === 0 || selecionadosUnidade.has(String(item.unidadeCodigo));
+    const okFonte = selecionadosFonte.size === 0 || selecionadosFonte.has(String(item.fonteRecurso));
     return okCredor && okOrgao && okUnidade && okFonte;
   });
 
@@ -887,8 +976,14 @@ function atualizarTabela(){
 function limparFiltros(){
   $("filtroCredor").value = "";
   $("filtroOrgao").value = "";
-  $("filtroUnidade").value = "";
-  $("filtroFonte").value = "";
+
+  selecionadosUnidade.clear();
+  selecionadosFonte.clear();
+  document.querySelectorAll('#listaFiltroUnidade input[type="checkbox"]').forEach(chk=>chk.checked=false);
+  document.querySelectorAll('#listaFiltroFonte input[type="checkbox"]').forEach(chk=>chk.checked=false);
+  atualizarLabelFiltro("labelFiltroUnidade", selecionadosUnidade, listaUnidades.length, "Todas", "unidade(s) selecionada(s)");
+  atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)");
+
   colunaOrdenacao = "fonteRecursoDescricao";
   direcaoOrdenacao = "asc";
   atualizarDashboard();
@@ -987,8 +1082,57 @@ $("btnLimpar").addEventListener("click", limparFiltros);
 $("btnCsv").addEventListener("click", exportarCSV);
 $("filtroCredor").addEventListener("input", atualizarDashboard);
 $("filtroOrgao").addEventListener("change", atualizarDashboard);
-$("filtroUnidade").addEventListener("change", atualizarDashboard);
-$("filtroFonte").addEventListener("change", atualizarDashboard);
+
+// Filtros de seleção múltipla: abrir/fechar dropdown, busca e ações de selecionar todas/limpar
+$("btnFiltroUnidade").addEventListener("click", function(e){
+  e.stopPropagation();
+  document.querySelectorAll(".filtro-multi-menu.show").forEach(m=>{ if(m.id !== "menuFiltroUnidade") m.classList.remove("show"); });
+  $("menuFiltroUnidade").classList.toggle("show");
+});
+$("btnFiltroFonte").addEventListener("click", function(e){
+  e.stopPropagation();
+  document.querySelectorAll(".filtro-multi-menu.show").forEach(m=>{ if(m.id !== "menuFiltroFonte") m.classList.remove("show"); });
+  $("menuFiltroFonte").classList.toggle("show");
+});
+
+document.addEventListener("click", function(e){
+  if(!e.target.closest(".filtro-multi")){
+    document.querySelectorAll(".filtro-multi-menu.show").forEach(m=>m.classList.remove("show"));
+  }
+});
+
+$("buscaFiltroUnidade").addEventListener("input", () => filtrarListaBusca("buscaFiltroUnidade", "listaFiltroUnidade"));
+$("buscaFiltroFonte").addEventListener("input", () => filtrarListaBusca("buscaFiltroFonte", "listaFiltroFonte"));
+
+$("linkTodasUnidade").addEventListener("click", function(e){
+  e.preventDefault();
+  listaUnidades.forEach(([codigo])=> selecionadosUnidade.add(String(codigo)));
+  document.querySelectorAll('#listaFiltroUnidade input[type="checkbox"]').forEach(chk=>chk.checked=true);
+  atualizarLabelFiltro("labelFiltroUnidade", selecionadosUnidade, listaUnidades.length, "Todas", "unidade(s) selecionada(s)");
+  atualizarDashboard();
+});
+$("linkLimparUnidade").addEventListener("click", function(e){
+  e.preventDefault();
+  selecionadosUnidade.clear();
+  document.querySelectorAll('#listaFiltroUnidade input[type="checkbox"]').forEach(chk=>chk.checked=false);
+  atualizarLabelFiltro("labelFiltroUnidade", selecionadosUnidade, listaUnidades.length, "Todas", "unidade(s) selecionada(s)");
+  atualizarDashboard();
+});
+
+$("linkTodasFonte").addEventListener("click", function(e){
+  e.preventDefault();
+  listaFontes.forEach(([codigo])=> selecionadosFonte.add(String(codigo)));
+  document.querySelectorAll('#listaFiltroFonte input[type="checkbox"]').forEach(chk=>chk.checked=true);
+  atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)");
+  atualizarDashboard();
+});
+$("linkLimparFonte").addEventListener("click", function(e){
+  e.preventDefault();
+  selecionadosFonte.clear();
+  document.querySelectorAll('#listaFiltroFonte input[type="checkbox"]').forEach(chk=>chk.checked=false);
+  atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)");
+  atualizarDashboard();
+});
 
 // Inicia consulta ao carregar a página
 consultarAPI();
