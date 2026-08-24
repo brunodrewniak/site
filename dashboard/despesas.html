@@ -232,8 +232,20 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 <div class="col-lg-6">
 <div class="card">
 <div class="card-body">
-<h5 class="card-title mb-3">Despesas por Unidade</h5>
-<div class="chart-box"><canvas id="graficoUnidade"></canvas></div>
+<div class="chart-header">
+<h5 class="card-title mb-0" id="tituloGraficoUnidade">Despesas por Unidade</h5>
+<div class="d-flex gap-2 flex-wrap align-items-center">
+<div class="btn-group btn-group-sm" role="group" aria-label="Métrica Unidade">
+<button type="button" class="btn btn-outline-primary metrica-btn active" data-chart="unidade" data-metrica="valorEmpenhado">Empenhado</button>
+<button type="button" class="btn btn-outline-primary metrica-btn" data-chart="unidade" data-metrica="valorLiquidado">Liquidado</button>
+<button type="button" class="btn btn-outline-primary metrica-btn" data-chart="unidade" data-metrica="valorPago">Pago</button>
+</div>
+<button type="button" id="btnExpandirUnidade" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-arrows-expand"></i> Ver todas
+</button>
+</div>
+</div>
+<div class="chart-box" id="chartBoxUnidade"><canvas id="graficoUnidade"></canvas></div>
 </div>
 </div>
 </div>
@@ -241,7 +253,14 @@ API utilizada: <code>campolargo.atende.net/api/WCPDadosAbertos/despesas</code>
 <div class="col-lg-6">
 <div class="card">
 <div class="card-body">
-<h5 class="card-title mb-3">Top 10 Credores</h5>
+<div class="chart-header">
+<h5 class="card-title mb-0">Top 10 Credores</h5>
+<div class="btn-group btn-group-sm" role="group" aria-label="Métrica Credores">
+<button type="button" class="btn btn-outline-primary metrica-btn active" data-chart="credores" data-metrica="valorEmpenhado">Empenhado</button>
+<button type="button" class="btn btn-outline-primary metrica-btn" data-chart="credores" data-metrica="valorLiquidado">Liquidado</button>
+<button type="button" class="btn btn-outline-primary metrica-btn" data-chart="credores" data-metrica="valorPago">Pago</button>
+</div>
+</div>
 <div class="chart-box"><canvas id="graficoCredores"></canvas></div>
 </div>
 </div>
@@ -340,6 +359,9 @@ let graficos = {};
 // Métricas selecionáveis nos gráficos de Fonte de Recurso e Unidade x Fonte de Recurso
 let metricaFonte = "valorEmpenhado";
 let metricaUnidadeFonte = "valorEmpenhado";
+let metricaUnidade = "valorEmpenhado";
+let metricaCredores = "valorEmpenhado";
+let unidadeExpandida = false;
 
 // Controle de ordenação da tabela (inicia ordenada por Fonte de Recurso, crescente)
 let colunaOrdenacao = "fonteRecursoDescricao";
@@ -688,14 +710,29 @@ function atualizarGraficoOrgao(){
 }
 
 function atualizarGraficoUnidade(){
-  const unidade = agrupar("unidadeDescricao", "valorPago", 10);
+  const limite = unidadeExpandida ? Infinity : 10;
+  const unidade = agrupar("unidadeDescricao", metricaUnidade, limite);
+
+  // Ajusta a altura do container conforme a quantidade de unidades exibidas
+  const caixa = $("chartBoxUnidade");
+  caixa.style.height = unidadeExpandida ? `${Math.max(360, unidade.length * 26)}px` : "360px";
+
+  $("tituloGraficoUnidade").textContent = unidadeExpandida
+    ? `Despesas por Unidade (todas - ${unidade.length})`
+    : "Despesas por Unidade (Top 10)";
+
+  const btnExpandir = $("btnExpandirUnidade");
+  btnExpandir.innerHTML = unidadeExpandida
+    ? `<i class="bi bi-arrows-collapse"></i> Ver Top 10`
+    : `<i class="bi bi-arrows-expand"></i> Ver todas`;
+
   destruirGrafico("unidade");
   graficos.unidade = new Chart($("graficoUnidade"), {
     type:"bar",
     data:{
       labels: unidade.map(item=>item[0]),
       datasets:[{
-        label:"Valor Pago",
+        label: NOME_METRICA[metricaUnidade],
         backgroundColor: "#0dcaf0",
         data: unidade.map(item=>item[1])
       }]
@@ -712,14 +749,14 @@ function atualizarGraficoUnidade(){
 }
 
 function atualizarGraficoCredores(){
-  const credores = agrupar("nomeCredor", "valorPago", 10);
+  const credores = agrupar("nomeCredor", metricaCredores, 10);
   destruirGrafico("credores");
   graficos.credores = new Chart($("graficoCredores"), {
     type:"bar",
     data:{
       labels: credores.map(item=>item[0]),
       datasets:[{
-        label:"Valor Pago",
+        label: NOME_METRICA[metricaCredores],
         backgroundColor: "#073b6f",
         data: credores.map(item=>item[1])
       }]
@@ -890,7 +927,7 @@ function exportarCSV(){
   URL.revokeObjectURL(url);
 }
 
-// Botões de métrica (Empenhado / Liquidado / Pago) dos gráficos de Fonte e Unidade x Fonte
+// Botões de métrica (Empenhado / Liquidado / Pago) dos gráficos com métrica selecionável
 document.querySelectorAll(".metrica-btn").forEach(btn=>{
   btn.addEventListener("click", function(){
     const grafico = this.dataset.chart;
@@ -905,8 +942,20 @@ document.querySelectorAll(".metrica-btn").forEach(btn=>{
     } else if(grafico === "unidadeFonte"){
       metricaUnidadeFonte = metrica;
       atualizarGraficoUnidadeFonte();
+    } else if(grafico === "unidade"){
+      metricaUnidade = metrica;
+      atualizarGraficoUnidade();
+    } else if(grafico === "credores"){
+      metricaCredores = metrica;
+      atualizarGraficoCredores();
     }
   });
+});
+
+// Alterna entre exibir Top 10 unidades ou todas as unidades no gráfico "Despesas por Unidade"
+$("btnExpandirUnidade").addEventListener("click", function(){
+  unidadeExpandida = !unidadeExpandida;
+  atualizarGraficoUnidade();
 });
 
 // Leitor do arquivo JSON local
