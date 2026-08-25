@@ -99,9 +99,20 @@ Aguardando consulta...
 
 <div class="col-md-2">
 <label class="form-label fw-semibold">Órgão</label>
-<select id="filtroOrgao" class="form-select">
-<option value="">Todos</option>
-</select>
+<div class="dropdown filtro-multi">
+<button type="button" class="filtro-multi-btn" id="btnFiltroOrgao">
+<span class="filtro-multi-label" id="labelFiltroOrgao">Todos</span>
+<i class="bi bi-caret-down-fill small"></i>
+</button>
+<div class="filtro-multi-menu" id="menuFiltroOrgao">
+<input type="text" class="form-control form-control-sm mb-2" id="buscaFiltroOrgao" placeholder="Buscar órgão...">
+<div class="filtro-multi-acoes">
+<a href="#" id="linkTodasOrgao">Selecionar todos</a>
+<a href="#" id="linkLimparOrgao">Limpar</a>
+</div>
+<div class="filtro-multi-lista" id="listaFiltroOrgao"></div>
+</div>
+</div>
 </div>
 
 <div class="col-md-2">
@@ -395,9 +406,11 @@ let metricaUnidade = "valorEmpenhado";
 let metricaCredores = "valorEmpenhado";
 let unidadeExpandida = false;
 
-// Filtros de seleção múltipla (Unidade e Fonte de Recurso)
+// Filtros de seleção múltipla (Órgão, Unidade e Fonte de Recurso)
+let listaOrgaos = [];   // [ [codigo, nome], ... ]
 let listaUnidades = []; // [ [codigo, nome], ... ]
 let listaFontes = [];   // [ [codigo, nome], ... ]
+let selecionadosOrgao = new Set();
 let selecionadosUnidade = new Set();
 let selecionadosFonte = new Set();
 
@@ -532,7 +545,7 @@ function processarDados(lista) {
 }
 
 function preencherFiltros(){
-  const orgaos = [...new Map(dados.map(item => [item.orgaoCodigo, item.orgaoDescricao])).entries()]
+  listaOrgaos = [...new Map(dados.map(item => [item.orgaoCodigo, item.orgaoDescricao])).entries()]
     .sort((a,b)=> String(a[1]).localeCompare(String(b[1]), "pt-BR"));
 
   listaUnidades = [...new Map(dados.map(item => [item.unidadeCodigo, item.unidadeDescricao])).entries()]
@@ -548,11 +561,16 @@ function preencherFiltros(){
       return String(a[0]).localeCompare(String(b[0]), "pt-BR", { numeric:true });
     });
 
-  $("filtroOrgao").innerHTML = `<option value="">Todos</option>` +
-    orgaos.map(([codigo,nome])=> `<option value="${escapeHtml(codigo)}">${escapeHtml(nome)}</option>`).join("");
-
+  selecionadosOrgao.clear();
   selecionadosUnidade.clear();
   selecionadosFonte.clear();
+
+  construirListaFiltro(
+    "listaFiltroOrgao",
+    listaOrgaos.map(([codigo,nome])=>[codigo, nome]),
+    selecionadosOrgao,
+    () => { atualizarLabelFiltro("labelFiltroOrgao", selecionadosOrgao, listaOrgaos.length, "Todos", "órgão(s) selecionado(s)"); atualizarDashboard(); }
+  );
 
   construirListaFiltro(
     "listaFiltroUnidade",
@@ -568,6 +586,7 @@ function preencherFiltros(){
     () => { atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)"); atualizarDashboard(); }
   );
 
+  atualizarLabelFiltro("labelFiltroOrgao", selecionadosOrgao, listaOrgaos.length, "Todos", "órgão(s) selecionado(s)");
   atualizarLabelFiltro("labelFiltroUnidade", selecionadosUnidade, listaUnidades.length, "Todas", "unidade(s) selecionada(s)");
   atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)");
 }
@@ -613,11 +632,10 @@ function filtrarListaBusca(inputId, listaContainerId){
 
 function aplicarFiltros(){
   const credor = $("filtroCredor").value.toLowerCase().trim();
-  const orgao = $("filtroOrgao").value;
 
   dadosFiltrados = dados.filter(item => {
     const okCredor = !credor || String(item.nomeCredor).toLowerCase().includes(credor);
-    const okOrgao = !orgao || String(item.orgaoCodigo) === orgao;
+    const okOrgao = selecionadosOrgao.size === 0 || selecionadosOrgao.has(String(item.orgaoCodigo));
     const okUnidade = selecionadosUnidade.size === 0 || selecionadosUnidade.has(String(item.unidadeCodigo));
     const okFonte = selecionadosFonte.size === 0 || selecionadosFonte.has(String(item.fonteRecurso));
     return okCredor && okOrgao && okUnidade && okFonte;
@@ -975,12 +993,14 @@ function atualizarTabela(){
 
 function limparFiltros(){
   $("filtroCredor").value = "";
-  $("filtroOrgao").value = "";
 
+  selecionadosOrgao.clear();
   selecionadosUnidade.clear();
   selecionadosFonte.clear();
+  document.querySelectorAll('#listaFiltroOrgao input[type="checkbox"]').forEach(chk=>chk.checked=false);
   document.querySelectorAll('#listaFiltroUnidade input[type="checkbox"]').forEach(chk=>chk.checked=false);
   document.querySelectorAll('#listaFiltroFonte input[type="checkbox"]').forEach(chk=>chk.checked=false);
+  atualizarLabelFiltro("labelFiltroOrgao", selecionadosOrgao, listaOrgaos.length, "Todos", "órgão(s) selecionado(s)");
   atualizarLabelFiltro("labelFiltroUnidade", selecionadosUnidade, listaUnidades.length, "Todas", "unidade(s) selecionada(s)");
   atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)");
 
@@ -1081,9 +1101,13 @@ $("btnConsultar").addEventListener("click", consultarAPI);
 $("btnLimpar").addEventListener("click", limparFiltros);
 $("btnCsv").addEventListener("click", exportarCSV);
 $("filtroCredor").addEventListener("input", atualizarDashboard);
-$("filtroOrgao").addEventListener("change", atualizarDashboard);
 
-// Filtros de seleção múltipla: abrir/fechar dropdown, busca e ações de selecionar todas/limpar
+// Filtros de seleção múltipla: abrir/fechar dropdown, busca e ações de selecionar todos/limpar
+$("btnFiltroOrgao").addEventListener("click", function(e){
+  e.stopPropagation();
+  document.querySelectorAll(".filtro-multi-menu.show").forEach(m=>{ if(m.id !== "menuFiltroOrgao") m.classList.remove("show"); });
+  $("menuFiltroOrgao").classList.toggle("show");
+});
 $("btnFiltroUnidade").addEventListener("click", function(e){
   e.stopPropagation();
   document.querySelectorAll(".filtro-multi-menu.show").forEach(m=>{ if(m.id !== "menuFiltroUnidade") m.classList.remove("show"); });
@@ -1101,8 +1125,24 @@ document.addEventListener("click", function(e){
   }
 });
 
+$("buscaFiltroOrgao").addEventListener("input", () => filtrarListaBusca("buscaFiltroOrgao", "listaFiltroOrgao"));
 $("buscaFiltroUnidade").addEventListener("input", () => filtrarListaBusca("buscaFiltroUnidade", "listaFiltroUnidade"));
 $("buscaFiltroFonte").addEventListener("input", () => filtrarListaBusca("buscaFiltroFonte", "listaFiltroFonte"));
+
+$("linkTodasOrgao").addEventListener("click", function(e){
+  e.preventDefault();
+  listaOrgaos.forEach(([codigo])=> selecionadosOrgao.add(String(codigo)));
+  document.querySelectorAll('#listaFiltroOrgao input[type="checkbox"]').forEach(chk=>chk.checked=true);
+  atualizarLabelFiltro("labelFiltroOrgao", selecionadosOrgao, listaOrgaos.length, "Todos", "órgão(s) selecionado(s)");
+  atualizarDashboard();
+});
+$("linkLimparOrgao").addEventListener("click", function(e){
+  e.preventDefault();
+  selecionadosOrgao.clear();
+  document.querySelectorAll('#listaFiltroOrgao input[type="checkbox"]').forEach(chk=>chk.checked=false);
+  atualizarLabelFiltro("labelFiltroOrgao", selecionadosOrgao, listaOrgaos.length, "Todos", "órgão(s) selecionado(s)");
+  atualizarDashboard();
+});
 
 $("linkTodasUnidade").addEventListener("click", function(e){
   e.preventDefault();
@@ -1133,6 +1173,7 @@ $("linkLimparFonte").addEventListener("click", function(e){
   atualizarLabelFiltro("labelFiltroFonte", selecionadosFonte, listaFontes.length, "Todas", "fonte(s) selecionada(s)");
   atualizarDashboard();
 });
+
 
 // Inicia consulta ao carregar a página
 consultarAPI();
