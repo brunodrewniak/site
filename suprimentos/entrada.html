@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Transparência - Entradas de Almoxarifado 2026</title>
+<title>Transparência - Entradas de Almoxarifado</title>
 
 <!-- Bootstrap 5 & Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -46,6 +46,7 @@ body { background: var(--fundo); font-family: system-ui, -apple-system, "Segoe U
 .btn-outline-tema:hover { background-color: var(--cor-secundaria); color: #fff; }
 .badge-tema { background-color: var(--cor-secundaria); color: #fff; font-weight: 600; }
 .progress-bar-custom { background-color: var(--cor-secundaria); }
+.tr-estornada { background-color: #fff0f0 !important; color: #842029; }
 </style>
 </head>
 
@@ -67,7 +68,7 @@ body { background: var(--fundo); font-family: system-ui, -apple-system, "Segoe U
 <span class="badge bg-light text-dark mb-2">DADOS ABERTOS</span>
 <h1 class="h2 fw-bold">Dashboard de Entradas de Almoxarifado</h1>
 <p class="lead mb-0 small">
-Busca Adaptativa por Data com Parada Automática ao Detectar Fim de Registros (Entrada Vazia).
+Informe 0 no Código para pesquisar por Data ou informe o código específico para busca direta.
 </p>
 </div>
 </div>
@@ -82,19 +83,9 @@ Aguardando parâmetro de busca...
 
 <div class="card mb-4">
 <div class="card-body">
-<h5 class="card-title mb-3">Parâmetros de Busca por Data</h5>
+<h5 class="card-title mb-3">Parâmetros de Consulta</h5>
 
 <div class="row g-3 mb-2">
-<div class="col-md-2">
-<label class="form-label fw-semibold">Entidade</label>
-<input type="number" id="codigoEntidade" class="form-control" value="2848">
-</div>
-
-<div class="col-md-2">
-<label class="form-label fw-semibold">Ano</label>
-<input type="number" id="anoEntrada" class="form-control" value="2026">
-</div>
-
 <div class="col-md-2">
 <label class="form-label fw-semibold">Data Inicial</label>
 <input type="date" id="dataInicio" class="form-control">
@@ -106,13 +97,18 @@ Aguardando parâmetro de busca...
 </div>
 
 <div class="col-md-2">
-<label class="form-label fw-semibold">Cód. Estimado Inicial</label>
-<input type="number" id="codigoInicio" class="form-control" value="1" min="1">
+<label class="form-label fw-semibold">Código Entrada</label>
+<input type="number" id="codigoInicio" class="form-control" value="0" min="0">
 </div>
 
-<div class="col-md-2">
-<label class="form-label fw-semibold">Filtro Rápido</label>
-<input type="text" id="filtroTexto" class="form-control" placeholder="Produto, Fornecedor...">
+<div class="col-md-3">
+<label class="form-label fw-semibold">Filtro por Depósito</label>
+<input type="text" id="filtroDeposito" class="form-control" placeholder="Ex: 1, 5, 10 ou Todos">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Filtro Rápido (Texto)</label>
+<input type="text" id="filtroTexto" class="form-control" placeholder="Produto, CNPJ, Tipo, Obs...">
 </div>
 </div>
 
@@ -128,13 +124,13 @@ Aguardando parâmetro de busca...
 
 <div class="col-md-3 text-end">
 <button id="btnConsultar" class="btn btn-tema w-100">
-<i class="bi bi-search"></i> Buscar por Período
+<i class="bi bi-search"></i> Realizar Consulta
 </button>
 </div>
 </div>
 
 <div class="small-muted mt-3">
-Caso o sistema encontre retorno de saída vazia mais de uma vez consecutiva, a busca é finalizada imediatamente.
+* Entidade fixa (2848). O ano da busca é extraído automaticamente da Data Inicial informada.
 </div>
 </div>
 </div>
@@ -143,7 +139,7 @@ Caso o sistema encontre retorno de saída vazia mais de uma vez consecutiva, a b
 <div id="loading" class="card mb-4 d-none">
 <div class="card-body text-center py-4">
 <div class="spinner-border mb-3" role="status" style="color: var(--cor-secundaria);"></div>
-<h6 id="loadingTexto" class="fw-semibold mb-2">Localizando faixa de datas...</h6>
+<h6 id="loadingTexto" class="fw-semibold mb-2">Processando consulta...</h6>
 <div class="progress w-75 mx-auto" style="height: 18px;">
 <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated progress-bar-custom" role="progressbar" style="width: 100%;">Processando...</div>
 </div>
@@ -201,7 +197,7 @@ Caso o sistema encontre retorno de saída vazia mais de uma vez consecutiva, a b
 <div class="col-lg-6">
 <div class="card">
 <div class="card-body">
-<h5 class="card-title mb-3">Top Fornecedores</h5>
+<h5 class="card-title mb-3">Top Tipos de Entrada</h5>
 <div class="chart-box"><canvas id="graficoFornecedores"></canvas></div>
 </div>
 </div>
@@ -213,7 +209,7 @@ Caso o sistema encontre retorno de saída vazia mais de uma vez consecutiva, a b
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 <div>
 <h5 class="mb-1">Registros de Entrada de Estoque</h5>
-<div class="small-muted">Filtro aplicado por faixa de data exata</div>
+<div class="small-muted">Resultados detalhados conforme os parâmetros do endpoint</div>
 </div>
 <span id="contadorTabela" class="badge badge-tema">0 registros</span>
 </div>
@@ -223,16 +219,17 @@ Caso o sistema encontre retorno de saída vazia mais de uma vez consecutiva, a b
 <thead>
 <tr>
 <th>Entrada</th>
-<th>Data</th>
-<th>Fornecedor</th>
-<th>Nota Fiscal</th>
-<th>Empenho</th>
+<th>Data / Hora</th>
+<th>Tipo</th>
+<th>Estado</th>
+<th>CPF/CNPJ</th>
+<th>Doc. Nº</th>
 <th>Depósito</th>
-<th>Cód. Prod.</th>
 <th>Descrição do Produto</th>
-<th>Qtd.</th>
+<th>Qtd. (Unid)</th>
 <th>Vlr. Unitário</th>
 <th>Vlr. Total</th>
+<th>Obs.</th>
 </tr>
 </thead>
 <tbody id="tbody"></tbody>
@@ -250,11 +247,39 @@ Dashboard de Almoxarifado — Campo Largo/PR | Módulo de Entradas
 </footer>
 
 <script>
+const ENTIDADE_FIXA = "2848";
+
+const MAPA_TIPOS = {
+  1: "Nota Fiscal",
+  2: "Doação",
+  3: "Transferência",
+  4: "Ordem de Compra",
+  5: "Saída Total",
+  6: "Devolução",
+  7: "Empenho",
+  8: "Estorno Saída",
+  9: "Fabricação Própria",
+  10: "Fracionamento"
+};
+
+const MAPA_ESTADOS = {
+  1: { texto: "Normal", badge: "bg-success" },
+  2: { texto: "Est. Parcial", badge: "bg-warning text-dark" },
+  3: { texto: "Est. Total", badge: "bg-danger" }
+};
+
 let dadosItens = [];
 let dadosFiltrados = [];
 let graficos = {};
 
 const $ = id => document.getElementById(id);
+
+// DEFINE A DATA DO DIA ATUAL POR DEFAULT
+function inicializarDatasPadrao() {
+  const hoje = new Date().toISOString().split('T')[0];
+  $("dataInicio").value = hoje;
+  $("dataFim").value = hoje;
+}
 
 function escapeHtml(valor){
   return String(valor ?? "")
@@ -292,7 +317,6 @@ function parseDataBR(dataStr) {
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Extrai dados tratando retornos do tipo "entrada":[[]]
 function extrairEntradas(json) {
   if (!json) return [];
   const noEntrada = json.entrada || json.Entrada;
@@ -304,6 +328,50 @@ function extrairEntradas(json) {
     return [noEntrada];
   }
   return [];
+}
+
+function processarEInserirItens(json, infoEntrada) {
+  const itens = json.Itens || json.itens || infoEntrada.Itens || infoEntrada.itens || [];
+  
+  const tipoId = Number(infoEntrada.Tipo || infoEntrada.tipo || 0);
+  const estadoId = Number(infoEntrada.Estado || infoEntrada.estado || 1);
+
+  const tipoTexto = MAPA_TIPOS[tipoId] || `Tipo ${tipoId}`;
+  const estadoObj = MAPA_ESTADOS[estadoId] || { texto: "Outro", badge: "bg-secondary" };
+
+  const cpfCnpj = infoEntrada.pessoa?.cpfCnpj || infoEntrada.Pessoa?.cpfCnpj || infoEntrada.cpfCnpj || "-";
+  const observacao = infoEntrada.Observacao || infoEntrada.observacao || infoEntrada.Observacoes || "";
+
+  if (Array.isArray(itens) && itens.length > 0) {
+    itens.forEach(it => {
+      const depCodigo = it.Deposito?.codigo || it.deposito?.codigo || it.Estoque?.Deposito?.codigo || "-";
+      const descProduto = it.ProdutoUnidade?.Produto?.descricao || it.produtoUnidade?.produto?.descricao || it.descricao || "Sem Descrição";
+      const descUnidade = it.ProdutoUnidade?.Unidade?.descricao || it.produtoUnidade?.unidade?.descricao || "UN";
+
+      dadosItens.push({
+        codigoCliente: infoEntrada.CodigoCliente || infoEntrada.codigoCliente || ENTIDADE_FIXA,
+        ano: infoEntrada.Ano || infoEntrada.ano,
+        numeroEntrada: infoEntrada.Codigo || infoEntrada.codigo,
+        data: infoEntrada.Data || infoEntrada.data,
+        hora: infoEntrada.Hora || infoEntrada.hora || "",
+        tipoId: tipoId,
+        tipoTexto: tipoTexto,
+        estadoId: estadoId,
+        estadoTexto: estadoObj.texto,
+        estadoBadge: estadoObj.badge,
+        cpfCnpj: cpfCnpj,
+        documentoNumero: infoEntrada.DocumentoNumero || infoEntrada.documentoNumero || infoEntrada.NotaFiscal || "-",
+        observacao: observacao,
+        itemNum: it.Item || it.item,
+        depositoCodigo: String(depCodigo),
+        produto: descProduto,
+        unidade: descUnidade,
+        quantidade: Number(it.Quantidade || it.quantidade || 0),
+        valorUnitario: Number(it.ValorUnitario || it.valorUnitario || it.PrecoEntrada || 0),
+        valorTotal: Number(it.ValorTotal || it.valorTotal || 0)
+      });
+    });
+  }
 }
 
 async function buscarEntradaPorCodigo(entidade, ano, codigo) {
@@ -326,13 +394,39 @@ async function buscarEntradaPorCodigo(entidade, ano, codigo) {
 }
 
 async function consultarAPI(){
-  const entidade = $("codigoEntidade").value;
-  const ano = $("anoEntrada").value;
   const dtInicioStr = $("dataInicio").value;
   const dtFimStr = $("dataFim").value;
+  const codigoInput = parseInt($("codigoInicio").value, 10) || 0;
 
-  if (!dtInicioStr || !dtFimStr) {
-    mostrarStatus("Por favor, selecione as datas Inicial e Final para consulta.", "danger");
+  if (!dtInicioStr) {
+    mostrarStatus("Por favor, selecione a Data Inicial para definir o ano da consulta.", "danger");
+    return;
+  }
+
+  const ano = dtInicioStr.split('-')[0];
+  dadosItens = [];
+  mostrarLoading(true);
+
+  if (codigoInput !== 0) {
+    mostrarStatus(`Buscando código específico de entrada ${codigoInput} (${ano})...`, "info");
+    const res = await buscarEntradaPorCodigo(ENTIDADE_FIXA, ano, codigoInput);
+    
+    if (res.lista.length > 0) {
+      processarEInserirItens(res.json, res.lista[0]);
+      mostrarLoading(false);
+      atualizarDashboard();
+      mostrarStatus(`Entrada nº ${codigoInput} localizada com sucesso!`, "success");
+    } else {
+      mostrarLoading(false);
+      mostrarStatus(`Entrada nº ${codigoInput} não foi encontrada para o ano de ${ano}.`, "warning");
+      atualizarDashboard();
+    }
+    return;
+  }
+
+  if (!dtFimStr) {
+    mostrarLoading(false);
+    mostrarStatus("Por favor, selecione a Data Final para realizar a busca por período.", "danger");
     return;
   }
 
@@ -340,14 +434,12 @@ async function consultarAPI(){
   const targetDtFim = new Date(dtFimStr + "T23:59:59");
 
   if (targetDtInicio > targetDtFim) {
+    mostrarLoading(false);
     mostrarStatus("A Data Inicial não pode ser maior que a Data Final.", "danger");
     return;
   }
 
-  dadosItens = [];
-  mostrarLoading(true);
-
-  let codAtual = parseInt($("codigoInicio").value, 10) || 1;
+  let codAtual = 1;
   let salto = 1000;
   let direcao = 1;
   let codInicialEncontrado = null;
@@ -355,11 +447,10 @@ async function consultarAPI(){
 
   mostrarStatus("Localizando a faixa de código correspondente à data...", "info");
 
-  // FASE 1: APROXIMAÇÃO POR SALTO (1000, 500, 250...)
   while (salto >= 1) {
     $("loadingTexto").textContent = `Saltando para o Código de Entrada ${codAtual} (Passo: ${salto})...`;
     
-    const res = await buscarEntradaPorCodigo(entidade, ano, codAtual);
+    const res = await buscarEntradaPorCodigo(ENTIDADE_FIXA, ano, codAtual);
 
     if (res.lista.length > 0) {
       contagemVaziosIniciais = 0;
@@ -397,7 +488,6 @@ async function consultarAPI(){
   if (!codInicialEncontrado) codInicialEncontrado = codAtual;
   codAtual = Math.max(1, codInicialEncontrado - 20);
 
-  // FASE 2: LEITURA SEQUENCIAL COM INTERRUPÇÃO EM ENTRADA VAZIA
   let lendo = true;
   let entradasEncontradas = 0;
   let respostasVaziasConsecutivas = 0;
@@ -405,7 +495,7 @@ async function consultarAPI(){
   while (lendo) {
     $("loadingTexto").textContent = `Lendo sequencialmente: Entrada ${codAtual} (Encontradas: ${entradasEncontradas})...`;
     
-    const res = await buscarEntradaPorCodigo(entidade, ano, codAtual);
+    const res = await buscarEntradaPorCodigo(ENTIDADE_FIXA, ano, codAtual);
 
     if (res.lista.length > 0) {
       respostasVaziasConsecutivas = 0;
@@ -420,33 +510,12 @@ async function consultarAPI(){
 
         if (dataReg >= targetDtInicio && dataReg <= targetDtFim) {
           entradasEncontradas++;
-          const itens = res.json.Itens || res.json.itens || infoEntrada.itens || [];
-
-          if (Array.isArray(itens) && itens.length > 0) {
-            itens.forEach(it => {
-              dadosItens.push({
-                numeroEntrada: infoEntrada.Codigo || infoEntrada.codigo,
-                data: infoEntrada.Data || infoEntrada.data,
-                fornecedor: infoEntrada.Fornecedor?.nome || infoEntrada.Pessoa?.nome || "Não informado",
-                notaFiscal: infoEntrada.NotaFiscal || infoEntrada.numeroNota || "-",
-                empenho: infoEntrada.Empenho || infoEntrada.numeroEmpenho || "-",
-                deposito: it.Estoque?.Deposito?.codigo || "-",
-                itemNum: it.Item,
-                codigoProduto: it.ProdutoUnidade?.Produto?.codigo || "",
-                produto: it.ProdutoUnidade?.Produto?.descricao || "Sem Descrição",
-                unidade: it.ProdutoUnidade?.Unidade?.descricao || "UN",
-                quantidade: Number(it.Quantidade || 0),
-                preco: Number(it.PrecoEntrada || it.PrecoUnitario || it.ValorUnitario || 0),
-                valorTotal: Number(it.ValorTotal || 0)
-              });
-            });
-          }
+          processarEInserirItens(res.json, infoEntrada);
         }
       }
     } else {
       respostasVaziasConsecutivas++;
       if (respostasVaziasConsecutivas >= 2) {
-        console.log(`Parando: Detectado retorno 'entrada:[[]]' ${respostasVaziasConsecutivas} vezes consecutivos. Fim da base atingido.`);
         lendo = false;
         break;
       }
@@ -469,8 +538,14 @@ async function consultarAPI(){
 
 function aplicarFiltros(){
   const texto = $("filtroTexto").value.toLowerCase().trim();
+  const depositoFiltro = $("filtroDeposito").value.trim();
 
   dadosFiltrados = dadosItens.filter(item => {
+    // FILTRO DE DEPÓSITO
+    if (depositoFiltro && item.depositoCodigo !== depositoFiltro) {
+      return false;
+    }
+    // FILTRO GERAL DE TEXTO
     if (texto) {
       return Object.values(item).some(val => String(val ?? "").toLowerCase().includes(texto));
     }
@@ -487,12 +562,12 @@ function atualizarDashboard(){
 
 function atualizarCards(){
   const entradasUnicas = new Set(dadosFiltrados.map(i => i.numeroEntrada)).size;
-  const fornUnicos = new Set(dadosFiltrados.map(i => i.fornecedor).filter(f => f !== "Não informado")).size;
+  const cnpsUnicos = new Set(dadosFiltrados.map(i => i.cpfCnpj).filter(c => c !== "-")).size;
   const valorTotal = dadosFiltrados.reduce((acc, cur) => acc + cur.valorTotal, 0);
 
   $("totalEntradas").textContent = entradasUnicas.toLocaleString("pt-BR");
   $("totalItens").textContent = dadosFiltrados.length.toLocaleString("pt-BR");
-  $("fornecedoresDistintos").textContent = fornUnicos.toLocaleString("pt-BR");
+  $("fornecedoresDistintos").textContent = cnpsUnicos.toLocaleString("pt-BR");
   $("valorTotalGeral").textContent = formatarMoeda(valorTotal);
   $("contadorTabela").textContent = `${dadosFiltrados.length.toLocaleString("pt-BR")} itens`;
 }
@@ -508,14 +583,14 @@ function agruparPor(campo) {
 
 function destruirGraficos(){
   if (graficos.produtos) graficos.produtos.destroy();
-  if (graficos.fornecedores) graficos.fornecedores.destroy();
+  if (graficos.tipos) graficos.tipos.destroy();
 }
 
 function atualizarGraficos(){
   destruirGraficos();
 
   const topProdutos = agruparPor("produto");
-  const topFornecedores = agruparPor("fornecedor");
+  const topTipos = agruparPor("tipoTexto");
 
   graficos.produtos = new Chart($("graficoProdutos"), {
     type: "bar",
@@ -530,12 +605,12 @@ function atualizarGraficos(){
     options: { indexAxis: "y", responsive: true, maintainAspectRatio: false }
   });
 
-  graficos.fornecedores = new Chart($("graficoFornecedores"), {
+  graficos.tipos = new Chart($("graficoFornecedores"), {
     type: "doughnut",
     data: {
-      labels: topFornecedores.map(i => i[0]),
+      labels: topTipos.map(i => i[0]),
       datasets: [{
-        data: topFornecedores.map(i => i[1]),
+        data: topTipos.map(i => i[1]),
         backgroundColor: ["#2c1338","#611f69","#8b2fc9","#b052de","#3d0c4e","#a0338a","#52185c","#c879f0"]
       }]
     },
@@ -547,31 +622,33 @@ function atualizarTabela(){
   const tbody = $("tbody");
 
   if (!dadosFiltrados.length) {
-    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-3">Nenhum registro encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="text-center py-3">Nenhum registro encontrado.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = dadosFiltrados.map(item => `
-    <tr>
+    <tr class="${item.estadoId === 3 ? 'tr-estornada' : ''}">
       <td><strong>${item.numeroEntrada}</strong></td>
-      <td>${escapeHtml(item.data)}</td>
-      <td>${escapeHtml(item.fornecedor)}</td>
-      <td><span class="badge bg-light text-dark border">NF: ${escapeHtml(item.notaFiscal)}</span></td>
-      <td><span class="badge bg-secondary">Emp: ${escapeHtml(item.empenho)}</span></td>
-      <td>${escapeHtml(item.deposito)}</td>
-      <td><code>${escapeHtml(item.codigoProduto)}</code></td>
+      <td>${escapeHtml(item.data)} <span class="small-muted">${escapeHtml(item.hora)}</span></td>
+      <td><span class="badge bg-light text-dark border">${escapeHtml(item.tipoTexto)}</span></td>
+      <td><span class="badge ${item.estadoBadge}">${escapeHtml(item.estadoTexto)}</span></td>
+      <td><code>${escapeHtml(item.cpfCnpj)}</code></td>
+      <td>${escapeHtml(item.documentoNumero)}</td>
+      <td><span class="badge bg-secondary">${escapeHtml(item.depositoCodigo)}</span></td>
       <td>${escapeHtml(item.produto)}</td>
-      <td>${formatarQuantidade(item.quantidade)}</td>
-      <td>${formatarMoeda(item.preco)}</td>
+      <td>${formatarQuantidade(item.quantidade)} <small class="text-muted">${escapeHtml(item.unidade)}</small></td>
+      <td>${formatarMoeda(item.valorUnitario)}</td>
       <td><strong>${formatarMoeda(item.valorTotal)}</strong></td>
+      <td title="${escapeHtml(item.observacao)}">${item.observacao ? '<i class="bi bi-chat-left-text" data-bs-toggle="tooltip" title="' + escapeHtml(item.observacao) + '"></i>' : '-'}</td>
     </tr>
   `).join("");
 }
 
 function limparFiltros(){
   $("filtroTexto").value = "";
-  $("dataInicio").value = "";
-  $("dataFim").value = "";
+  $("filtroDeposito").value = "";
+  $("codigoInicio").value = "0";
+  inicializarDatasPadrao();
   atualizarDashboard();
 }
 
@@ -581,9 +658,9 @@ function exportarCSV(){
     return;
   }
 
-  const cabecalho = ["NumeroEntrada", "Data", "Fornecedor", "NotaFiscal", "Empenho", "Deposito", "Item", "CodigoProduto", "Produto", "Unidade", "Quantidade", "PrecoUnitario", "ValorTotal"];
+  const cabecalho = ["CodigoCliente", "Ano", "NumeroEntrada", "Data", "Hora", "Tipo", "Estado", "CpfCnpj", "DocumentoNumero", "DepositoCodigo", "Item", "Produto", "Unidade", "Quantidade", "ValorUnitario", "ValorTotal", "Observacao"];
   const linhas = dadosFiltrados.map(i => [
-    i.numeroEntrada, i.data, i.fornecedor, i.notaFiscal, i.empenho, i.deposito, i.itemNum, i.codigoProduto, i.produto, i.unidade, i.quantidade, i.preco, i.valorTotal
+    i.codigoCliente, i.ano, i.numeroEntrada, i.data, i.hora, i.tipoTexto, i.estadoTexto, i.cpfCnpj, i.documentoNumero, i.depositoCodigo, i.itemNum, i.produto, i.unidade, i.quantidade, i.valorUnitario, i.valorTotal, i.observacao
   ]);
 
   const csv = [cabecalho, ...linhas]
@@ -601,10 +678,16 @@ function exportarCSV(){
   URL.revokeObjectURL(url);
 }
 
+// Inicialização
+document.addEventListener("DOMContentLoaded", () => {
+  inicializarDatasPadrao();
+});
+
 $("btnConsultar").addEventListener("click", consultarAPI);
 $("btnLimpar").addEventListener("click", limparFiltros);
 $("btnCsv").addEventListener("click", exportarCSV);
 $("filtroTexto").addEventListener("input", atualizarDashboard);
+$("filtroDeposito").addEventListener("input", atualizarDashboard);
 
 </script>
 
