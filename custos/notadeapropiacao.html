@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Nota de Apropriação (CSV para Excel)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+        }
+        h2 {
+            color: #1155cc;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .file-input-wrapper {
+            margin: 25px 0 15px 0;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn-upload {
+            background-color: #1155cc;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(17, 85, 204, 0.3);
+        }
+        .btn-upload:hover {
+            background-color: #0b3c94;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #666;
+            padding: 12px;
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Conversor de Nota de Apropriação</h2>
+    <p>Selecione o arquivo CSV original. </br> O sistema gerará um arquivo <strong>em planilha do Excel</strong> com os dados já extraidos.</p>
+    
+    <div class="file-input-wrapper">
+        <label for="csvFile" class="btn-upload">Selecionar e Converter para Excel</label>
+        <input type="file" id="csvFile" accept=".csv">
+    </div>
+    
+    <div id="status">Aguardando seleção do arquivo...</div>
+</div>
+
+<script>
+document.getElementById('csvFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const statusDiv = document.getElementById('status');
+    statusDiv.style.backgroundColor = "#eef2ff";
+    statusDiv.style.color = '#1155cc';
+    statusDiv.innerText = "Processando arquivo...";
+
+    const reader = new FileReader();
+    
+    reader.readAsText(file, 'ISO-8859-1');
+
+    reader.onload = function(event) {
+        try {
+            const conteudoArquivo = event.target.result;
+            
+            // Padroniza quebras de linha
+            const linhas = conteudoArquivo.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            
+            let dadosDestino = [];
+            let dataAtual = "";
+            let numeroNotaAtual = "";
+            let lendoItens = false;
+
+            let linhasLidas = 0;
+            let notasEncontradas = 0;
+
+            for (let i = 0; i < linhas.length; i++) {
+                let linhaTxt = linhas[i].trim();
+                if (linhaTxt === "") continue;
+
+                let colunas = linhaTxt.split(';');
+                
+                // Remove aspas e espaços extras das células
+                colunas = colunas.map(item => item.replace(/"/g, '').trim());
+                
+                if (colunas.length > 0 && colunas[0] !== "") {
+                    // Normaliza strings para evitar que problemas de codificação quebrem a lógica
+                    let chaveLimpa = colunas[0].normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+                    // Identifica "numero:" ou variações
+                    if (chaveLimpa.indexOf("numero:") === 0) {
+                        if (colunas.length >= 2) {
+                            numeroNotaAtual = colunas[1];
+                            notasEncontradas++;
+                        }
+                        lendoItens = false;
+                        
+                    // Identifica "data:"
+                    } else if (chaveLimpa.indexOf("data:") === 0) {
+                        if (colunas.length >= 2) {
+                            dataAtual = colunas[1];
+                        }
+                        lendoItens = false;
+                        
+                    // Identifica "seq."
+                    } else if (chaveLimpa.indexOf("seq") === 0) {
+                        lendoItens = true;
+                        
+                    // Interrompe se encontrar cabeçalhos secundários
+                    } else if (chaveLimpa.indexOf("apropri") !== -1 || chaveLimpa.indexOf("liquida") !== -1) {
+                        lendoItens = false;
+                        
+                    // Extrai dados se estiver no bloco ativo
+                    } else if (lendoItens && colunas.length >= 4) {
+                        let seqTxt = colunas[0];
+                        
+                        // Garante que o primeiro campo é um número sequencial
+                        if (/^\d+$/.test(seqTxt)) {
+                            let objetoCusto = colunas[1] || "";
+                            let itemCusto = colunas[2] || "";
+                            let valorOriginal = colunas[3] || "0";
+                            
+                            if (valorOriginal === "") valorOriginal = "0";
+                            
+                            // Tratamento estrito de número decimal para o Excel brasileiro
+                            let valorLimpo = valorOriginal.replace(/\./g, '').replace(/,/g, '.');
+                            let valorApropriado = parseFloat(valorLimpo);
+                            if (isNaN(valorApropriado)) valorApropriado = 0;
+                            
+                            // Formata com vírgula para manter compatibilidade imediata com o Excel nacional
+                            let valorExcel = valorApropriado.toFixed(2).replace('.', ',');
+                            
+                            dadosDestino.push({
+                                data: dataAtual,
+                                objeto: objetoCusto,
+                                item: itemCusto,
+                                valor: valorExcel,
+                                nota: numeroNotaAtual
+                            });
+                            linhasLidas++;
+                        }
+                    }
+                }
+            }
+
+            if (dadosDestino.length > 0) {
+                // Monta um CSV perfeito compatível nativamente com o Microsoft Excel do Brasil
+                let csvContent = "sep=;\r\n";
+                csvContent += "Data;Objeto de Custo;Item de Custo;Valor Apropriado;Nº Nota\r\n";
+
+                for (let i = 0; i < dadosDestino.length; i++) {
+                    let d = dadosDestino[i];
+                    
+                    // Força o Excel a tratar o campo como Texto usando a notação de fórmula literal: ="VALOR"
+                    let objetoFormatadoTexto = `="${d.objeto}"`;
+                    
+                    csvContent += `"${d.data}";${objetoFormatadoTexto};"${d.item}";${d.valor};"${d.nota}"\r\n`;
+                }
+
+                // Convertemos o texto para uma representação em Windows-1252 (ANSI) em binário
+                const csvLength = csvContent.length;
+                const buffer = new Uint8Array(csvLength);
+                for (let i = 0; i < csvLength; i++) {
+                    const charCode = csvContent.charCodeAt(i);
+                    buffer[i] = charCode < 256 ? charCode : 63;
+                }
+
+                const blob = new Blob([buffer], { type: "text/csv;charset=iso-8859-1;" });
+                
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "Relatorio_Notas_Apropriacao.csv";
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(function() {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 150);
+
+                statusDiv.style.backgroundColor = "#d1e7dd";
+                statusDiv.style.color = '#0f5132';
+                statusDiv.innerHTML = `<b>Sucesso!</b> ${linhasLidas} itens extraídos de ${notasEncontradas} nota(s) encontradas.<br>O arquivo <b>Relatorio_Notas_Apropriacao.csv</b> foi gerado e baixado de forma limpa!`;
+            } else {
+                statusDiv.style.backgroundColor = "#f8d7da";
+                statusDiv.style.color = '#842029';
+                statusDiv.innerHTML = "<b>Atenção:</b> Nenhum item pôde ser extraído.<br>Verifique se o seu arquivo original está no formato esperado.";
+            }
+        } catch (error) {
+            statusDiv.style.backgroundColor = "#f8d7da";
+            statusDiv.style.color = '#842029';
+            statusDiv.innerText = "Erro ao processar o arquivo: " + error.message;
+            console.error(error);
+        }
+    };
+});
+</script>
+
+</body>
+</html>
