@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Dinâmico - Execução Orçamentária e Financeira</title>
+<!-- Chart.js para o gráfico dinâmico -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root {
+        --primary: #1e293b;
+        --secondary: #0f172a;
+        --danger: #dc2626;
+        --warning: #d97706;
+        --success: #16a34a;
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --border: #e2e8f0;
+        --text: #334155;
+    }
+
+    body {
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 24px;
+        line-height: 1.5;
+    }
+
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .header {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        color: white;
+        padding: 28px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .header h1 {
+        margin: 0 0 6px 0;
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    .header p {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 14px;
+    }
+
+    /* CONTROLES E BOTÕES DE NAVEGAÇÃO */
+    .controls-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 24px;
+        margin-bottom: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .controls-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .controls-title {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 15px;
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-toggle {
+        padding: 10px 20px;
+        border: 2px solid var(--primary);
+        background-color: white;
+        color: var(--primary);
+        font-weight: 700;
+        font-size: 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-toggle:hover {
+        background-color: #f1f5f9;
+    }
+
+    .btn-toggle.active {
+        background-color: var(--primary);
+        color: white;
+    }
+
+    /* BOTOES DE COLUNAS (OCULTAR / REEXIBIR) */
+    .column-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--border);
+    }
+
+    .col-btn {
+        background: #f1f5f9;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s;
+    }
+
+    .col-btn:hover {
+        border-color: var(--primary);
+    }
+
+    .col-btn.col-hidden {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border-color: #fca5a5;
+        text-decoration: line-through;
+    }
+
+    /* CARDS DE RESUMO (KPIS) */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .kpi-card {
+        background: var(--card-bg);
+        padding: 18px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .kpi-title {
+        font-size: 12px;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .kpi-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .kpi-sub {
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    .text-danger { color: var(--danger); font-weight: 600; }
+    .text-success { color: var(--success); font-weight: 600; }
+
+    .card {
+        background: var(--card-bg);
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .card-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--primary);
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        text-align: right;
+    }
+
+    th {
+        background-color: #f1f5f9;
+        color: var(--primary);
+        padding: 10px 8px;
+        font-weight: 600;
+        border-bottom: 2px solid var(--border);
+        white-space: nowrap;
+    }
+
+    th:first-child, td:first-child {
+        text-align: left;
+    }
+
+    td {
+        padding: 9px 8px;
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+    }
+
+    tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .highlight-row {
+        background-color: #fef2f2 !important;
+    }
+
+    .forecast-row {
+        background-color: #faf5ff;
+        font-style: italic;
+    }
+
+    .total-row {
+        background-color: #e2e8f0;
+        font-weight: 700;
+    }
+
+    .badge {
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .badge-danger { background-color: #fee2e2; color: #991b1b; }
+    .badge-success { background-color: #dcfce7; color: #166534; }
+    .badge-warning { background-color: #fef3c7; color: #92400e; }
+
+    .chart-container {
+        position: relative;
+        height: 380px;
+        width: 100%;
+    }
+
+    .is-hidden {
+        display: none !important;
+    }
+
+    .th-header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+    }
+
+    .btn-hide-col {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 11px;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+
+    .btn-hide-col:hover {
+        background: #e2e8f0;
+        color: #ef4444;
+    }
+
+    .select-comparison {
+        padding: 4px 6px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        background-color: #ffffff;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--primary);
+        cursor: pointer;
+        outline: none;
+    }
+
+    .select-comparison:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="header">
+        <h1>Painel Dinâmico de Execução Orçamentária e Financeira</h1>
+        <p>Acompanhamento Mensal: Receita, Empenhado, Liquidado e Pago (2025 vs 2026)</p>
+    </div>
+
+    <!-- PAINEL DE CONTROLES -->
+    <div class="controls-card">
+        <div class="controls-row">
+            <div class="controls-title">Selecione a Visão Orçamentária:</div>
+            <div class="btn-group">
+                <button class="btn-toggle active" id="btn-total" onclick="switchView('TOTAL')">📊 TOTAL GERAL</button>
+                <button class="btn-toggle" id="btn-rl" onclick="switchView('RL')">💧 RECURSOS LIVRES</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="controls-title" style="font-size: 13px; margin-bottom: 8px;">Exibir / Ocultar Colunas da Tabela:</div>
+            <div class="column-toggles" id="columnToggleButtons"></div>
+        </div>
+    </div>
+
+    <!-- KPIS DINÂMICOS -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-title">Receita 2026 (Jan-Ago)</div>
+            <div class="kpi-value" id="kpi-rec-total">-</div>
+            <div class="kpi-sub" id="kpi-rec-sub">-</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-title">Empenhado 2026 (Jan-Ago)</div>
+            <div class="kpi-value text-danger" id="kpi-emp-val">-</div>
+            <div class="kpi-sub text-danger" id="kpi-emp-sub">-</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-title">Déficit Orçamentário (Jan-Ago)</div>
+            <div class="kpi-value text-danger" id="kpi-def-val">-</div>
+            <div class="kpi-sub">Receita Realizada vs Empenhado</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-title">Liquidado vs Pago 2026 (Jan-Ago)</div>
+            <div class="kpi-value" id="kpi-liq-pago">-</div>
+            <div class="kpi-sub text-success">Execução financeira acumulada</div>
+        </div>
+    </div>
+
+    <!-- TABELA PRINCIPAL -->
+    <div class="card">
+        <h3 class="card-title" id="table-title">1. Visão Mensal Completa: Receita, Empenhado, Liquidado e Pago (em R$)</h3>
+        <div class="table-responsive">
+            <table id="mainTable">
+                <thead>
+                    <tr>
+                        <th data-col="0">Mês</th>
+                        <th data-col="1">
+                            <div class="th-header-inner">
+                                <span>Receita 2025</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(1)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="2">
+                            <div class="th-header-inner">
+                                <span>Empenhado 2025</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(2)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="3">
+                            <div class="th-header-inner">
+                                <span>Liquidado 2025</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(3)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="4">
+                            <div class="th-header-inner">
+                                <span>Pago 2025</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(4)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="5">
+                            <div class="th-header-inner">
+                                <span>Receita 2026</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(5)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="6">
+                            <div class="th-header-inner">
+                                <span>Empenhado 2026</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(6)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="7">
+                            <div class="th-header-inner">
+                                <span>Liquidado 2026</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(7)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="8">
+                            <div class="th-header-inner">
+                                <span>Pago 2026</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(8)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="9">
+                            <div class="th-header-inner">
+                                <select id="comparisonSelector" class="select-comparison" onchange="changeComparison(this.value)">
+                                    <option value="emp">Receita 2026 x Empenhado 2026</option>
+                                    <option value="liq">Receita 2026 x Liquidado 2026</option>
+                                    <option value="pago">Receita 2026 x Pago 2026</option>
+                                </select>
+                                <button class="btn-hide-col" onclick="toggleColumn(9)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                        <th data-col="10">
+                            <div class="th-header-inner">
+                                <span>Status / Obs</span>
+                                <button class="btn-hide-col" onclick="toggleColumn(10)" title="Ocultar coluna">✕</button>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Gerado via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- GRÁFICO DINÂMICO COMPARATIVO -->
+    <div class="card">
+        <div class="card-title">
+            <span id="chart-title">2. Acompanhamento do Fluxo de Execução 2026: Receita, Empenhado, Liquidado e Pago</span>
+            <span style="font-size: 12px; font-weight: normal; color: #64748b;">*Setembro a Dezembro contêm projeção de receita</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="execChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Dados atualizados conforme a planilha Excel
+const datasets = {
+    TOTAL: {
+        titleTable: "1. Visão Mensal Geral (TOTAL GERAL): Receita, Empenhado, Liquidado e Pago (em R$)",
+        titleChart: "2. Acompanhamento do Fluxo de Execução 2026 (TOTAL GERAL)",
+        rec25: [61237195.66, 54475976.56, 56843356.93, 71885903.65, 53873666.74, 54798203.22, 78658959.35, 53818990.60, 55764054.57, 55692661.95, 52907969.30, 80049816.88],
+        emp25: [131642015.58, 60004550.27, 39854759.41, 39064845.42, 44672846.08, 53340053.20, 46603166.10, 59712033.10, 62696670.17, 58450817.12, 51999870.67, 68279158.34],
+        liq25: [28331832.21, 37994916.66, 45478476.06, 48079429.27, 50521312.68, 51936721.80, 56876907.11, 55152218.72, 69484568.89, 57625826.19, 64763911.92, 89587287.34],
+        pago25: [24479685.21, 38039467.46, 44824803.41, 45835650.34, 50273647.08, 49387307.28, 58020613.68, 55886836.37, 70438550.21, 56499449.92, 63892183.10, 88201948.12],
+        rec26: [78194982.73, 68185212.62, 58311120.20, 79414681.90, 61028291.68, 70765194.56, 69497576.77, 44905787.86, 58139603.29, 58065169.35, 55161848.79, 83459939.08],
+        emp26: [137731738.52, 77782818.77, 63770835.55, 74292158.90, 72574483.52, 54254144.73, 71912217.68, 60940800.53, null, null, null, null],
+        liq26: [32552801.56, 48286404.75, 56748300.15, 70107822.23, 62525283.56, 70799528.52, 64517948.79, 66877371.47, null, null, null, null],
+        pago26: [28438629.62, 45154553.52, 54607364.77, 68977964.43, 63363820.48, 64343397.60, 70740884.74, 36830805.85, null, null, null, null],
+        recTotalStr: "R$ 530,30 M",
+        recSubStr: "Realizado (Jan-Ago)",
+        empValStr: "R$ 613,26 M",
+        empSubStr: "Consumiu 115,6% da receita acumulada",
+        defValStr: "R$ -82,96 M",
+        liqPagoStr: "R$ 472,4 M / R$ 432,5 M"
+    },
+    RL: {
+        titleTable: "1. Visão Mensal Geral (RECURSOS LIVRES): Receita, Empenhado, Liquidado e Pago (em R$)",
+        titleChart: "2. Acompanhamento do Fluxo de Execução 2026 (RECURSOS LIVRES)",
+        rec25: [28521456.71, 25723900.69, 24164058.47, 34799338.62, 24357434.41, 24312656.74, 27063154.93, 21764745.61, 25930594.07, 22227426.09, 23255655.91, 32812260.62],
+        emp25: [48608894.30, 24696287.46, 17268621.06, 16884674.84, 17010379.03, 26040058.66, 21091061.83, 25088400.76, 31521244.09, 21725889.90, 24424752.83, 27877750.98],
+        liq25: [12037426.32, 17567380.05, 17447699.55, 19989225.89, 21252223.15, 25177361.58, 26659340.12, 24257144.99, 34005018.24, 25172985.74, 23934337.62, 37525483.02],
+        pago25: [10640224.37, 17365234.05, 17577405.01, 17988924.48, 21186649.28, 25637325.81, 26288513.14, 24249060.29, 36058281.42, 24840171.41, 22932183.83, 37878791.05],
+        rec26: [29808087.47, 25644600.63, 25822489.27, 34197174.90, 25647281.87, 28237204.66, 28343439.06, 19039244.49, 27035237.38, 23174314.44, 24246346.85, 34210062.92],
+        emp26: [54419528.27, 40278226.03, 23671707.41, 32715665.64, 25841745.76, 20164861.05, 23824556.80, 20251120.27, null, null, null, null],
+        liq26: [15160914.70, 21942337.87, 21922126.42, 35513205.02, 24065796.08, 27020418.88, 25676892.92, 25356783.98, null, null, null, null],
+        pago26: [13354602.71, 19908601.95, 20248518.91, 36085942.81, 26674515.18, 22989411.09, 28664046.95, 14884618.61, null, null, null, null],
+        recTotalStr: "R$ 216,74 M",
+        recSubStr: "Realizado (Jan-Ago)",
+        empValStr: "R$ 241,17 M",
+        empSubStr: "Consumiu 111,2% da receita acumulada",
+        defValStr: "R$ -24,43 M",
+        liqPagoStr: "R$ 196,7 M / R$ 182,8 M"
+    }
+};
+
+const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro (Prev)', 'Outubro (Prev)', 'Novembro (Prev)', 'Dezembro (Prev)'];
+const hiddenColumns = new Set();
+let currentView = 'TOTAL';
+let currentChart = null;
+let currentComparison = 'emp'; // 'emp', 'liq', ou 'pago'
+
+function formatCurrency(val) {
+    if (val === null || val === undefined || isNaN(val)) return '-';
+    return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function changeComparison(type) {
+    currentComparison = type;
+    updateTable(currentView);
+}
+
+function updateTable(viewKey) {
+    const d = datasets[viewKey];
+    document.getElementById('table-title').innerText = d.titleTable;
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+
+    let sumRec25_8 = 0, sumEmp25_8 = 0, sumLiq25_8 = 0, sumPago25_8 = 0;
+    let sumRec26_8 = 0, sumEmp26_8 = 0, sumLiq26_8 = 0, sumPago26_8 = 0;
+
+    let sumRec25_12 = 0, sumEmp25_12 = 0, sumLiq25_12 = 0, sumPago25_12 = 0;
+    let sumRec26_12 = 0;
+
+    for (let i = 0; i < 12; i++) {
+        const isForecast = i >= 8;
+        const rec25 = d.rec25[i];
+        const emp25 = d.emp25[i];
+        const liq25 = d.liq25[i];
+        const pago25 = d.pago25[i];
+
+        const rec26 = d.rec26[i];
+        const emp26 = d.emp26[i];
+        const liq26 = d.liq26[i];
+        const pago26 = d.pago26[i];
+
+        sumRec25_12 += (rec25 || 0);
+        sumEmp25_12 += (emp25 || 0);
+        sumLiq25_12 += (liq25 || 0);
+        sumPago25_12 += (pago25 || 0);
+        sumRec26_12 += (rec26 || 0);
+
+        if (!isForecast) {
+            sumRec25_8 += (rec25 || 0);
+            sumEmp25_8 += (emp25 || 0);
+            sumLiq25_8 += (liq25 || 0);
+            sumPago25_8 += (pago25 || 0);
+
+            sumRec26_8 += (rec26 || 0);
+            sumEmp26_8 += (emp26 || 0);
+            sumLiq26_8 += (liq26 || 0);
+            sumPago26_8 += (pago26 || 0);
+        }
+
+        // Determina o valor de comparação com base na escolha do usuário
+        let compVal26 = null;
+        if (currentComparison === 'emp') compVal26 = emp26;
+        else if (currentComparison === 'liq') compVal26 = liq26;
+        else if (currentComparison === 'pago') compVal26 = pago26;
+
+        const res26 = isForecast || compVal26 === null ? null : (rec26 - compVal26);
+        let badgeHtml = '';
+        let rowClass = '';
+
+        if (isForecast) {
+            rowClass = 'forecast-row';
+            badgeHtml = '<span class="badge badge-warning">Projeção Receita</span>';
+        } else if (res26 < 0) {
+            rowClass = 'highlight-row';
+            badgeHtml = `<span class="badge badge-danger">${i === 0 ? 'Pico Inicial' : 'Déficit'}</span>`;
+        } else {
+            badgeHtml = '<span class="badge badge-success">Superávit</span>';
+        }
+
+        const tr = document.createElement('tr');
+        if (rowClass) tr.className = rowClass;
+
+        const resText = res26 !== null ? (res26 >= 0 ? '+' : '') + formatCurrency(res26) : '-';
+        const resClass = res26 !== null ? (res26 < 0 ? 'text-danger' : 'text-success') : '';
+
+        tr.innerHTML = `
+            <td data-col="0">${monthNames[i]}</td>
+            <td data-col="1">${formatCurrency(rec25)}</td>
+            <td data-col="2">${formatCurrency(emp25)}</td>
+            <td data-col="3">${formatCurrency(liq25)}</td>
+            <td data-col="4">${formatCurrency(pago25)}</td>
+            <td data-col="5">${formatCurrency(rec26)}</td>
+            <td data-col="6">${formatCurrency(emp26)}</td>
+            <td data-col="7">${formatCurrency(liq26)}</td>
+            <td data-col="8">${formatCurrency(pago26)}</td>
+            <td data-col="9" class="${resClass}">${resText}</td>
+            <td data-col="10">${badgeHtml}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    // Acumulado (Jan-Ago)
+    let compVal8 = sumEmp26_8;
+    let labelBadge = "DÉFICIT ORÇAMENTÁRIO";
+    if (currentComparison === 'liq') {
+        compVal8 = sumLiq26_8;
+        labelBadge = "SALDO LÍQUIDO";
+    } else if (currentComparison === 'pago') {
+        compVal8 = sumPago26_8;
+        labelBadge = "SUPERÁVIT FINANCEIRO";
+    }
+
+    const def8 = sumRec26_8 - compVal8;
+    const trAcum = document.createElement('tr');
+    trAcum.style.backgroundColor = def8 < 0 ? '#fee2e2' : '#dcfce7';
+    trAcum.style.fontWeight = 'bold';
+    
+    const badgeClass = def8 < 0 ? 'badge-danger' : 'badge-success';
+    const valClass = def8 < 0 ? 'text-danger' : 'text-success';
+
+    trAcum.innerHTML = `
+        <td data-col="0">ACUMULADO (Jan–Ago)</td>
+        <td data-col="1">${formatCurrency(sumRec25_8)}</td>
+        <td data-col="2">${formatCurrency(sumEmp25_8)}</td>
+        <td data-col="3">${formatCurrency(sumLiq25_8)}</td>
+        <td data-col="4">${formatCurrency(sumPago25_8)}</td>
+        <td data-col="5">${formatCurrency(sumRec26_8)}</td>
+        <td data-col="6">${formatCurrency(sumEmp26_8)}</td>
+        <td data-col="7">${formatCurrency(sumLiq26_8)}</td>
+        <td data-col="8">${formatCurrency(sumPago26_8)}</td>
+        <td data-col="9" class="${valClass}">${(def8 >= 0 ? '+' : '') + formatCurrency(def8)}</td>
+        <td data-col="10"><span class="badge ${badgeClass}">${labelBadge}</span></td>
+    `;
+    tbody.appendChild(trAcum);
+
+    // Linha Total Ano
+    const trTotal = document.createElement('tr');
+    trTotal.className = 'total-row';
+    trTotal.innerHTML = `
+        <td data-col="0">TOTAL DO ANO (Orçado/Prev)</td>
+        <td data-col="1">${formatCurrency(sumRec25_12)}</td>
+        <td data-col="2">${formatCurrency(sumEmp25_12)}</td>
+        <td data-col="3">${formatCurrency(sumLiq25_12)}</td>
+        <td data-col="4">${formatCurrency(sumPago25_12)}</td>
+        <td data-col="5">${formatCurrency(sumRec26_12)}</td>
+        <td data-col="6">Teto: ${(sumRec26_12 / 1000000).toFixed(2)} M</td>
+        <td data-col="7">-</td>
+        <td data-col="8">-</td>
+        <td data-col="9">Margem: +${((sumRec26_12 - sumEmp26_8) / 1000000).toFixed(2)} M</td>
+        <td data-col="10"><span class="badge badge-warning">TETO RESTANTE</span></td>
+    `;
+    tbody.appendChild(trTotal);
+
+    applyColumnVisibility();
+}
+
+function updateChart(viewKey) {
+    const ctx = document.getElementById('execChart').getContext('2d');
+    const d = datasets[viewKey];
+
+    const recM = d.rec26.map(v => v !== null ? (v / 1000000) : null);
+    const empM = d.emp26.map(v => v !== null ? (v / 1000000) : null);
+    const liqM = d.liq26.map(v => v !== null ? (v / 1000000) : null);
+    const pagoM = d.pago26.map(v => v !== null ? (v / 1000000) : null);
+
+    if (currentChart) {
+        currentChart.destroy();
+    }
+
+    currentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set (P)', 'Out (P)', 'Nov (P)', 'Dez (P)'],
+            datasets: [
+                {
+                    label: 'Receita 2026 (R$ Mi)',
+                    data: recM,
+                    backgroundColor: '#10b981',
+                    borderRadius: 4,
+                    order: 2
+                },
+                {
+                    label: 'Empenhado 2026 (R$ Mi)',
+                    data: empM,
+                    backgroundColor: '#ef4444',
+                    borderRadius: 4,
+                    order: 1
+                },
+                {
+                    label: 'Liquidado 2026 (R$ Mi)',
+                    type: 'line',
+                    data: liqM,
+                    borderColor: '#f59e0b',
+                    backgroundColor: '#f59e0b',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.2,
+                    order: 0
+                },
+                {
+                    label: 'Pago 2026 (R$ Mi)',
+                    type: 'line',
+                    data: pagoM,
+                    borderColor: '#3b82f6',
+                    backgroundColor: '#3b82f6',
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.2,
+                    order: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { font: { size: 13, weight: 'bold' } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) {
+                                label += 'R$ ' + context.parsed.y.toFixed(2) + ' M';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Valores em Milhões (R$)' }
+                }
+            }
+        }
+    });
+}
+
+// LÓGICA PARA OCULTAR E REEXIBIR COLUNAS
+function initColumnToggles() {
+    const container = document.getElementById('columnToggleButtons');
+    container.innerHTML = '';
+
+    const headers = document.querySelectorAll('#mainTable thead th');
+    headers.forEach((th, idx) => {
+        if (idx === 0) return; // Mantém 'Mês' fixo
+        
+        let colName = "";
+        if (idx === 9) {
+            colName = "Resultado Mensal 2026";
+        } else {
+            colName = th.querySelector('span') ? th.querySelector('span').innerText : th.innerText;
+        }
+
+        const btn = document.createElement('button');
+        btn.className = 'col-btn';
+        btn.id = `btn-col-${idx}`;
+        btn.innerHTML = `👁️ ${colName}`;
+        btn.onclick = () => toggleColumn(idx);
+
+        container.appendChild(btn);
+    });
+}
+
+function toggleColumn(colIndex) {
+    if (hiddenColumns.has(colIndex)) {
+        hiddenColumns.delete(colIndex);
+    } else {
+        hiddenColumns.add(colIndex);
+    }
+
+    applyColumnVisibility();
+    updateColumnButtons();
+}
+
+function applyColumnVisibility() {
+    const table = document.getElementById('mainTable');
+    const rows = table.querySelectorAll('tr');
+
+    rows.forEach(row => {
+        const cells = row.children;
+        for (let i = 0; i < cells.length; i++) {
+            if (hiddenColumns.has(i)) {
+                cells[i].classList.add('is-hidden');
+            } else {
+                cells[i].classList.remove('is-hidden');
+            }
+        }
+    });
+}
+
+function updateColumnButtons() {
+    const headers = document.querySelectorAll('#mainTable thead th');
+    headers.forEach((th, idx) => {
+        if (idx === 0) return;
+        const btn = document.getElementById(`btn-col-${idx}`);
+        
+        let colName = "";
+        if (idx === 9) {
+            colName = "Resultado Mensal 2026";
+        } else {
+            colName = th.querySelector('span') ? th.querySelector('span').innerText : th.innerText;
+        }
+
+        if (hiddenColumns.has(idx)) {
+            btn.classList.add('col-hidden');
+            btn.innerHTML = `🚫 ${colName}`;
+        } else {
+            btn.classList.remove('col-hidden');
+            btn.innerHTML = `👁️ ${colName}`;
+        }
+    });
+}
+
+function switchView(viewKey) {
+    currentView = viewKey;
+    document.getElementById('btn-total').classList.remove('active');
+    document.getElementById('btn-rl').classList.remove('active');
+
+    if (viewKey === 'TOTAL') {
+        document.getElementById('btn-total').classList.add('active');
+    } else {
+        document.getElementById('btn-rl').classList.add('active');
+    }
+
+    const d = datasets[viewKey];
+    document.getElementById('chart-title').innerText = d.titleChart;
+
+    // Atualizar KPIs
+    document.getElementById('kpi-rec-total').innerText = d.recTotalStr;
+    document.getElementById('kpi-rec-sub').innerText = d.recSubStr;
+    document.getElementById('kpi-emp-val').innerText = d.empValStr;
+    document.getElementById('kpi-emp-sub').innerText = d.empSubStr;
+    document.getElementById('kpi-def-val').innerText = d.defValStr;
+    document.getElementById('kpi-liq-pago').innerText = d.liqPagoStr;
+
+    // Atualizar Tabela e Gráfico
+    updateTable(viewKey);
+    updateChart(viewKey);
+}
+
+// Inicialização
+window.onload = function() {
+    initColumnToggles();
+    switchView('TOTAL');
+};
+</script>
+
+</body>
+</html>
