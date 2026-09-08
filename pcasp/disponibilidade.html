@@ -12,25 +12,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            background-color: #f1f5f9;
+            background-color: #f8fafc;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
         .card {
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .card:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
-        }
-        .badge-superavit {
-            background-color: #dcfce7;
-            color: #15803d;
-        }
-        .badge-deficit {
-            background-color: #fee2e2;
-            color: #b91c1c;
+            border: 1px solid #e2e8f0;
         }
     </style>
 </head>
@@ -41,9 +30,9 @@
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-900 text-white p-6 rounded-2xl shadow-lg">
             <div>
-                <span class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Relatório Financeiro Municipal</span>
+                <span class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Gestão Financeira & Orçamentária</span>
                 <h1 class="text-2xl md:text-3xl font-bold mt-1">Apuração do Saldo de Disponibilidade de Recursos</h1>
-                <p class="text-slate-400 text-sm mt-1">Visão Geral de Caixa, Compromissos, Superávit e Déficit por Fonte/Secretaria</p>
+                <p class="text-slate-400 text-sm mt-1">Panorama por Secretarias, Distribuição de Compromissos e Fontes</p>
             </div>
             <div class="mt-4 md:mt-0 flex items-center space-x-3">
                 <button onclick="resetFilters()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center">
@@ -86,20 +75,20 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-xs font-semibold uppercase text-gray-400">Disp. Total de Caixa</p>
-                        <h3 id="kpiDisp" class="text-2xl font-bold text-gray-800 mt-1">R$ 0,00</h3>
+                        <h3 id="kpiDisp" class="text-xl md:text-2xl font-bold text-gray-800 mt-1">R$ 0,00</h3>
                     </div>
                     <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
                         <i class="fas fa-wallet text-xl"></i>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-3">Disponibilidade Bruta em Conta</p>
+                <p class="text-xs text-gray-500 mt-3">Saldo Bruto em Conta</p>
             </div>
 
             <div class="card p-5 border-l-4 border-amber-500">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-xs font-semibold uppercase text-gray-400">Total Compromissados</p>
-                        <h3 id="kpiCompromissos" class="text-2xl font-bold text-gray-800 mt-1">R$ 0,00</h3>
+                        <h3 id="kpiCompromissos" class="text-xl md:text-2xl font-bold text-gray-800 mt-1">R$ 0,00</h3>
                     </div>
                     <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
                         <i class="fas fa-file-invoice-dollar text-xl"></i>
@@ -112,57 +101,71 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-xs font-semibold uppercase text-gray-400">Superávit Acumulado</p>
-                        <h3 id="kpiSuperavit" class="text-2xl font-bold text-emerald-600 mt-1">R$ 0,00</h3>
+                        <h3 id="kpiSuperavit" class="text-xl md:text-2xl font-bold text-emerald-600 mt-1">R$ 0,00</h3>
                     </div>
                     <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
                         <i class="fas fa-arrow-up text-xl"></i>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-3">Fontes com Saldo Positivo Livre</p>
+                <p class="text-xs text-gray-500 mt-3">Soma das Fontes Positivas</p>
             </div>
 
             <div class="card p-5 border-l-4 border-rose-500">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-xs font-semibold uppercase text-gray-400">Déficit Acumulado</p>
-                        <h3 id="kpiDeficit" class="text-2xl font-bold text-rose-600 mt-1">R$ 0,00</h3>
+                        <h3 id="kpiDeficit" class="text-xl md:text-2xl font-bold text-rose-600 mt-1">R$ 0,00</h3>
                     </div>
                     <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
                         <i class="fas fa-arrow-down text-xl"></i>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-3">Fontes com Insuficiência Financeira</p>
+                <p class="text-xs text-gray-500 mt-3">Insuficiência Financeira Apurada</p>
             </div>
         </div>
 
-        <!-- Charts Section -->
+        <!-- Seção de Gráficos Principais -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Chart 1: Top Secretarias em Caixa -->
+            
+            <!-- Gráfico 1: Panorama por Secretaria (Déficit a Superávit) -->
             <div class="card p-5">
-                <h2 class="text-base font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-chart-bar text-blue-600 mr-2"></i> Top Secretarias por Disponibilidade de Caixa
-                </h2>
-                <div class="relative h-72">
-                    <canvas id="chartSecBar"></canvas>
+                <div class="mb-4">
+                    <h2 class="text-base font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-sort-amount-up-alt text-indigo-600 mr-2"></i> Panorama por Secretaria (Resultado Líquido)
+                    </h2>
+                    <p class="text-xs text-gray-500">Ordenado do maior déficit ao maior superávit (Todas as secretarias)</p>
+                </div>
+                <div class="relative min-h-[450px] w-full">
+                    <canvas id="chartResultadoSec"></canvas>
                 </div>
             </div>
 
-            <!-- Chart 2: Proporção de Compromissos x Saldo Líquido -->
-            <div class="card p-5">
-                <h2 class="text-base font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-chart-pie text-emerald-600 mr-2"></i> Composição Financeira Geral
-                </h2>
-                <div class="relative h-72 flex justify-center">
-                    <canvas id="chartPie"></canvas>
+            <!-- Gráfico 2: Composição dos Compromissos -->
+            <div class="card p-5 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-chart-pie text-amber-600 mr-2"></i> Composição dos Compromissos
+                    </h2>
+                    <p class="text-xs text-gray-500">Distribuição do total de R$ compromissados por categoria</p>
+                </div>
+                <div class="relative h-80 w-full flex items-center justify-center my-auto">
+                    <canvas id="chartComposicaoCompromissos"></canvas>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs text-slate-600 border-t pt-3 mt-2">
+                    <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-1"></span> A Liquidar</div>
+                    <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 mr-1"></span> Liquidados</div>
+                    <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-purple-500 mr-1"></span> Restos Não Processados</div>
+                    <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-rose-400 mr-1"></span> Restos Processados</div>
                 </div>
             </div>
+
         </div>
 
-        <!-- Detalhes por Secretaria / Tabela Dinâmica -->
+        <!-- Tabela Detalhada -->
         <div class="card p-5">
             <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
                 <h2 class="text-base font-bold text-gray-800 flex items-center">
-                    <i class="fas fa-list text-slate-700 mr-2"></i> Apuração Detalhada por Fonte e Destinação
+                    <i class="fas fa-table text-slate-700 mr-2"></i> Detalhamento por Secretaria, Fonte e Destinação
                 </h2>
                 <span id="recordCount" class="text-xs font-semibold text-gray-500 mt-2 sm:mt-0">Exibindo 0 registros</span>
             </div>
@@ -180,7 +183,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="text-xs text-gray-700 divide-y divide-gray-100">
-                        <!-- Dynamic Rows -->
+                        <!-- Linhas geradas via Javascript -->
                     </tbody>
                 </table>
             </div>
@@ -188,15 +191,21 @@
 
     </div>
 
-    <!-- Embedding Data & Scripts -->
+    <!-- Script de Processamento e Renderização -->
     <script>
+        // Formatação BRL
+        const formatBRL = (val) => {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+        };
+
+        // Dados brutos carregados
         const rawData = [
             {"Secretaria": "Todas", "Codigo": 0.0, "Destinação de Recursos": "Recursos Livres - Não condicionado", "Disp. Caixa": 29651147.8, "Liquidados": 5945757.77, "A Liquidar": 43383570.97, "Restos Não Processados": 1180975.19, "Restos Processados": 194569.92, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 50704873.85, "Superávit": 0.0, "Déficit": 21053726.05},
             {"Secretaria": "Ordem Pública", "Codigo": 2.0, "Destinação de Recursos": "Desvinculação das Receitas dos Municípios( DRM)", "Disp. Caixa": 1631129.73, "Liquidados": 446603.95, "A Liquidar": 317323.89, "Restos Não Processados": 139549.74, "Restos Processados": 37592.94, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 941070.52, "Superávit": 690059.21, "Déficit": 0.0},
             {"Secretaria": "Meio Ambiente", "Codigo": 12.0, "Destinação de Recursos": "Fundo Meio Ambiente (FMA)", "Disp. Caixa": 253106.64, "Liquidados": 9668.0, "A Liquidar": 165830.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 175498.0, "Superávit": 77608.64, "Déficit": 0.0},
             {"Secretaria": "Ordem Pública", "Codigo": 17.0, "Destinação de Recursos": "Multas - Programa de Proteção e Defesa do Consumidor (PROCON)", "Disp. Caixa": 524103.38, "Liquidados": 4291.38, "A Liquidar": 65867.83, "Restos Não Processados": 19336.0, "Restos Processados": 9668.01, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 99163.22, "Superávit": 424940.16, "Déficit": 0.0},
             {"Secretaria": "Não Especificado", "Codigo": 18.0, "Destinação de Recursos": "Indenizações Ambientais", "Disp. Caixa": 3075.44, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 3075.44, "Déficit": 0.0},
-            {"Secretaria": "Desenvolvimento Economico", "Codigo": 19.0, "Destinação de Recursos": "Centro de Estudos de Ciências e Tecnologias Cerâmicas (CESTEC) - CL (Campo Largo)", "Disp. Caixa": 12514.54, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 12514.54, "Déficit": 0.0},
+            {"Secretaria": "Desenvolvimento Economico", "Codigo": 19.0, "Destinação de Recursos": "Centro de Estudos de Ciências e Tecnologias Cerâmicas (CESTEC)", "Disp. Caixa": 12514.54, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 12514.54, "Déficit": 0.0},
             {"Secretaria": "Meio Ambiente", "Codigo": 20.0, "Destinação de Recursos": "Fundo Municipal de Saneamento Básico e Ambiental (FMSBA)", "Disp. Caixa": 2035241.0, "Liquidados": 40672.82, "A Liquidar": 668264.61, "Restos Não Processados": 136008.16, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 844945.59, "Superávit": 1190295.41, "Déficit": 0.0},
             {"Secretaria": "Procuradoria", "Codigo": 21.0, "Destinação de Recursos": "Fundo da Procuradoria do Município", "Disp. Caixa": 503018.73, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 660.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 660.0, "Superávit": 502358.73, "Déficit": 0.0},
             {"Secretaria": "Desenvolvimento Urbano", "Codigo": 22.0, "Destinação de Recursos": "Fundo Municipal de Desenvolvimento Urbano (FMDU)", "Disp. Caixa": 1540617.36, "Liquidados": 0.0, "A Liquidar": 164.36, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 164.36, "Superávit": 1540453.0, "Déficit": 0.0},
@@ -207,21 +216,21 @@
             {"Secretaria": "Não Especificado", "Codigo": 44.0, "Destinação de Recursos": "Convênio nº 302/2024/SEAB - Secretaria de Agricultura e Pecuária", "Disp. Caixa": 268988.52, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 268988.52, "Déficit": 0.0},
             {"Secretaria": "Cultura e Turismo", "Codigo": 51.0, "Destinação de Recursos": "Fundo Municipal de Cultura (FMC)", "Disp. Caixa": 37944.94, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 37944.94, "Déficit": 0.0},
             {"Secretaria": "Não Especificado", "Codigo": 54.0, "Destinação de Recursos": "Convênio nº 202412090/SECID", "Disp. Caixa": 21944.53, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 21944.53, "Déficit": 0.0},
-            {"Secretaria": "Não Especificado", "Codigo": 55.0, "Destinação de Recursos": "Convênio nº 162/2025/SECID - Implantação de Abrigos Parada de Ônibus.", "Disp. Caixa": 1158.06, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 1359110.64, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1359110.64, "Superávit": 0.0, "Déficit": 1357952.58},
+            {"Secretaria": "Não Especificado", "Codigo": 55.0, "Destinação de Recursos": "Convênio nº 162/2025/SECID - Implantação de Abrigos Parada de Ônibus", "Disp. Caixa": 1158.06, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 1359110.64, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1359110.64, "Superávit": 0.0, "Déficit": 1357952.58},
             {"Secretaria": "Educação", "Codigo": 56.0, "Destinação de Recursos": "Convênio nº 961194/2024/FNDE/CAIXA - Construção Cmei João Santana", "Disp. Caixa": 911110.16, "Liquidados": 0.0, "A Liquidar": 4802652.69, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 4802652.69, "Superávit": 0.0, "Déficit": 3891542.53},
-            {"Secretaria": "Não Especificado", "Codigo": 58.0, "Destinação de Recursos": "Convênio nº 216/2025/SEAB - Programa Estradas Rurais Integradas aos Princípios e Sistemas Conservacionistas", "Disp. Caixa": 310845.09, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 310845.09, "Déficit": 0.0},
-            {"Secretaria": "Cultura e Turismo", "Codigo": 59.0, "Destinação de Recursos": "Termo de Compromisso nº 964553/2024/MINC/CAIXA - Ministério da Cultura - Implantação do CEU da Cultura", "Disp. Caixa": 0.0, "Liquidados": 173683.71, "A Liquidar": 1467511.52, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1641195.23, "Superávit": 0.0, "Déficit": 1641195.23},
+            {"Secretaria": "Não Especificado", "Codigo": 58.0, "Destinação de Recursos": "Convênio nº 216/2025/SEAB - Programa Estradas Rurais", "Disp. Caixa": 310845.09, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 310845.09, "Déficit": 0.0},
+            {"Secretaria": "Cultura e Turismo", "Codigo": 59.0, "Destinação de Recursos": "Termo de Compromisso nº 964553/2024/MINC/CAIXA - CEU da Cultura", "Disp. Caixa": 0.0, "Liquidados": 173683.71, "A Liquidar": 1467511.52, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1641195.23, "Superávit": 0.0, "Déficit": 1641195.23},
             {"Secretaria": "Esporte e Lazer", "Codigo": 61.0, "Destinação de Recursos": "Fundo Municipal do Esporte e Lazer (FMEL)", "Disp. Caixa": 11967.01, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 11967.01, "Déficit": 0.0},
-            {"Secretaria": "Desenvolvimento Urbano", "Codigo": 64.0, "Destinação de Recursos": "Convênio nº 1285/2025/SECID - Pavimentação da Via Urbana Alcebíades Guimarães", "Disp. Caixa": 412.77, "Liquidados": 0.0, "A Liquidar": 4942650.38, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 4942650.38, "Superávit": 0.0, "Déficit": 4942237.61},
+            {"Secretaria": "Desenvolvimento Urbano", "Codigo": 64.0, "Destinação de Recursos": "Convênio nº 1285/2025/SECID - Pavimentação Alcebíades Guimarães", "Disp. Caixa": 412.77, "Liquidados": 0.0, "A Liquidar": 4942650.38, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 4942650.38, "Superávit": 0.0, "Déficit": 4942237.61},
             {"Secretaria": "Ordem Pública", "Codigo": 70.0, "Destinação de Recursos": "Sistema de Bilhetagem Eletrônica (SBE)", "Disp. Caixa": 3047500.16, "Liquidados": 0.0, "A Liquidar": 1485853.32, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1485853.32, "Superávit": 1561646.84, "Déficit": 0.0},
             {"Secretaria": "Não Especificado", "Codigo": 71.0, "Destinação de Recursos": "Fundo Municipal de Transporte Público - Lei 3946/2025", "Disp. Caixa": 10183.83, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 10183.83, "Déficit": 0.0},
             {"Secretaria": "Agricultura e Pecuaria", "Codigo": 76.0, "Destinação de Recursos": "Patrocínio nº 179/2024 Sanepar - Festa do Agricultor", "Disp. Caixa": 100211.92, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 100211.92, "Déficit": 0.0},
-            {"Secretaria": "Meio Ambiente", "Codigo": 77.0, "Destinação de Recursos": "Convênio nº 1286/2025/SEDU - Implantação de Bancos em Parques e Praças", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 72144.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 72144.0, "Superávit": 0.0, "Déficit": 72144.0},
-            {"Secretaria": "Cultura e Turismo", "Codigo": 78.0, "Destinação de Recursos": "Termo de Adesão Fundo a Fundo nº 003/2025 - Cultura/PR - Instrumentos para Fanfarra Municipal", "Disp. Caixa": 53691.06, "Liquidados": 1840.0, "A Liquidar": 14318.27, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 16158.27, "Superávit": 37532.79, "Déficit": 0.0},
-            {"Secretaria": "Administração", "Codigo": 79.0, "Destinação de Recursos": "Convênio nº 2165/2025/SECID - Aquisição de um Veículo Hatch", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 95000.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 95000.0, "Superávit": 0.0, "Déficit": 95000.0},
-            {"Secretaria": "Saúde", "Codigo": 81.0, "Destinação de Recursos": "Convênio nº 2186/2025/SECID - Saúde/Construção da Sede da Farmácia Especial", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 1899050.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1899050.0, "Superávit": 0.0, "Déficit": 1899050.0},
-            {"Secretaria": "Meio Ambiente", "Codigo": 83.0, "Destinação de Recursos": "Convênio nº 235/2025/IAT - Limpeza e Desassoreamento de Leito do Rio Cambuí e do Rio Verde", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 5892909.68, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 5892909.68, "Superávit": 0.0, "Déficit": 5892909.68},
-            {"Secretaria": "Meio Ambiente", "Codigo": 84.0, "Destinação de Recursos": "Convênio nº 234/2025/IAT - Limpeza e Desassoreamento de Leito do Rio Itaqui", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 2500000.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 2500000.0, "Superávit": 0.0, "Déficit": 2500000.0},
+            {"Secretaria": "Meio Ambiente", "Codigo": 77.0, "Destinação de Recursos": "Convênio nº 1286/2025/SEDU - Bancos em Parques e Praças", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 72144.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 72144.0, "Superávit": 0.0, "Déficit": 72144.0},
+            {"Secretaria": "Cultura e Turismo", "Codigo": 78.0, "Destinação de Recursos": "Termo de Adesão nº 003/2025 - Instrumentos Fanfarra Municipal", "Disp. Caixa": 53691.06, "Liquidados": 1840.0, "A Liquidar": 14318.27, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 16158.27, "Superávit": 37532.79, "Déficit": 0.0},
+            {"Secretaria": "Administração", "Codigo": 79.0, "Destinação de Recursos": "Convênio nº 2165/2025/SECID - Aquisição de Veículo Hatch", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 95000.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 95000.0, "Superávit": 0.0, "Déficit": 95000.0},
+            {"Secretaria": "Saúde", "Codigo": 81.0, "Destinação de Recursos": "Convênio nº 2186/2025/SECID - Construção Sede Farmácia Especial", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 1899050.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1899050.0, "Superávit": 0.0, "Déficit": 1899050.0},
+            {"Secretaria": "Meio Ambiente", "Codigo": 83.0, "Destinação de Recursos": "Convênio nº 235/2025/IAT - Desassoreamento Rio Cambuí e Rio Verde", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 5892909.68, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 5892909.68, "Superávit": 0.0, "Déficit": 5892909.68},
+            {"Secretaria": "Meio Ambiente", "Codigo": 84.0, "Destinação de Recursos": "Convênio nº 234/2025/IAT - Desassoreamento Rio Itaqui", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 2500000.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 2500000.0, "Superávit": 0.0, "Déficit": 2500000.0},
             {"Secretaria": "Não Especificado", "Codigo": 87.0, "Destinação de Recursos": "FEPGCL Rateio - Fundo da Procuradoria do Município", "Disp. Caixa": 44765.25, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 44765.25, "Déficit": 0.0},
             {"Secretaria": "Não Especificado", "Codigo": 94.0, "Destinação de Recursos": "Consignações", "Disp. Caixa": 3565219.68, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 3565219.68, "Total (a+b+c)": 3565219.68, "Superávit": 0.0, "Déficit": 0.0},
             {"Secretaria": "Educação", "Codigo": 101.0, "Destinação de Recursos": "Fundeb 70% - Exercício Corrente", "Disp. Caixa": 3342643.4, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 487.87, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 487.87, "Superávit": 3342155.53, "Déficit": 0.0},
@@ -236,62 +245,59 @@
             {"Secretaria": "Desenvolvimento Social e da Mulher", "Codigo": 124.0, "Destinação de Recursos": "Deliberação nº 72/2023 CEDCA/PR - Conselho Tutelar", "Disp. Caixa": 12717.74, "Liquidados": 0.0, "A Liquidar": 1017.47, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1017.47, "Superávit": 11700.27, "Déficit": 0.0},
             {"Secretaria": "Fundo Assistencia Social", "Codigo": 131.0, "Destinação de Recursos": "Piso Único de Assistência Social (PAS)", "Disp. Caixa": 60000.0, "Liquidados": 0.0, "A Liquidar": 53151.45, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 53151.45, "Superávit": 6848.55, "Déficit": 0.0},
             {"Secretaria": "Educação", "Codigo": 170.0, "Destinação de Recursos": "Transporte Escolar 2008", "Disp. Caixa": 959750.88, "Liquidados": 288453.01, "A Liquidar": 2613103.26, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 2901556.27, "Superávit": 0.0, "Déficit": 1941805.39},
-            {"Secretaria": "Não Especificado", "Codigo": 191.0, "Destinação de Recursos": "Programa de Apoio Suplementar à Educação Infantil - Novos Estabelecimentos", "Disp. Caixa": 9693.19, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 9693.19, "Déficit": 0.0},
-            {"Secretaria": "Educação", "Codigo": 192.0, "Destinação de Recursos": "FNDE - Módulo Educação infantil - Manutenção/Novas Turmas - SIMEC", "Disp. Caixa": 11190.4, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 11190.4, "Déficit": 0.0},
-            {"Secretaria": "Agricultura e Pecuaria", "Codigo": 263.0, "Destinação de Recursos": "Convênio 947/2025/SEAB - Aquisição de Máquinas e Equipamentos Agrícolas", "Disp. Caixa": 2860.91, "Liquidados": 0.0, "A Liquidar": 2402672.55, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 2402672.55, "Superávit": 0.0, "Déficit": 2399811.64},
-            {"Secretaria": "Desenvolvimento Economico", "Codigo": 264.0, "Destinação de Recursos": "Programa Pacto Pela Inovação - Fundo da Ciência, Tecnologia e Inovação", "Disp. Caixa": 1059021.83, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1059021.83, "Déficit": 0.0},
-            {"Secretaria": "Infraestrutura Viaria", "Codigo": 265.0, "Destinação de Recursos": "Convênio nº 42/2026/SECID - Aquisição de rolo compactador", "Disp. Caixa": 826.53, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 826.53, "Déficit": 0.0},
-            {"Secretaria": "Infraestrutura Viaria", "Codigo": 266.0, "Destinação de Recursos": "Convênio 43/2026/SECID - Aquisição uma escavadeira e uma motoniveladora", "Disp. Caixa": 1406.2, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1406.2, "Déficit": 0.0},
-            {"Secretaria": "Infraestrutura Viaria", "Codigo": 267.0, "Destinação de Recursos": "Convênio Nº 44/2026/SECID - Aquisição de um caminhão plataforma 8x4", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 850000.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 850000.0, "Superávit": 0.0, "Déficit": 850000.0},
-            {"Secretaria": "Infraestrutura Viaria", "Codigo": 268.0, "Destinação de Recursos": "Convênio Nº 45/2026/SECID - Aquisição de um caminhão caçamba basculante 6x4", "Disp. Caixa": 406.17, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 406.17, "Déficit": 0.0},
-            {"Secretaria": "Administração", "Codigo": 270.0, "Destinação de Recursos": "Convênio Nº 311/2026/SECID - Aquisição de um veículo utilitário pick up - Guarda Municipal", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 120640.5, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 120640.5, "Superávit": 0.0, "Déficit": 120640.5},
-            {"Secretaria": "Não Especificado", "Codigo": 271.0, "Destinação de Recursos": "Programa Apoio aos Municípios Criativos do Paraná", "Disp. Caixa": 102729.56, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 102729.56, "Déficit": 0.0},
-            {"Secretaria": "Esporte e Lazer", "Codigo": 272.0, "Destinação de Recursos": "Deliberação 01/2026 - Fundo Estadual do Esporte - Programa Esporte que Queremos", "Disp. Caixa": 762119.15, "Liquidados": 0.0, "A Liquidar": 279900.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 279900.0, "Superávit": 482219.15, "Déficit": 0.0},
+            {"Secretaria": "Não Especificado", "Codigo": 191.0, "Destinação de Recursos": "Programa Apoio Suplementar Educação Infantil", "Disp. Caixa": 9693.19, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 9693.19, "Déficit": 0.0},
+            {"Secretaria": "Educação", "Codigo": 192.0, "Destinação de Recursos": "FNDE - Módulo Educação Infantil / SIMEC", "Disp. Caixa": 11190.4, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 11190.4, "Déficit": 0.0},
+            {"Secretaria": "Agricultura e Pecuaria", "Codigo": 263.0, "Destinação de Recursos": "Convênio 947/2025/SEAB - Máquinas Agrícolas", "Disp. Caixa": 2860.91, "Liquidados": 0.0, "A Liquidar": 2402672.55, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 2402672.55, "Superávit": 0.0, "Déficit": 2399811.64},
+            {"Secretaria": "Desenvolvimento Economico", "Codigo": 264.0, "Destinação de Recursos": "Programa Pacto Pela Inovação", "Disp. Caixa": 1059021.83, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1059021.83, "Déficit": 0.0},
+            {"Secretaria": "Infraestrutura Viaria", "Codigo": 265.0, "Destinação de Recursos": "Convênio nº 42/2026/SECID - Rolo Compactador", "Disp. Caixa": 826.53, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 826.53, "Déficit": 0.0},
+            {"Secretaria": "Infraestrutura Viaria", "Codigo": 266.0, "Destinação de Recursos": "Convênio 43/2026/SECID - Escavadeira e Motoniveladora", "Disp. Caixa": 1406.2, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1406.2, "Déficit": 0.0},
+            {"Secretaria": "Infraestrutura Viaria", "Codigo": 267.0, "Destinação de Recursos": "Convênio Nº 44/2026/SECID - Caminhão Plataforma 8x4", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 850000.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 850000.0, "Superávit": 0.0, "Déficit": 850000.0},
+            {"Secretaria": "Infraestrutura Viaria", "Codigo": 268.0, "Destinação de Recursos": "Convênio Nº 45/2026/SECID - Caminhão Caçamba 6x4", "Disp. Caixa": 406.17, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 406.17, "Déficit": 0.0},
+            {"Secretaria": "Administração", "Codigo": 270.0, "Destinação de Recursos": "Convênio Nº 311/2026/SECID - Pick Up Guarda Municipal", "Disp. Caixa": 0.0, "Liquidados": 0.0, "A Liquidar": 120640.5, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 120640.5, "Superávit": 0.0, "Déficit": 120640.5},
+            {"Secretaria": "Não Especificado", "Codigo": 271.0, "Destinação de Recursos": "Programa Apoio aos Municípios Criativos", "Disp. Caixa": 102729.56, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 102729.56, "Déficit": 0.0},
+            {"Secretaria": "Esporte e Lazer", "Codigo": 272.0, "Destinação de Recursos": "Programa Esporte que Queremos", "Disp. Caixa": 762119.15, "Liquidados": 0.0, "A Liquidar": 279900.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 279900.0, "Superávit": 482219.15, "Déficit": 0.0},
             {"Secretaria": "Saúde", "Codigo": 303.0, "Destinação de Recursos": "Saúde 15% - Exercício Corrente", "Disp. Caixa": 5984081.03, "Liquidados": 900444.96, "A Liquidar": 4311067.69, "Restos Não Processados": 179875.88, "Restos Processados": 116125.53, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 5507514.06, "Superávit": 476566.97, "Déficit": 0.0},
             {"Secretaria": "Saúde", "Codigo": 304.0, "Destinação de Recursos": "Alienação de Ativos da Saúde", "Disp. Caixa": 1897.95, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 744.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 744.0, "Superávit": 1153.95, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 317.0, "Destinação de Recursos": "Emenda Individual - PORTARIA GM/MS Nº 3.591, DE 18 DE ABRIL DE 2024 - Incremento MAC", "Disp. Caixa": 167390.05, "Liquidados": 22396.68, "A Liquidar": 56020.98, "Restos Não Processados": 25267.37, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 103685.03, "Superávit": 63705.02, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 318.0, "Destinação de Recursos": "Emenda Parlamentar Individual - PORTARIA GM/MS Nº 3.615, de 23 DE ABRIL DE 2024 - Incremento PAP", "Disp. Caixa": 197973.96, "Liquidados": 85.9, "A Liquidar": 87308.39, "Restos Não Processados": 8087.81, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 95482.1, "Superávit": 102491.86, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 320.0, "Destinação de Recursos": "Bloco de Custeio das Ações e Serviços Públicos de Saúde - ESTADO", "Disp. Caixa": 6769474.4, "Liquidados": 140966.91, "A Liquidar": 1350591.82, "Restos Não Processados": 68047.82, "Restos Processados": 2733.63, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1562340.18, "Superávit": 5207134.22, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 322.0, "Destinação de Recursos": "Emenda Parlamentar Individual - PORTARIA GM/MS Nº 6.313, DE 26 DE DEZEMBRO DE 2024 - Incremento Atenção Primária - Custeio - Emenda Deputado Geraldo Mendes.", "Disp. Caixa": 549585.08, "Liquidados": 35249.28, "A Liquidar": 137981.16, "Restos Não Processados": 633.31, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 173863.75, "Superávit": 375721.33, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 323.0, "Destinação de Recursos": "Emenda Parlamentar Individual - PORTARIA GM/MS Nº 6.313, DE 26 DE DEZEMBRO DE 2024 - Incremento Atenção Primária - Custeio - Emenda Deputado Beto Richa.", "Disp. Caixa": 1197802.85, "Liquidados": 130181.87, "A Liquidar": 438075.22, "Restos Não Processados": 4828.96, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 573086.05, "Superávit": 624716.8, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 324.0, "Destinação de Recursos": "Emenda Parlamentar Individual - PORTARIA GM/MS Nº 6.313, DE 26 DE DEZEMBRO DE 2024 - Incremento Atenção Primária - Custeio - Emenda Deputado Tião Medeiros.", "Disp. Caixa": 585052.02, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 585052.02, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 361.0, "Destinação de Recursos": "SAMU/SIATE Estado - Exercicio Corrente", "Disp. Caixa": 703571.31, "Liquidados": 53742.27, "A Liquidar": 443905.74, "Restos Não Processados": 37048.04, "Restos Processados": 1316.77, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 536012.82, "Superávit": 167558.49, "Déficit": 0.0},
-            {"Secretaria": "Não Especificado", "Codigo": 373.0, "Destinação de Recursos": "Emenda Parlamentar Individual - Saúde - Investimento - Transporte Sanitário", "Disp. Caixa": 124154.3, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 124154.3, "Déficit": 0.0},
-            {"Secretaria": "Não Especificado", "Codigo": 374.0, "Destinação de Recursos": "Emenda Parlamentar Individual - Saúde - Investimento - Construção de UBS", "Disp. Caixa": 43139.02, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 43139.02, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 375.0, "Destinação de Recursos": "Emenda Parlamentar Individual - Saúde - Investimento - Equipamentos para Unidades de Atenção Primária", "Disp. Caixa": 1002777.8, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1002777.8, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 317.0, "Destinação de Recursos": "Emenda Individual - Incremento MAC", "Disp. Caixa": 167390.05, "Liquidados": 22396.68, "A Liquidar": 56020.98, "Restos Não Processados": 25267.37, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 103685.03, "Superávit": 63705.02, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 318.0, "Destinação de Recursos": "Emenda Parlamentar - Incremento PAP", "Disp. Caixa": 197973.96, "Liquidados": 85.9, "A Liquidar": 87308.39, "Restos Não Processados": 8087.81, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 95482.1, "Superávit": 102491.86, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 320.0, "Destinação de Recursos": "Bloco Custeio Saúde - ESTADO", "Disp. Caixa": 6769474.4, "Liquidados": 140966.91, "A Liquidar": 1350591.82, "Restos Não Processados": 68047.82, "Restos Processados": 2733.63, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 1562340.18, "Superávit": 5207134.22, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 322.0, "Destinação de Recursos": "Emenda Atenção Primária - Deputado Geraldo Mendes", "Disp. Caixa": 549585.08, "Liquidados": 35249.28, "A Liquidar": 137981.16, "Restos Não Processados": 633.31, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 173863.75, "Superávit": 375721.33, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 323.0, "Destinação de Recursos": "Emenda Atenção Primária - Deputado Beto Richa", "Disp. Caixa": 1197802.85, "Liquidados": 130181.87, "A Liquidar": 438075.22, "Restos Não Processados": 4828.96, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 573086.05, "Superávit": 624716.8, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 324.0, "Destinação de Recursos": "Emenda Atenção Primária - Deputado Tião Medeiros", "Disp. Caixa": 585052.02, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 585052.02, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 361.0, "Destinação de Recursos": "SAMU/SIATE Estado - Exercício Corrente", "Disp. Caixa": 703571.31, "Liquidados": 53742.27, "A Liquidar": 443905.74, "Restos Não Processados": 37048.04, "Restos Processados": 1316.77, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 536012.82, "Superávit": 167558.49, "Déficit": 0.0},
+            {"Secretaria": "Não Especificado", "Codigo": 373.0, "Destinação de Recursos": "Emenda Transporte Sanitário", "Disp. Caixa": 124154.3, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 124154.3, "Déficit": 0.0},
+            {"Secretaria": "Não Especificado", "Codigo": 374.0, "Destinação de Recursos": "Emenda Construção de UBS", "Disp. Caixa": 43139.02, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 43139.02, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 375.0, "Destinação de Recursos": "Emenda Equipamentos Unidades de Saúde", "Disp. Caixa": 1002777.8, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1002777.8, "Déficit": 0.0},
             {"Secretaria": "Saúde", "Codigo": 376.0, "Destinação de Recursos": "Emendas Parlamentares - Bancadas - Saúde", "Disp. Caixa": 200937.58, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 200937.58, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 377.0, "Destinação de Recursos": "Bloco de Custeio das Ações e Serviços Públicos de Saúde - Emendas Individuais (§ 13, art. 166 da CF)", "Disp. Caixa": 15399.18, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 2720.2, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 2720.2, "Superávit": 12678.98, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 378.0, "Destinação de Recursos": "Atenção Básica - Emendas Individuais (§ 13, art. 166 da CF) - Custeio, informatização nas UBS", "Disp. Caixa": 6122.21, "Liquidados": 0.0, "A Liquidar": 1000.0, "Restos Não Processados": 3564.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 4564.0, "Superávit": 1558.21, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 379.0, "Destinação de Recursos": "Atenção Básica - Emendas Individuais (§ 13, art. 166 da CF) - Incremento temporário de custeio ações estratégicas para os serviços destinados a saúde na Atenção Básica.", "Disp. Caixa": 952443.8, "Liquidados": 10621.02, "A Liquidar": 99212.42, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 109833.44, "Superávit": 842610.36, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 381.0, "Destinação de Recursos": "Atenção Básica - Emendas Individuais (§ 13, art. 166 da CF) - Portaria GM/MS Nº 7.301, de 24 de junho de 2025", "Disp. Caixa": 1045935.72, "Liquidados": 6620.85, "A Liquidar": 34554.51, "Restos Não Processados": 0.0, "Restos Processados": 0.01, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 41175.37, "Superávit": 1004760.35, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 382.0, "Destinação de Recursos": "Atenção Básica - Emendas Individuais (§ 13, art. 166 da CF) - Atividades para Fortalecimento da Atenção Básica - produtos de custeio e serviços.", "Disp. Caixa": 1090541.25, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1090541.25, "Déficit": 0.0},
-            {"Secretaria": "Ordem Pública", "Codigo": 383.0, "Destinação de Recursos": "Emenda Parlamentar Individual - ME/SEGOV N 6411, de 15 de junho de 2021 - Custeio - Fardamento da Guarda Municipal", "Disp. Caixa": 426617.03, "Liquidados": 179875.2, "A Liquidar": 216112.32, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 395987.52, "Superávit": 30629.51, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 384.0, "Destinação de Recursos": "Emenda - Estruturação de Unidades de Atenção Especializada em Saúde - UPA - Portaria GM/MS Nº 9.273 de 11 de dezembro de 2025 - Fonte 1", "Disp. Caixa": 82785.96, "Liquidados": 239.7, "A Liquidar": 7879.79, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 8119.49, "Superávit": 74666.47, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 385.0, "Destinação de Recursos": "Emenda Individual - Estruturação de Unidades de Saúde - UPA - Portaria GM/MS Nº 9.273 de 11 de dezembro de 2025 - Atenção Especializada - Deputado Tadeu Veneri", "Disp. Caixa": 402391.79, "Liquidados": 0.0, "A Liquidar": 231963.58, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 231963.58, "Superávit": 170428.21, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 386.0, "Destinação de Recursos": "Emenda Individual - Portaria GM/MS Nº 9.273 de 11 de dezembro de 2025 - Atenção Especializada - Micro-ônibus Urbano de Transporte Sanitário - Deputado Sergio Souza", "Disp. Caixa": 70825.07, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 70825.07, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 387.0, "Destinação de Recursos": "Emenda - Custeio de Serviços da Atenção Especializada em Saúde, Portaria GM/MS Nº 9.796 de 26 de dezembro de 2025 - Material de consumo e serviços", "Disp. Caixa": 1056904.48, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1056904.48, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 494.0, "Destinação de Recursos": "Bloco de Custeio das Ações e Serviços Públicos de Saúde", "Disp. Caixa": 6721591.24, "Liquidados": 592719.17, "A Liquidar": 4600162.11, "Restos Não Processados": 224179.7, "Restos Processados": 69488.21, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 5486549.19, "Superávit": 1235042.05, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 500.0, "Destinação de Recursos": "Investimentos SUS - Rede de Serviços - Exercício Corrente", "Disp. Caixa": 128519.59, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 128519.59, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 377.0, "Destinação de Recursos": "Bloco Custeio Saúde - Emendas Individuais", "Disp. Caixa": 15399.18, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 2720.2, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 2720.2, "Superávit": 12678.98, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 378.0, "Destinação de Recursos": "Atenção Básica - Informatização nas UBS", "Disp. Caixa": 6122.21, "Liquidados": 0.0, "A Liquidar": 1000.0, "Restos Não Processados": 3564.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 4564.0, "Superávit": 1558.21, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 379.0, "Destinação de Recursos": "Atenção Básica - Incremento Temporário Custeio", "Disp. Caixa": 952443.8, "Liquidados": 10621.02, "A Liquidar": 99212.42, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 109833.44, "Superávit": 842610.36, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 381.0, "Destinação de Recursos": "Atenção Básica - Portaria GM/MS Nº 7.301/2025", "Disp. Caixa": 1045935.72, "Liquidados": 6620.85, "A Liquidar": 34554.51, "Restos Não Processados": 0.0, "Restos Processados": 0.01, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 41175.37, "Superávit": 1004760.35, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 382.0, "Destinação de Recursos": "Atenção Básica - Fortalecimento Custeio", "Disp. Caixa": 1090541.25, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1090541.25, "Déficit": 0.0},
+            {"Secretaria": "Ordem Pública", "Codigo": 383.0, "Destinação de Recursos": "Emenda Individual - Fardamento Guarda Municipal", "Disp. Caixa": 426617.03, "Liquidados": 179875.2, "A Liquidar": 216112.32, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 395987.52, "Superávit": 30629.51, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 384.0, "Destinação de Recursos": "Emenda Estruturação UPA - Fonte 1", "Disp. Caixa": 82785.96, "Liquidados": 239.7, "A Liquidar": 7879.79, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 8119.49, "Superávit": 74666.47, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 385.0, "Destinação de Recursos": "Emenda UPA - Deputado Tadeu Veneri", "Disp. Caixa": 402391.79, "Liquidados": 0.0, "A Liquidar": 231963.58, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 231963.58, "Superávit": 170428.21, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 386.0, "Destinação de Recursos": "Emenda Micro-ônibus - Deputado Sergio Souza", "Disp. Caixa": 70825.07, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 70825.07, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 387.0, "Destinação de Recursos": "Emenda Custeio Serviços Atenção Especializada", "Disp. Caixa": 1056904.48, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 1056904.48, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 494.0, "Destinação de Recursos": "Bloco Custeio das Ações e Serviços de Saúde", "Disp. Caixa": 6721591.24, "Liquidados": 592719.17, "A Liquidar": 4600162.11, "Restos Não Processados": 224179.7, "Restos Processados": 69488.21, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 5486549.19, "Superávit": 1235042.05, "Déficit": 0.0},
+            {"Secretaria": "Saúde", "Codigo": 500.0, "Destinação de Recursos": "Investimentos SUS - Rede de Serviços", "Disp. Caixa": 128519.59, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 128519.59, "Déficit": 0.0},
             {"Secretaria": "Planejamento e Transformação Digital", "Codigo": 501.0, "Destinação de Recursos": "Alienação de Ativos", "Disp. Caixa": 269086.0, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 269086.0, "Déficit": 0.0},
             {"Secretaria": "Infraestrutura Viaria", "Codigo": 504.0, "Destinação de Recursos": "Royalties - Exercício Corrente", "Disp. Caixa": 3641197.88, "Liquidados": 547049.62, "A Liquidar": 2894704.55, "Restos Não Processados": 518.63, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 3442272.8, "Superávit": 198925.08, "Déficit": 0.0},
-            {"Secretaria": "Infraestrutura Viaria", "Codigo": 507.0, "Destinação de Recursos": "Contribuição Para o Custeio do Serviço de Iluminação Pública (COSIP)", "Disp. Caixa": 4667818.39, "Liquidados": 1136680.02, "A Liquidar": 4186586.38, "Restos Não Processados": 7278.9, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 5330545.3, "Superávit": 0.0, "Déficit": 662726.91},
+            {"Secretaria": "Infraestrutura Viaria", "Codigo": 507.0, "Destinação de Recursos": "Iluminação Pública (COSIP)", "Disp. Caixa": 4667818.39, "Liquidados": 1136680.02, "A Liquidar": 4186586.38, "Restos Não Processados": 7278.9, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 5330545.3, "Superávit": 0.0, "Déficit": 662726.91},
             {"Secretaria": "Ordem Pública", "Codigo": 509.0, "Destinação de Recursos": "Gerenciamento de Trânsito - Exercício Corrente", "Disp. Caixa": 3811403.09, "Liquidados": 881340.24, "A Liquidar": 2663463.88, "Restos Não Processados": 24670.0, "Restos Processados": 50.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 3569524.12, "Superávit": 241878.97, "Déficit": 0.0},
-            {"Secretaria": "Saúde", "Codigo": 510.0, "Destinação de Recursos": "Taxas - Exercício Poder de Polícia - Exercício Corrente", "Disp. Caixa": 1310873.4, "Liquidados": 26999.3, "A Liquidar": 288892.05, "Restos Não Processados": 11147.11, "Restos Processados": 149.9, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 327188.36, "Superávit": 983685.04, "Déficit": 0.0},
-            {"Secretaria": "Meio Ambiente", "Codigo": 511.0, "Destinação de Recursos": "Taxas - Prestação de Serviços - Exercício Corrente", "Disp. Caixa": 2290754.89, "Liquidados": 0.0, "A Liquidar": 6525947.93, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 6525947.93, "Superávit": 0.0, "Déficit": 4235193.04},
+            {"Secretaria": "Saúde", "Codigo": 510.0, "Destinação de Recursos": "Taxas - Poder de Polícia - Exercício Corrente", "Disp. Caixa": 1310873.4, "Liquidados": 26999.3, "A Liquidar": 288892.05, "Restos Não Processados": 11147.11, "Restos Processados": 149.9, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 327188.36, "Superávit": 983685.04, "Déficit": 0.0},
+            {"Secretaria": "Meio Ambiente", "Codigo": 511.0, "Destinação de Recursos": "Taxas - Prestação de Serviços", "Disp. Caixa": 2290754.89, "Liquidados": 0.0, "A Liquidar": 6525947.93, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 6525947.93, "Superávit": 0.0, "Déficit": 4235193.04},
             {"Secretaria": "Infraestrutura Viaria", "Codigo": 512.0, "Destinação de Recursos": "CIDE - Combustíveis - Exercício Corrente", "Disp. Caixa": 46555.23, "Liquidados": 0.0, "A Liquidar": 31350.94, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 31350.94, "Superávit": 15204.29, "Déficit": 0.0},
-            {"Secretaria": "Ordem Pública", "Codigo": 514.0, "Destinação de Recursos": "Indenizações Recebidas Por Bens Sinistrados de Outras Áreas", "Disp. Caixa": 259215.69, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 259215.69, "Déficit": 0.0}
+            {"Secretaria": "Ordem Pública", "Codigo": 514.0, "Destinação de Recursos": "Indenizações Por Bens Sinistrados", "Disp. Caixa": 259215.69, "Liquidados": 0.0, "A Liquidar": 0.0, "Restos Não Processados": 0.0, "Restos Processados": 0.0, "Saldo Extra (c)": 0.0, "Total (a+b+c)": 0.0, "Superávit": 259215.69, "Déficit": 0.0}
         ];
 
-        let chartSecBarInstance = null;
-        let chartPieInstance = null;
+        let chartResultadoSecInstance = null;
+        let chartComposicaoCompromissosInstance = null;
 
-        function formatCurrency(val) {
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
-        }
-
+        // Preenche o filtro com todas as secretarias encontradas
         function populateSecretariaDropdown() {
             const select = document.getElementById('filterSecretaria');
-            const secretarias = [...new Set(rawData.map(item => item.Secretaria))].sort();
+            const secretarias = [...new Set(rawData.map(item => item.Secretaria))].filter(s => s !== 'Todas').sort();
             
             secretarias.forEach(sec => {
                 const opt = document.createElement('option');
@@ -307,14 +313,10 @@
             const textFilter = document.getElementById('filterText').value.toLowerCase().trim();
 
             return rawData.filter(item => {
-                // Match Secretaria
                 if (secFilter !== 'ALL' && item.Secretaria !== secFilter) return false;
-                
-                // Match Condição
                 if (condFilter === 'SUPERAVIT' && item["Superávit"] <= 0) return false;
                 if (condFilter === 'DEFICIT' && item["Déficit"] <= 0) return false;
 
-                // Match Text Search (Código ou Nome da Destinação)
                 if (textFilter !== '') {
                     const codStr = String(item.Codigo || '');
                     const destStr = (item["Destinação de Recursos"] || '').toLowerCase();
@@ -322,7 +324,6 @@
                         return false;
                     }
                 }
-
                 return true;
             });
         }
@@ -330,26 +331,35 @@
         function updateDashboard() {
             const filtered = getFilteredData();
 
-            // Totals
             let totalDisp = 0;
             let totalCompromissos = 0;
             let totalSuperavit = 0;
             let totalDeficit = 0;
+
+            let compALiquidar = 0;
+            let compLiquidados = 0;
+            let compRNP = 0;
+            let compRP = 0;
 
             filtered.forEach(item => {
                 totalDisp += item["Disp. Caixa"] || 0;
                 totalCompromissos += item["Total (a+b+c)"] || 0;
                 totalSuperavit += item["Superávit"] || 0;
                 totalDeficit += item["Déficit"] || 0;
+
+                compALiquidar += item["A Liquidar"] || 0;
+                compLiquidados += item["Liquidados"] || 0;
+                compRNP += item["Restos Não Processados"] || 0;
+                compRP += item["Restos Processados"] || 0;
             });
 
-            // Update KPI Cards
-            document.getElementById('kpiDisp').textContent = formatCurrency(totalDisp);
-            document.getElementById('kpiCompromissos').textContent = formatCurrency(totalCompromissos);
-            document.getElementById('kpiSuperavit').textContent = formatCurrency(totalSuperavit);
-            document.getElementById('kpiDeficit').textContent = formatCurrency(totalDeficit);
+            // Atualiza KPI Cards
+            document.getElementById('kpiDisp').textContent = formatBRL(totalDisp);
+            document.getElementById('kpiCompromissos').textContent = formatBRL(totalCompromissos);
+            document.getElementById('kpiSuperavit').textContent = formatBRL(totalSuperavit);
+            document.getElementById('kpiDeficit').textContent = formatBRL(totalDeficit);
 
-            // Update Table
+            // Atualiza Tabela
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
@@ -365,80 +375,122 @@
                     <td class="p-3">
                         <span class="font-bold text-slate-900">${Math.round(item.Codigo)}</span> - ${item["Destinação de Recursos"]}
                     </td>
-                    <td class="p-3 text-right font-medium">${formatCurrency(item["Disp. Caixa"])}</td>
-                    <td class="p-3 text-right text-gray-600">${formatCurrency(item["Total (a+b+c)"])}</td>
-                    <td class="p-3 text-right ${hasSuperavit ? 'font-semibold text-emerald-600' : 'text-gray-400'}">${formatCurrency(item["Superávit"])}</td>
-                    <td class="p-3 text-right ${hasDeficit ? 'font-semibold text-rose-600' : 'text-gray-400'}">${formatCurrency(item["Déficit"])}</td>
+                    <td class="p-3 text-right font-medium">${formatBRL(item["Disp. Caixa"])}</td>
+                    <td class="p-3 text-right text-gray-600">${formatBRL(item["Total (a+b+c)"])}</td>
+                    <td class="p-3 text-right ${hasSuperavit ? 'font-semibold text-emerald-600' : 'text-gray-400'}">${formatBRL(item["Superávit"])}</td>
+                    <td class="p-3 text-right ${hasDeficit ? 'font-semibold text-rose-600' : 'text-gray-400'}">${formatBRL(item["Déficit"])}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
             document.getElementById('recordCount').textContent = `Exibindo ${filtered.length} registro(s)`;
 
-            // Update Charts
-            renderCharts(filtered, totalCompromissos, totalSuperavit);
+            // Renderiza Gráficos
+            renderResultadoPorSecretariaChart(filtered);
+            renderComposicaoCompromissosChart(compALiquidar, compLiquidados, compRNP, compRP);
         }
 
-        function renderCharts(data, totalCompromissos, totalSuperavit) {
-            // Group Caixa by Secretaria for Bar Chart
-            const secCaixaMap = {};
+        // Gráfico 1: Panorama por Secretaria (Resultado Líquido Ordenado)
+        function renderResultadoPorSecretariaChart(data) {
+            const secResultMap = {};
+
             data.forEach(item => {
                 if (item.Secretaria !== "Todas") {
-                    secCaixaMap[item.Secretaria] = (secCaixaMap[item.Secretaria] || 0) + (item["Disp. Caixa"] || 0);
+                    const liquido = (item["Superávit"] || 0) - (item["Déficit"] || 0);
+                    secResultMap[item.Secretaria] = (secResultMap[item.Secretaria] || 0) + liquido;
                 }
             });
 
-            const sortedSecs = Object.keys(secCaixaMap).sort((a, b) => secCaixaMap[b] - secCaixaMap[a]).slice(0, 6);
-            const barData = sortedSecs.map(sec => secCaixaMap[sec]);
+            // Ordena do Maior Déficit (mais negativo) ao Maior Superávit (mais positivo)
+            const sortedSecretarias = Object.keys(secResultMap).sort((a, b) => secResultMap[a] - secResultMap[b]);
+            const valoresOrdenados = sortedSecretarias.map(sec => secResultMap[sec]);
+            const backgroundColors = valoresOrdenados.map(v => v < 0 ? '#ef4444' : '#10b981'); // Vermelho se Déficit, Verde se Superávit
 
-            // Chart Bar Instance
-            if (chartSecBarInstance) chartSecBarInstance.destroy();
-            const ctxBar = document.getElementById('chartSecBar').getContext('2d');
-            chartSecBarInstance = new Chart(ctxBar, {
+            if (chartResultadoSecInstance) chartResultadoSecInstance.destroy();
+            
+            const ctx = document.getElementById('chartResultadoSec').getContext('2d');
+            chartResultadoSecInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: sortedSecs,
+                    labels: sortedSecretarias,
                     datasets: [{
-                        label: 'Disp. de Caixa (R$)',
-                        data: barData,
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 6
+                        label: 'Resultado Líquido (R$)',
+                        data: valoresOrdenados,
+                        backgroundColor: backgroundColors,
+                        borderRadius: 4
                     }]
                 },
                 options: {
+                    indexAxis: 'y', // Barra Horizontal
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    const tipo = val < 0 ? 'Déficit Líquido' : 'Superávit Líquido';
+                                    return `${tipo}: ${formatBRL(val)}`;
+                                }
+                            }
+                        }
                     },
                     scales: {
-                        y: {
+                        x: {
                             ticks: {
                                 callback: value => 'R$ ' + (value / 1e6).toFixed(1) + 'M'
-                            }
+                            },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        y: {
+                            grid: { display: false }
                         }
                     }
                 }
             });
+        }
 
-            // Chart Pie Instance
-            if (chartPieInstance) chartPieInstance.destroy();
-            const ctxPie = document.getElementById('chartPie').getContext('2d');
-            chartPieInstance = new Chart(ctxPie, {
+        // Gráfico 2: Composição dos Compromissos em R$
+        function renderComposicaoCompromissosChart(aLiquidar, liquidados, rnp, rp) {
+            if (chartComposicaoCompromissosInstance) chartComposicaoCompromissosInstance.destroy();
+
+            const ctx = document.getElementById('chartComposicaoCompromissos').getContext('2d');
+            chartComposicaoCompromissosInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Compromissos Totais', 'Superávit Livre'],
+                    labels: ['A Liquidar', 'Liquidados', 'Restos Não Processados', 'Restos Processados'],
                     datasets: [{
-                        data: [totalCompromissos, totalSuperavit],
-                        backgroundColor: ['#f59e0b', '#10b981']
+                        data: [aLiquidar, liquidados, rnp, rp],
+                        backgroundColor: [
+                            '#f59e0b', // Âmbar
+                            '#3b82f6', // Azul
+                            '#a855f7', // Roxo
+                            '#f43f5e'  // Rosa/Vermelho
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom' }
-                    }
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+                                    return ` ${context.label}: ${formatBRL(val)} (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
                 }
             });
         }
@@ -454,7 +506,6 @@
             updateDashboard();
         }
 
-        // Initialize Page
         window.addEventListener('DOMContentLoaded', () => {
             populateSecretariaDropdown();
             updateDashboard();
