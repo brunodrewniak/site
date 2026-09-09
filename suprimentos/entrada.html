@@ -246,6 +246,7 @@ Dashboard de Almoxarifado — Campo Largo/PR | Módulo de Entradas
 </div>
 </footer>
 
+
 <script>
 const ENTIDADE_FIXA = "2848";
 
@@ -274,7 +275,6 @@ let graficos = {};
 
 const $ = id => document.getElementById(id);
 
-// DEFINE A DATA DO DIA ATUAL POR DEFAULT
 function inicializarDatasPadrao() {
   const hoje = new Date().toISOString().split('T')[0];
   $("dataInicio").value = hoje;
@@ -321,7 +321,7 @@ function extrairEntradas(json) {
   if (!json) return [];
   const noEntrada = json.entrada || json.Entrada;
   if (!noEntrada) return [];
-  
+
   if (Array.isArray(noEntrada)) {
     return noEntrada.filter(item => item && !Array.isArray(item) && typeof item === 'object');
   } else if (typeof noEntrada === 'object') {
@@ -332,7 +332,7 @@ function extrairEntradas(json) {
 
 function processarEInserirItens(json, infoEntrada) {
   const itens = json.Itens || json.itens || infoEntrada.Itens || infoEntrada.itens || [];
-  
+
   const tipoId = Number(infoEntrada.Tipo || infoEntrada.tipo || 0);
   const estadoId = Number(infoEntrada.Estado || infoEntrada.estado || 1);
 
@@ -393,6 +393,42 @@ async function buscarEntradaPorCodigo(entidade, ano, codigo) {
   return { json: null, lista: [], statusOk: false };
 }
 
+/**
+ * NOVO: varre para trás a partir de um código já confirmado dentro do período,
+ * até encontrar um registro com data ANTERIOR ao início solicitado.
+ * Isso garante que nenhum lançamento do início do dia (manhã) seja perdido,
+ * ao contrário do antigo recuo fixo de 20 códigos.
+ */
+async function encontrarInicioReal(entidade, ano, codigoPartida, targetDtInicio) {
+  const TOLERANCIA_VAZIOS = 15; // tolera sequências de códigos cancelados/inexistentes
+  let cod = codigoPartida;
+  let vazios = 0;
+
+  while (cod > 1) {
+    cod--;
+    $("loadingTexto").textContent = `Localizando o início real do período (verificando código ${cod})...`;
+
+    const res = await buscarEntradaPorCodigo(entidade, ano, cod);
+
+    if (res.lista.length > 0) {
+      vazios = 0;
+      const dataReg = parseDataBR(res.lista[0].Data || res.lista[0].data);
+      if (dataReg && dataReg < targetDtInicio) {
+        // Encontramos um registro anterior ao período: o início real é cod + 1
+        return cod + 1;
+      }
+    } else {
+      vazios++;
+      if (vazios >= TOLERANCIA_VAZIOS) {
+        // Muitos códigos vazios em sequência: assume-se que passamos do início real dos dados
+        return cod + vazios;
+      }
+    }
+    await sleep(30);
+  }
+  return 1;
+}
+
 async function consultarAPI(){
   const dtInicioStr = $("dataInicio").value;
   const dtFimStr = $("dataFim").value;
@@ -410,7 +446,7 @@ async function consultarAPI(){
   if (codigoInput !== 0) {
     mostrarStatus(`Buscando código específico de entrada ${codigoInput} (${ano})...`, "info");
     const res = await buscarEntradaPorCodigo(ENTIDADE_FIXA, ano, codigoInput);
-    
+
     if (res.lista.length > 0) {
       processarEInserirItens(res.json, res.lista[0]);
       mostrarLoading(false);
@@ -449,7 +485,7 @@ async function consultarAPI(){
 
   while (salto >= 1) {
     $("loadingTexto").textContent = `Saltando para o Código de Entrada ${codAtual} (Passo: ${salto})...`;
-    
+
     const res = await buscarEntradaPorCodigo(ENTIDADE_FIXA, ano, codAtual);
 
     if (res.lista.length > 0) {
@@ -486,15 +522,21 @@ async function consultarAPI(){
   }
 
   if (!codInicialEncontrado) codInicialEncontrado = codAtual;
-  codAtual = Math.max(1, codInicialEncontrado - 20);
+
+  // CORREÇÃO PRINCIPAL: em vez de recuar um valor fixo (-20), que cortava
+  // lançamentos da manhã em dias de movimento intenso, varremos para trás
+  // até confirmar o início real do período.
+  mostrarStatus("Confirmando o início exato do período (evitando perder lançamentos)...", "info");
+  codAtual = await encontrarInicioReal(ENTIDADE_FIXA, ano, codInicialEncontrado, targetDtInicio);
 
   let lendo = true;
   let entradasEncontradas = 0;
   let respostasVaziasConsecutivas = 0;
+  const TOLERANCIA_VAZIOS_LEITURA = 15; // era 2: aumentado para não parar em pequenas lacunas (entradas canceladas/excluídas)
 
   while (lendo) {
     $("loadingTexto").textContent = `Lendo sequencialmente: Entrada ${codAtual} (Encontradas: ${entradasEncontradas})...`;
-    
+
     const res = await buscarEntradaPorCodigo(ENTIDADE_FIXA, ano, codAtual);
 
     if (res.lista.length > 0) {
@@ -515,7 +557,7 @@ async function consultarAPI(){
       }
     } else {
       respostasVaziasConsecutivas++;
-      if (respostasVaziasConsecutivas >= 2) {
+      if (respostasVaziasConsecutivas >= TOLERANCIA_VAZIOS_LEITURA) {
         lendo = false;
         break;
       }
@@ -541,11 +583,9 @@ function aplicarFiltros(){
   const depositoFiltro = $("filtroDeposito").value.trim();
 
   dadosFiltrados = dadosItens.filter(item => {
-    // FILTRO DE DEPÓSITO
     if (depositoFiltro && item.depositoCodigo !== depositoFiltro) {
       return false;
     }
-    // FILTRO GERAL DE TEXTO
     if (texto) {
       return Object.values(item).some(val => String(val ?? "").toLowerCase().includes(texto));
     }
@@ -678,7 +718,6 @@ function exportarCSV(){
   URL.revokeObjectURL(url);
 }
 
-// Inicialização
 document.addEventListener("DOMContentLoaded", () => {
   inicializarDatasPadrao();
 });
@@ -690,6 +729,7 @@ $("filtroTexto").addEventListener("input", atualizarDashboard);
 $("filtroDeposito").addEventListener("input", atualizarDashboard);
 
 </script>
+
 
 </body>
 </html>
