@@ -15,10 +15,11 @@
 
 <style>
 :root {
-  --vermelho: #bf1b20;
-  --vermelho-escuro: #961317;
+  --vermelho: #f2b705;
+  --vermelho-escuro: #c79300;
   --escuro: #212529;
   --fundo: #f8f9fa;
+  --texto-sobre-primaria: #212529;
 }
 
 body {
@@ -42,7 +43,7 @@ body {
 
 .badge-vermelho {
   background-color: var(--vermelho);
-  color: #fff;
+  color: var(--texto-sobre-primaria, #fff);
 }
 
 /* Cards & KPIs */
@@ -71,13 +72,13 @@ body {
 .btn-primary-custom {
   background-color: var(--vermelho);
   border-color: var(--vermelho);
-  color: #fff;
+  color: var(--texto-sobre-primaria, #fff);
 }
 
 .btn-primary-custom:hover {
   background-color: var(--vermelho-escuro);
   border-color: var(--vermelho-escuro);
-  color: #fff;
+  color: var(--texto-sobre-primaria, #fff);
 }
 
 .btn-outline-custom {
@@ -97,7 +98,7 @@ body {
 
 .btn-outline-vermelho:hover {
   background-color: var(--vermelho);
-  color: #fff;
+  color: var(--texto-sobre-primaria, #fff);
 }
 
 /* Tabela & Gráficos */
@@ -129,29 +130,132 @@ body {
   font-size: 0.82rem;
   color: #6c757d;
 }
+
+/* ===== Menu de Acesso Setorial ===== */
+.menu-setorial {
+  background-color: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.btn-setor {
+  border: 2px solid transparent;
+  background-color: #f1f3f5;
+  color: var(--escuro);
+  font-weight: 600;
+  border-radius: 8px;
+  padding: .55rem 1.1rem;
+  transition: all .15s ease-in-out;
+}
+
+.btn-setor:hover {
+  background-color: #e9ecef;
+}
+
+.btn-setor.ativo {
+  color: #fff;
+}
+
+.btn-setor.ativo[data-setor="custos"] {
+  background-color: var(--vermelho);
+  border-color: var(--vermelho-escuro);
+}
+
+.btn-setor.ativo[data-setor="saude"] {
+  background-color: #bf1b20;
+  border-color: #961317;
+}
+
+.btn-setor.ativo[data-setor="educacao"] {
+  background-color: #0d6efd;
+  border-color: #084298;
+}
+
+/* Tema dinâmico: essas classes usam a variável --tema, trocada via JS */
+.tema-hero {
+  background: linear-gradient(135deg, #1a1d20, #2c3036) !important;
+  border-bottom-color: var(--tema, var(--vermelho)) !important;
+}
+
+.badge-tema {
+  background-color: var(--tema, var(--vermelho));
+  color: var(--tema-texto, var(--texto-sobre-primaria, #fff));
+}
+
+.kpi-tema {
+  border-left: 5px solid var(--tema, var(--vermelho));
+}
+
+.text-tema {
+  color: var(--tema, var(--vermelho)) !important;
+}
+
+#painelArea .navbar,
+.navbar.tema-navbar {
+  border-bottom-color: var(--tema, var(--vermelho)) !important;
+}
+
+/* ===== Mapa (Google Maps embutido) ===== */
+.mapa-box {
+  width: 100%;
+  height: 440px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.mapa-box iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.btn-acao-mapa {
+  font-size: 0.78rem;
+  padding: .2rem .5rem;
+  white-space: nowrap;
+}
 </style>
 </head>
 
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top tema-navbar">
   <div class="container">
     <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
-      <i class="bi bi-bar-chart-line-fill text-danger"></i> BI de Custos
+      <i id="iconeNavbar" class="bi bi-bar-chart-line-fill text-danger"></i> <span id="tituloNavbar">BI de Custos</span>
     </a>
     <span class="text-white-50 small">Campo Largo - PR</span>
   </div>
 </nav>
 
-<header class="hero py-4 mb-4">
+<!-- Menu de Acesso Setorial -->
+<div class="menu-setorial py-2">
+  <div class="container d-flex flex-wrap gap-2 align-items-center">
+    <span class="small-muted fw-semibold me-1"><i class="bi bi-grid-3x3-gap me-1"></i>Acesso rápido:</span>
+    <button class="btn btn-setor btn-sm ativo" data-setor="custos" onclick="mostrarPainel('custos')">
+      <i class="bi bi-bar-chart-line-fill me-1"></i> Custos (Geral)
+    </button>
+    <button class="btn btn-setor btn-sm" data-setor="educacao" onclick="mostrarPainel('educacao')">
+      <i class="bi bi-mortarboard-fill me-1"></i> Educação
+    </button>
+    <button class="btn btn-setor btn-sm" data-setor="saude" onclick="mostrarPainel('saude')">
+      <i class="bi bi-heart-pulse-fill me-1"></i> Saúde
+    </button>
+  </div>
+</div>
+
+<header class="hero tema-hero py-4 mb-4">
   <div class="container">
-    <span class="badge badge-vermelho mb-2">SISTEMA DE CUSTOS</span>
-    <h1 class="h2 fw-bold mb-1">Dashboard de Custos por Objeto</h1>
-    <p class="mb-0 opacity-75">Custos apropriados por Secretaria, Departamento e Item de Custo.</p>
+    <span id="badgeHero" class="badge badge-vermelho badge-tema mb-2">SISTEMA DE CUSTOS</span>
+    <h1 id="tituloHero" class="h2 fw-bold mb-1">Dashboard de Custos por Objeto</h1>
+    <p id="subtituloHero" class="mb-0 opacity-75">Custos apropriados por Secretaria, Departamento e Item de Custo.</p>
   </div>
 </header>
 
 <main class="container py-2">
+
+<div id="painelGeral">
 
   <div id="status" class="alert alert-info status">
     Aguardando consulta...
@@ -334,6 +438,136 @@ body {
     </div>
   </section>
 
+</div>
+<!-- /painelGeral -->
+
+<!-- ===== Painel Setorial (Educação / Saúde) ===== -->
+<div id="painelArea" class="d-none">
+
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <span id="badgeArea" class="badge badge-tema mb-1"></span>
+      <h2 id="tituloArea" class="h4 fw-bold mb-0"></h2>
+      <p id="descArea" class="small-muted mb-0"></p>
+    </div>
+    <button class="btn btn-outline-custom btn-sm" onclick="mostrarPainel('custos')">
+      <i class="bi bi-arrow-left me-1"></i> Voltar ao painel geral
+    </button>
+  </div>
+
+  <!-- Filtros do setor -->
+  <div class="card mb-3">
+    <div class="card-body py-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Data Inicial</label>
+          <input type="date" id="dataInicialArea" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Data Final</label>
+          <input type="date" id="dataFinalArea" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">Item de Custo</label>
+          <select id="filtroItemArea" class="form-select form-select-sm">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button id="btnLimparArea" class="btn btn-outline-secondary btn-sm w-100">
+            <i class="bi bi-eraser me-1"></i> Limpar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="statusArea" class="alert alert-info status">Carregando dados do setor...</div>
+
+  <!-- KPIs do setor -->
+  <section class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card kpi-tema h-100"><div class="card-body py-3">
+        <div class="text-muted small">Total Apropriado no Setor</div>
+        <div id="areaTotalValor" class="valor">R$ 0,00</div>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card kpi-tema h-100"><div class="card-body py-3">
+        <div class="text-muted small">Unidades Identificadas</div>
+        <div id="areaTotalUnidades" class="valor">0</div>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card kpi-tema h-100"><div class="card-body py-3">
+        <div class="text-muted small">Registros de Custo</div>
+        <div id="areaTotalRegistros" class="valor">0</div>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card kpi-tema h-100"><div class="card-body py-3">
+        <div class="text-muted small">Endereços Disponíveis no Mapa</div>
+        <div id="areaTotalGeocodificadas" class="valor">0</div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- Mapa + Ranking -->
+  <section class="row g-4 mb-4">
+    <div class="col-lg-7">
+      <div class="card h-100"><div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <h5 class="card-title-custom h6 mb-0">
+            <i class="bi bi-geo-alt-fill text-tema me-1"></i> <span id="tituloMapa">Mapa das Unidades</span>
+          </h5>
+          <a id="linkAbrirMaps" href="#" target="_blank" rel="noopener" class="small">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Abrir no Google Maps
+          </a>
+        </div>
+        <div class="mapa-box">
+          <iframe id="mapaArea" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen src=""></iframe>
+        </div>
+        <p class="small-muted mt-2 mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          Endereços conforme a aba "Localização" da planilha oficial. Clique em <strong>"Ver no mapa"</strong> na tabela abaixo para focar em uma unidade, e use o ícone do bonequinho (Pegman) no canto do mapa para abrir o Street View da rua.
+        </p>
+      </div></div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card h-100"><div class="card-body">
+        <h5 class="card-title-custom h6 mb-3">Top Unidades por Custo</h5>
+        <div class="chart-box"><canvas id="graficoArea"></canvas></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- Tabela do setor -->
+  <section class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h5 class="card-title-custom h6 mb-0">Unidades do Setor</h5>
+        <span id="contadorArea" class="badge badge-tema">0 unidades</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th onclick="ordenarPorArea('nome')">Unidade / Objeto <i id="iconArea-nome" class="bi bi-arrow-down-up small opacity-50"></i></th>
+              <th onclick="ordenarPorArea('departamento')">Departamento <i id="iconArea-departamento" class="bi bi-arrow-down-up small opacity-50"></i></th>
+              <th onclick="ordenarPorArea('endereco')">Endereço (planilha) <i id="iconArea-endereco" class="bi bi-arrow-down-up small opacity-50"></i></th>
+              <th onclick="ordenarPorArea('valor')">Total Apropriado <i id="iconArea-valor" class="bi bi-arrow-down-up small opacity-50"></i></th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyArea"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+<!-- /painelArea -->
+
 </main>
 
 <footer class="bg-dark text-white py-3">
@@ -352,12 +586,44 @@ let graficos = {};
 let secMap = {};
 let deptMap = {};
 let objMap = {};
+let locMap = {};
 
 let colunaOrdenacao = "";
 let direcaoOrdenacao = "asc";
 
 let paginaAtual = 1;
 const ITENS_POR_PAGINA = 50;
+
+// ===== Painel Setorial (Educação / Saúde) =====
+let setorAtual = "custos";
+let unidadesAreaAtual = [];
+let colunaOrdenacaoArea = "valor";
+let direcaoOrdenacaoArea = "desc";
+
+const CONFIG_SETOR = {
+  custos: {
+    corTema: "#f2b705", corTemaEscura: "#c79300", corTexto: "#212529",
+    icone: "bi-bar-chart-line-fill", titulo: "BI de Custos",
+    badge: "SISTEMA DE CUSTOS", h1: "Dashboard de Custos por Objeto",
+    sub: "Custos apropriados por Secretaria, Departamento e Item de Custo."
+  },
+  educacao: {
+    corTema: "#0d6efd", corTemaEscura: "#084298", corTexto: "#ffffff",
+    icone: "bi-mortarboard-fill", titulo: "BI de Educação",
+    badge: "SETOR DE EDUCAÇÃO", h1: "Painel de Educação",
+    sub: "Custos e localização de escolas, CMEIs e unidades de ensino.",
+    codigoSecretaria: "0002.0010",
+    palavrasChave: ["educ","escola","cmei","ensino","creche","pedagog","colegio","colégio","infantil","pre-escola","pré-escola"]
+  },
+  saude: {
+    corTema: "#bf1b20", corTemaEscura: "#961317", corTexto: "#ffffff",
+    icone: "bi-heart-pulse-fill", titulo: "BI de Saúde",
+    badge: "SETOR DE SAÚDE", h1: "Painel de Saúde",
+    sub: "Custos e localização de UBSs, hospitais e unidades de saúde.",
+    codigoSecretaria: "0002.0014",
+    palavrasChave: ["saude","saúde","ubs","hospital","posto de saude","posto de saúde","samu","clinica","clínica","enfermagem","atencao basica","atenção básica","vigilancia sanitaria","vigilância sanitária","farmacia","farmácia","policlinica","policlínica"]
+  }
+};
 
 // Paleta completa estendida para os gráficos
 const PALETA_CORES = [
@@ -453,6 +719,7 @@ function processarWorkbook(workbook){
   const abaSecretarias = workbook.Sheets["Secretarias"];
   const abaDepartamentos = workbook.Sheets["Departamentos"];
   const abaObjetos = workbook.Sheets["Objetos"];
+  const abaLocalizacao = workbook.Sheets["Localização"];
 
   if(!abaDados) throw new Error('Aba "Dados" não encontrada na planilha.');
 
@@ -480,6 +747,23 @@ function processarWorkbook(workbook){
     });
   }
 
+  locMap = {};
+  if(abaLocalizacao){
+    XLSX.utils.sheet_to_json(abaLocalizacao).forEach(r=>{
+      const cod = r["Objeto de Custo"];
+      if(!cod) return;
+      const nome = String(r["Nome"] || "").trim();
+      const enderecoBruto = String(r["Localização"] || "").trim();
+      const naoUtilizar = /^n[aã]o utilizar/i.test(nome);
+      const enderecoInvalido = !enderecoBruto || enderecoBruto === "#N/A" || naoUtilizar;
+      locMap[String(cod).trim()] = {
+        nome: nome,
+        naoUtilizar: naoUtilizar,
+        endereco: enderecoInvalido ? null : limparEndereco(enderecoBruto)
+      };
+    });
+  }
+
   const linhas = XLSX.utils.sheet_to_json(abaDados, { defval:null });
   processarDados(linhas);
 }
@@ -493,6 +777,7 @@ function processarDados(linhas){
       const secCod = partes.slice(0,2).join(".");
       const deptCod = partes.slice(0,3).join(".");
       const sec = secMap[secCod] || {};
+      const loc = locMap[codigo];
       return {
         data: paraData(r["Data"]),
         objetoCodigo: codigo,
@@ -502,7 +787,9 @@ function processarDados(linhas){
         departamentoCodigo: deptCod,
         departamento: deptMap[deptCod] || "Não identificado",
         itemCusto: r["Item de Custo"] || "Não informado",
-        valor: numero(r["Valor Apropriado"])
+        valor: numero(r["Valor Apropriado"]),
+        endereco: loc ? loc.endereco : null,
+        naoUtilizar: loc ? !!loc.naoUtilizar : false
       };
     });
 
@@ -690,8 +977,8 @@ function atualizarGraficos(){
       datasets:[{
         label:"Custo Total (R$)",
         data: mensal.map(([,valor])=>valor),
-        borderColor:"#bf1b20",
-        backgroundColor:"rgba(191, 27, 32, 0.12)",
+        borderColor:"#c79300",
+        backgroundColor:"rgba(242, 183, 5, 0.18)",
         fill:true,
         tension:.3,
         borderWidth: 2
@@ -852,19 +1139,293 @@ $("inputXlsx").addEventListener("change", function(e){
   reader.readAsArrayBuffer(file);
 });
 
+// ---------- Utilitários ----------
+function removerAcentos(texto){
+  return String(texto ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+}
+
+function limparEndereco(endereco){
+  let e = String(endereco || "").trim();
+  // "Sn" = "sem número" na planilha; não é parte real do logradouro
+  e = e.replace(/\bs\/?n\b/gi, "").replace(/\s{2,}/g, " ").trim();
+  e = e.replace(/^[-,\s]+|[-,\s]+$/g, "");
+  return e || null;
+}
+
+function pertenceAoSetor(item, setor){
+  const cfg = CONFIG_SETOR[setor];
+  if(!cfg) return false;
+  if(cfg.codigoSecretaria) return item.secretariaCodigo === cfg.codigoSecretaria;
+  if(!cfg.palavrasChave) return false;
+  const texto = removerAcentos(`${item.secretaria} ${item.departamento} ${item.objetoNome} ${item.itemCusto}`);
+  return cfg.palavrasChave.some(p => texto.includes(removerAcentos(p)));
+}
+
+function filtrarPorSetor(setor){
+  return dados.filter(d => pertenceAoSetor(d, setor));
+}
+
+// ---------- Google Maps (sem necessidade de chave de API) ----------
+// Mapa embutido interativo (permite pan/zoom e o Pegman para Street View)
+function urlEmbedGoogleMaps(consulta){
+  return `https://www.google.com/maps?q=${encodeURIComponent(consulta)}&z=17&output=embed`;
+}
+// Link direto para abrir a localização em uma nova aba do Google Maps
+function urlAbrirGoogleMaps(consulta){
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(consulta)}`;
+}
+
+function focarMapaGoogle(consulta){
+  $("mapaArea").src = urlEmbedGoogleMaps(consulta);
+  $("linkAbrirMaps").href = urlAbrirGoogleMaps(consulta);
+  $("mapaArea").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// ---------- Troca de Tema Visual ----------
+function aplicarTema(setor){
+  const cfg = CONFIG_SETOR[setor];
+  document.documentElement.style.setProperty("--tema", cfg.corTema);
+  document.documentElement.style.setProperty("--tema-escuro", cfg.corTemaEscura);
+  document.documentElement.style.setProperty("--tema-texto", cfg.corTexto || "#fff");
+
+  $("iconeNavbar").className = `bi ${cfg.icone}`;
+  $("tituloNavbar").textContent = cfg.titulo;
+  $("badgeHero").textContent = cfg.badge;
+  $("tituloHero").textContent = cfg.h1;
+  $("subtituloHero").textContent = cfg.sub;
+
+  document.querySelectorAll(".btn-setor").forEach(btn=>{
+    btn.classList.toggle("ativo", btn.dataset.setor === setor);
+  });
+}
+
+// ---------- Painel Setorial: Mapa, KPIs, Gráfico e Tabela ----------
+function preencherFiltroItemArea(setor){
+  const baseSetor = filtrarPorSetor(setor).filter(item => !item.naoUtilizar);
+  const itens = [...new Set(baseSetor.map(d=>d.itemCusto))].sort((a,b)=>String(a).localeCompare(String(b),"pt-BR"));
+  $("filtroItemArea").innerHTML = `<option value="">Todos</option>` +
+    itens.map(i=> `<option value="${escapeHtml(i)}">${escapeHtml(i)}</option>`).join("");
+}
+
+function obterDadosSetorFiltrados(setor){
+  const inicio = $("dataInicialArea").value;
+  const fim = $("dataFinalArea").value;
+  const item = $("filtroItemArea").value;
+
+  return filtrarPorSetor(setor).filter(d=>{
+    if(d.naoUtilizar) return false;
+    const dataStr = d.data ? dataISO(d.data) : "";
+    const okInicio = !inicio || (dataStr && dataStr >= inicio);
+    const okFim = !fim || (dataStr && dataStr <= fim);
+    const okItem = !item || d.itemCusto === item;
+    return okInicio && okFim && okItem;
+  });
+}
+
+// Entrada ao trocar de setor: reseta filtros/ordenação e popula as opções do setor selecionado
+function renderizarPainelArea(setor){
+  const cfg = CONFIG_SETOR[setor];
+
+  $("badgeArea").textContent = cfg.badge;
+  $("tituloArea").textContent = cfg.h1;
+  $("descArea").textContent = cfg.sub;
+  $("tituloMapa").textContent = `Mapa das Unidades - ${cfg.h1}`;
+
+  $("dataInicialArea").value = "";
+  $("dataFinalArea").value = "";
+  preencherFiltroItemArea(setor);
+
+  colunaOrdenacaoArea = "valor";
+  direcaoOrdenacaoArea = "desc";
+
+  atualizarPainelArea();
+}
+
+// Reaplica os filtros do setor atual (chamada pelos inputs de filtro) sem resetar as opções
+function atualizarPainelArea(){
+  const setor = setorAtual;
+  const cfg = CONFIG_SETOR[setor];
+  const dadosSetor = obterDadosSetorFiltrados(setor);
+
+  // Agrupar por unidade (código de objeto de custo), usando o endereço cadastrado na aba "Localização"
+  const mapaUnidades = {};
+  dadosSetor.forEach(item=>{
+    const chave = item.objetoCodigo;
+    if(!mapaUnidades[chave]){
+      mapaUnidades[chave] = {
+        nome: item.objetoNome, departamento: item.departamento,
+        endereco: item.endereco, valor: 0, registros: 0
+      };
+    }
+    mapaUnidades[chave].valor += item.valor;
+    mapaUnidades[chave].registros += 1;
+  });
+
+  const unidades = Object.values(mapaUnidades);
+  unidadesAreaAtual = unidades.filter(u => u.endereco); // tabela só exibe unidades com endereço cadastrado
+
+  // KPIs
+  const totalValor = dadosSetor.reduce((t,i)=> t + i.valor, 0);
+  $("areaTotalValor").textContent = moeda(totalValor);
+  $("areaTotalUnidades").textContent = unidades.length.toLocaleString("pt-BR");
+  $("areaTotalRegistros").textContent = dadosSetor.length.toLocaleString("pt-BR");
+  $("areaTotalGeocodificadas").textContent = unidadesAreaAtual.length.toLocaleString("pt-BR");
+  $("contadorArea").textContent = `${unidadesAreaAtual.length.toLocaleString("pt-BR")} unidades no mapa`;
+
+  if(!unidades.length){
+    $("statusArea").className = "alert alert-warning status";
+    $("statusArea").textContent = `Nenhum registro encontrado para "${cfg.h1}" com os filtros aplicados.`;
+    $("tbodyArea").innerHTML = "";
+    destruirGrafico("area");
+    return;
+  }
+
+  // Gráfico Top Unidades por custo (considera todas as unidades do filtro, com ou sem endereço)
+  const topGrafico = [...unidades].sort((a,b)=> b.valor - a.valor).slice(0, 10);
+  destruirGrafico("area");
+  graficos.area = new Chart($("graficoArea"), {
+    type: "bar",
+    data: {
+      labels: topGrafico.map(u=>u.nome),
+      datasets: [{
+        label: "Valor Apropriado",
+        backgroundColor: PALETA_CORES,
+        data: topGrafico.map(u=>u.valor)
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { tooltip: { callbacks: { label: ctx => moeda(ctx.raw) } } }
+    }
+  });
+
+  aplicarOrdenacaoArea();
+  renderizarTabelaArea();
+  atualizarIconesOrdenacaoArea();
+
+  // Mapa: foca por padrão na primeira unidade com endereço cadastrado
+  if(unidadesAreaAtual.length){
+    const primeira = unidadesAreaAtual[0];
+    focarMapaGoogle(`${primeira.nome}, ${primeira.endereco}`);
+  } else {
+    focarMapaGoogle(`${cfg.h1}, Campo Largo, PR`);
+  }
+
+  $("statusArea").className = "alert alert-success status";
+  $("statusArea").textContent = `${unidadesAreaAtual.length} de ${unidades.length} unidades com endereço cadastrado. Total do setor: ${moeda(totalValor)} em ${dadosSetor.length.toLocaleString("pt-BR")} registros.`;
+}
+
+function renderizarTabelaArea(){
+  $("tbodyArea").innerHTML = unidadesAreaAtual.map(u=>{
+    const consulta = `${u.nome}, ${u.endereco}`.trim();
+    const acoes = `<button type="button" class="btn btn-sm btn-outline-custom btn-acao-mapa btn-ver-mapa" data-consulta="${escapeHtml(consulta)}">
+         <i class="bi bi-map"></i> Ver no mapa
+       </button>
+       <a class="btn btn-sm btn-outline-custom btn-acao-mapa" target="_blank" rel="noopener" href="${urlAbrirGoogleMaps(consulta)}">
+         <i class="bi bi-person-walking"></i> Street View
+       </a>`;
+    return `
+    <tr>
+      <td>${escapeHtml(u.nome)}</td>
+      <td>${escapeHtml(u.departamento)}</td>
+      <td class="small-muted">${escapeHtml(u.endereco)}</td>
+      <td><strong>${moeda(u.valor)}</strong></td>
+      <td class="d-flex flex-wrap gap-1">${acoes}</td>
+    </tr>`;
+  }).join("");
+}
+
+function ordenarPorArea(coluna){
+  if(colunaOrdenacaoArea === coluna){
+    direcaoOrdenacaoArea = direcaoOrdenacaoArea === "asc" ? "desc" : "asc";
+  } else {
+    colunaOrdenacaoArea = coluna;
+    direcaoOrdenacaoArea = "asc";
+  }
+  aplicarOrdenacaoArea();
+  renderizarTabelaArea();
+  atualizarIconesOrdenacaoArea();
+}
+
+function aplicarOrdenacaoArea(){
+  unidadesAreaAtual.sort((a,b)=>{
+    let valA = a[colunaOrdenacaoArea];
+    let valB = b[colunaOrdenacaoArea];
+
+    if(typeof valA === "number" && typeof valB === "number"){
+      return direcaoOrdenacaoArea === "asc" ? valA - valB : valB - valA;
+    }
+
+    valA = String(valA ?? "").toLowerCase();
+    valB = String(valB ?? "").toLowerCase();
+    return direcaoOrdenacaoArea === "asc" ? valA.localeCompare(valB,"pt-BR") : valB.localeCompare(valA,"pt-BR");
+  });
+}
+
+function atualizarIconesOrdenacaoArea(){
+  const colunas = ["nome","departamento","endereco","valor"];
+  colunas.forEach(col=>{
+    const icon = $(`iconArea-${col}`);
+    if(!icon) return;
+    if(col === colunaOrdenacaoArea){
+      const numerica = col === "valor";
+      icon.className = direcaoOrdenacaoArea === "asc"
+        ? (numerica ? "bi bi-sort-numeric-down" : "bi bi-sort-alpha-down")
+        : (numerica ? "bi bi-sort-numeric-down-alt" : "bi bi-sort-alpha-down-alt");
+    } else {
+      icon.className = "bi bi-arrow-down-up small opacity-50";
+    }
+  });
+}
+
+function limparFiltrosArea(){
+  $("dataInicialArea").value = "";
+  $("dataFinalArea").value = "";
+  $("filtroItemArea").value = "";
+  atualizarPainelArea();
+}
+
+function mostrarPainel(setor){
+  setorAtual = setor;
+  aplicarTema(setor);
+
+  if(setor === "custos"){
+    $("painelArea").classList.add("d-none");
+    $("painelGeral").classList.remove("d-none");
+    return;
+  }
+
+  $("painelGeral").classList.add("d-none");
+  $("painelArea").classList.remove("d-none");
+  renderizarPainelArea(setor);
+}
+
 $("btnConsultar").addEventListener("click", consultarLink);
 $("btnLimpar").addEventListener("click", limparFiltros);
 $("btnCsv").addEventListener("click", exportarCSV);
 $("filtroSecretaria").addEventListener("change", ()=>{ atualizarFiltroDepartamento(); atualizarDashboard(); });
 $("filtroDepartamento").addEventListener("change", atualizarDashboard);
 $("filtroItem").addEventListener("change", atualizarDashboard);
+
+$("tbodyArea").addEventListener("click", (ev)=>{
+  const btn = ev.target.closest(".btn-ver-mapa");
+  if(btn) focarMapaGoogle(btn.dataset.consulta);
+});
+
+$("dataInicialArea").addEventListener("change", atualizarPainelArea);
+$("dataFinalArea").addEventListener("change", atualizarPainelArea);
+$("filtroItemArea").addEventListener("change", atualizarPainelArea);
+$("btnLimparArea").addEventListener("click", limparFiltrosArea);
 $("filtroBusca").addEventListener("input", atualizarDashboard);
 $("dataInicial").addEventListener("change", atualizarDashboard);
 $("dataFinal").addEventListener("change", atualizarDashboard);
 $("btnPagAnterior").addEventListener("click", ()=>{ if(paginaAtual>1){ paginaAtual--; atualizarTabela(); } });
 $("btnPagProxima").addEventListener("click", ()=>{ paginaAtual++; atualizarTabela(); });
 
-// Inicializa a requisição ao carregar
+// Inicializa tema padrão e a requisição de dados ao carregar
+aplicarTema("custos");
 consultarLink();
 </script>
 
