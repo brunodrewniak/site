@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transparência - Contratos</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --cor-primaria:#2c1338;
+  --cor-secundaria:#611f69;
+  --cor-hover:#4a154b;
+  --fundo:#fff5f5;
+  --texto-escuro:#2b1111;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--texto-escuro)}
+.navbar{background-color:var(--cor-primaria)!important;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.hero{background:linear-gradient(135deg,var(--cor-primaria),#15051e);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--cor-secundaria)}
+.kpi .valor{font-size:1.45rem;font-weight:700;color:var(--cor-primaria)}
+.chart-box{height:360px;position:relative}
+.table-responsive{max-height:650px}
+.table thead th{position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;background-color:var(--cor-primaria)!important;color:#fff;white-space:nowrap}
+.table thead th:hover{background-color:var(--cor-secundaria)!important}
+.status{font-size:.92rem}.small-muted{font-size:.82rem;color:#6c757d}
+.btn-tema{background-color:var(--cor-secundaria);color:#fff;font-weight:600;border:none}
+.btn-tema:hover{background-color:var(--cor-hover);color:#fff}
+.btn-outline-tema{border-color:var(--cor-secundaria);color:var(--cor-secundaria)}
+.btn-outline-tema:hover{background-color:var(--cor-secundaria);color:#fff}
+.badge-tema{background-color:var(--cor-secundaria);color:#fff;font-weight:600}
+.tr-cancelado{background:#fff0f0!important;color:#842029}
+.tr-vencido{background:#fff8e1!important}
+.objeto{max-width:420px;min-width:280px}
+</style>
+
+<style id="paleta-vermelha-completa">
+:root{--cor-primaria:#8B0000!important;--cor-secundaria:#C1121F!important;--cor-hover:#A30D17!important;--fundo:#FFF1F1!important;--texto-escuro:#3A0000!important;--vermelho-claro:#FDE2E2;--vermelho-medio:#E63946;--vermelho-vivo:#D90429;--vermelho-escuro:#670000}
+body{background:var(--fundo)!important;color:var(--texto-escuro)!important}.navbar,.bg-primary{background:linear-gradient(90deg,#670000,#8B0000,#C1121F)!important}.card{border-color:#F0B5B5!important}.card-header{background:linear-gradient(90deg,#8B0000,#C1121F)!important;color:#fff!important}.btn-primary{background:#8B0000!important;border-color:#8B0000!important}.btn-primary:hover,.btn-primary:focus{background:#A30D17!important;border-color:#A30D17!important}.form-control:focus,.form-select:focus{border-color:#C1121F!important;box-shadow:0 0 0 .2rem rgba(193,18,31,.20)!important}.table thead th{background:#8B0000!important;color:#fff!important}.table-striped>tbody>tr:nth-of-type(odd)>*{--bs-table-accent-bg:#FFF1F1!important}.badge.bg-success{background:#A30D17!important}.badge.bg-secondary{background:#8B0000!important}.text-primary{color:#8B0000!important}.border-primary{border-color:#C1121F!important}.alert-info{background:#FFF1F1!important;border-color:#E63946!important;color:#670000!important}
+</style>
+</head>
+
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="#"><i class="bi bi-file-earmark-text"></i> Transparência de Contratos</a>
+    <div class="text-white small">Campo Largo - PR</div>
+  </div>
+</nav>
+
+<header class="hero py-4">
+  <div class="container">
+    <span class="badge bg-light text-dark mb-2">DADOS ABERTOS</span>
+    <h1 class="h2 fw-bold">Dashboard de Contratos</h1>
+    <p class="lead mb-0 small">Consulta e análise dos contratos publicados no módulo de dados abertos de Campo Largo.</p>
+  </div>
+</header>
+
+<main class="container py-4">
+  <div id="status" class="alert alert-info status">Aguardando parâmetro de busca...</div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Parâmetros de Consulta</h5>
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Ano</label>
+          <input type="number" id="ano" class="form-control" value="2026" min="2000" max="2100">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Identificador</label>
+          <input type="number" id="identificador" class="form-control" value="0" min="0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Data Inicial</label>
+          <input type="date" id="dataInicio" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Data Final</label>
+          <input type="date" id="dataFim" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Filtro Rápido</label>
+          <input type="text" id="filtroTexto" class="form-control" placeholder="Contrato, fornecedor, objeto, CNPJ, licitação...">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Situação</label>
+          <select id="filtroSituacao" class="form-select">
+            <option value="">Todas</option>
+            <option value="1">Ativo</option>
+            <option value="2">Finalizado</option>
+            <option value="3">Cedido</option>
+            <option value="4">Suspenso</option>
+            <option value="5">Em Digitação</option>
+            <option value="6">Anulado</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Fornecedor</label>
+          <input type="text" id="filtroFornecedor" class="form-control" placeholder="Nome do fornecedor">
+        </div>
+        <div class="col-md-6 d-flex align-items-end justify-content-end gap-2">
+          <button id="btnLimpar" class="btn btn-outline-secondary btn-sm"><i class="bi bi-eraser"></i> Limpar</button>
+          <button id="btnCsv" class="btn btn-outline-tema btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+          <button id="btnConsultar" class="btn btn-tema"><i class="bi bi-search"></i> Realizar Consulta</button>
+        </div>
+      </div>
+      <div class="small-muted mt-3">
+        * Entidade fixa: 2848. Com Identificador = 0, o sistema percorre os identificadores do ano informado.
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="card mb-4 d-none">
+    <div class="card-body text-center py-4">
+      <div class="spinner-border mb-3" role="status" style="color:var(--cor-secundaria)"></div>
+      <h6 id="loadingTexto" class="fw-semibold mb-2">Processando consulta...</h6>
+      <div class="progress w-75 mx-auto" style="height:18px">
+        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:100%;background:var(--cor-secundaria)">Consultando...</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card kpi h-100"><div class="card-body"><div class="text-muted small">Contratos Encontrados</div><div id="totalContratos" class="valor">0</div></div></div></div>
+    <div class="col-md-3"><div class="card kpi h-100"><div class="card-body"><div class="text-muted small">Valor Total dos Contratos</div><div id="valorTotal" class="valor">R$ 0,00</div></div></div></div>
+    <div class="col-md-3"><div class="card kpi h-100"><div class="card-body"><div class="text-muted small">Contratos Vigentes</div><div id="contratosVigentes" class="valor">0</div></div></div></div>
+    <div class="col-md-3"><div class="card kpi h-100"><div class="card-body"><div class="text-muted small">Fornecedores Distintos</div><div id="fornecedoresDistintos" class="valor">0</div></div></div></div>
+  </section>
+
+  <section class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card"><div class="card-body">
+        <h5 class="card-title mb-1">Valor dos contratos por fornecedor</h5><div class="small-muted mb-3">Ranking dos fornecedores com maior valor contratado na consulta.</div>
+        <div class="chart-box"><canvas id="graficoFornecedores"></canvas></div>
+      </div></div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card"><div class="card-body">
+        <h5 class="card-title mb-1">Distribuição dos contratos por situação</h5><div class="small-muted mb-3">Quantidade de contratos em cada situação encontrada.</div>
+        <div class="chart-box"><canvas id="graficoSituacoes"></canvas></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card"><div class="card-body">
+        <h5 class="card-title mb-1">Vencimentos por ano</h5><div class="small-muted mb-3">Quantidade de contratos agrupada pelo ano de vencimento.</div>
+        <div class="chart-box"><canvas id="graficoVencimentos"></canvas></div>
+      </div></div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card"><div class="card-body">
+        <h5 class="card-title mb-1">Valor por modalidade / licitação</h5><div class="small-muted mb-3">Concentração financeira dos contratos conforme a licitação consultada.</div>
+        <div class="chart-box"><canvas id="graficoLicitacoes"></canvas></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="row g-4 mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-1">Valor médio por fornecedor</h5>
+          <div class="small-muted mb-3">Permite identificar fornecedores com maior valor médio por contrato dentro da consulta.</div>
+          <div class="chart-box"><canvas id="graficoMediaFornecedor"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div><h5 class="mb-1">Registros de Contratos</h5><div class="small-muted">Dados tratados a partir da estrutura <code>contrato</code> do endpoint.</div></div>
+        <span id="contadorTabela" class="badge badge-tema">0 registros</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead><tr>
+            <th>Contrato</th><th>Assinatura</th><th>Vigência</th><th>Fornecedor</th><th>CNPJ</th>
+            <th>Licitação</th><th>Objeto</th><th>Valor</th><th>Situação</th><th>Fiscal</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="bg-dark text-white py-4">
+  <div class="container text-center small">Dashboard de Contratos — Campo Largo/PR | Dados Abertos</div>
+</footer>
+
+<script>
+const ENTIDADE_FIXA = "2848";
+const API_BASE = "https://campolargo.atende.net/api/transparencia/dados-abertos/v1/wco/contrato/";
+let dadosContratos = [], dadosFiltrados = [], graficos = {};
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const MAPA_SITUACAO = {
+  "1": {texto:"Ativo", badge:"bg-success"},
+  "2": {texto:"Finalizado", badge:"bg-secondary"},
+  "3": {texto:"Cedido", badge:"bg-info"},
+  "4": {texto:"Suspenso", badge:"bg-warning text-dark"},
+  "5": {texto:"Em Digitação", badge:"bg-primary"},
+  "6": {texto:"Anulado", badge:"bg-danger"}
+};
+
+function escapeHtml(v){
+  return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+function moeda(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
+function parseBR(s){
+  if(!s)return null;
+  const p=String(s).split("/");
+  if(p.length!==3)return null;
+  const d=new Date(Number(p[2]),Number(p[1])-1,Number(p[0]));
+  return isNaN(d)?null:d;
+}
+function isoParaDate(s){return s?new Date(s+"T00:00:00"):null;}
+function mostrarStatus(t,tipo="info"){const e=$("status");e.className="alert alert-"+tipo+" status";e.textContent=t;}
+function mostrarLoading(sim){$("loading").classList.toggle("d-none",!sim);}
+
+function extrairContratos(json){
+  if(!json)return [];
+  const c=json.contrato ?? json.Contrato ?? json.contratos ?? [];
+  if(Array.isArray(c)) return c.filter(x=>x&&typeof x==="object"&&!Array.isArray(x));
+  if(c&&typeof c==="object") return [c];
+  return [];
+}
+
+function tratarContrato(c, json){
+  const fornecedor=c.Fornecedor||{};
+  const lic=c.Licitacao||{};
+  const mod=lic.Modalidade||{};
+  const sit=String(c.Situacao??"");
+  const fiscais=Array.isArray(json?.Fiscais)?json.Fiscais:[];
+  const fiscalPrincipal=fiscais.find(f=>String(f.Principal)==="1")||fiscais[0]||{};
+  const pessoaFiscal=fiscalPrincipal.Fiscal?.pessoa||{};
+  return {
+    contratoAnoNumero:c.ContratoAnoNumero||`${c.Numero||"-"}/${c.Ano||"-"}`,
+    identificador:c.Identificador,
+    ano:c.Ano,
+    numero:c.Numero,
+    cliente:c.Nomecliente,
+    valor:Number(c.ValorContrato2Casas??c.ValorContrato??0),
+    valorAtualizado:c.ValorContratoAtualizado,
+    tipoInstrumento:c.Tipoinstrumento,
+    objetoTC:c.ObjetoTC,
+    objeto:c.Objeto,
+    dataAssinatura:c.DataAssinatura,
+    inicio:c.DataIniVigencia,
+    vencimento:c.DataVencimento||c.DataFimVigencia||c.DataFinal,
+    fimAtualizado:c.FimVigAtualizada,
+    fornecedor:fornecedor.nome||fornecedor.Fornecedor||"-",
+    cpfCnpj:fornecedor.cpfcnpj||"-",
+    fornecedorCodigo:fornecedor.pessoa?.codigo||"-",
+    licitacao:lic.Licitacao||((lic.numero&&lic.ano)?`${lic.numero}/${lic.ano}`:"-"),
+    modalidadeCodigo:mod.codigo||"-",
+    situacao:sit,
+    situacaoTexto:MAPA_SITUACAO[sit]?.texto||`Situação ${sit||"-"}`,
+    ultimoAditivo:c.UltimoAditivo,
+    percentualAditado:c.PercentualAditado,
+    totalFiscal:c.TotalFiscal,
+    fiscalPrincipal:pessoaFiscal.nomeRazao||"-",
+    fiscais:fiscais.length,
+    recursos:Array.isArray(json?.Recurso)?json.Recurso:[],
+    representantes:Array.isArray(json?.Representantes)?json.Representantes:[],
+    advogado:Array.isArray(json?.Advogado)?json.Advogado:[],
+    raw:c
+  };
+}
+
+async function buscarContrato(ano, identificador){
+  const url=`${API_BASE}${ENTIDADE_FIXA}/${ano}/${identificador}`;
+  try{
+    const r=await fetch(url,{headers:{"Accept":"application/json"}});
+    if(r.status===429){await sleep(1200);return buscarContrato(ano,identificador);}
+    if(!r.ok)return {ok:false,json:null};
+    const json=await r.json();
+    return {ok:true,json,lista:extrairContratos(json)};
+  }catch(e){
+    console.error("Erro ao consultar contrato",identificador,e);
+    return {ok:false,json:null,lista:[]};
+  }
+}
+
+async function consultarAPI(){
+  const ano=parseInt($("ano").value,10);
+  const id=parseInt($("identificador").value,10)||0;
+  if(!ano){mostrarStatus("Informe o ano da consulta.","danger");return;}
+  dadosContratos=[];mostrarLoading(true);
+
+  if(id!==0){
+    mostrarStatus(`Consultando contrato / identificador ${id}/${ano}...`,"info");
+    const res=await buscarContrato(ano,id);
+    if(res.lista.length){
+      res.lista.forEach(c=>dadosContratos.push(tratarContrato(c,res.json)));
+      atualizarDashboard();mostrarStatus(`Contrato ${id}/${ano} localizado com sucesso.`,"success");
+    }else{
+      atualizarDashboard();mostrarStatus(`Nenhum contrato encontrado para o identificador ${id} no ano ${ano}.`,"warning");
+    }
+    mostrarLoading(false);return;
+  }
+
+  // Busca sequencial por identificador. A faixa pode ser ajustada conforme o volume publicado pela API.
+  const LIMITE = 5000;
+  let vazios=0, encontrados=0;
+  mostrarStatus(`Percorrendo contratos de ${ano}...`,"info");
+
+  for(let cod=1;cod<=LIMITE;cod++){
+    $("loadingTexto").textContent=`Consultando identificador ${cod} de ${LIMITE} — encontrados: ${encontrados}`;
+    const res=await buscarContrato(ano,cod);
+    if(res.lista.length){
+      vazios=0;
+      res.lista.forEach(c=>dadosContratos.push(tratarContrato(c,res.json)));
+      encontrados+=res.lista.length;
+    }else{
+      vazios++;
+      // Não interrompe cedo: há lacunas de identificadores.
+      if(vazios>=100 && cod>500) break;
+    }
+    if(cod%25===0) await sleep(40);
+  }
+
+  mostrarLoading(false);atualizarDashboard();
+  mostrarStatus(`Consulta concluída: ${dadosContratos.length} contrato(s) localizado(s) para ${ano}.`,"success");
+}
+
+function aplicarFiltros(){
+  const texto=$("filtroTexto").value.toLowerCase().trim();
+  const fornecedor=$("filtroFornecedor").value.toLowerCase().trim();
+  const situacao=$("filtroSituacao").value;
+  const ini=$("dataInicio").value?isoParaDate($("dataInicio").value):null;
+  const fim=$("dataFim").value?isoParaDate($("dataFim").value):null;
+  if(fim)fim.setHours(23,59,59,999);
+
+  dadosFiltrados=dadosContratos.filter(c=>{
+    if(situacao && c.situacao!==situacao)return false;
+    if(fornecedor && !c.fornecedor.toLowerCase().includes(fornecedor))return false;
+    const dt=parseBR(c.dataAssinatura);
+    if(ini && (!dt || dt<ini))return false;
+    if(fim && (!dt || dt>fim))return false;
+    if(texto){
+      const hay=[c.contratoAnoNumero,c.identificador,c.ano,c.numero,c.fornecedor,c.cpfCnpj,c.licitacao,c.objeto,c.objetoTC,c.fiscalPrincipal].join(" ").toLowerCase();
+      if(!hay.includes(texto))return false;
+    }
+    return true;
+  });
+}
+function atualizarDashboard(){aplicarFiltros();atualizarCards();atualizarGraficos();atualizarTabela();}
+function atualizarCards(){
+  $("totalContratos").textContent=dadosFiltrados.length.toLocaleString("pt-BR");
+  $("valorTotal").textContent=moeda(dadosFiltrados.reduce((s,c)=>s+c.valor,0));
+  const vig=dadosFiltrados.filter(c=>c.situacao==="1").length;
+  $("contratosVigentes").textContent=vig.toLocaleString("pt-BR");
+  $("fornecedoresDistintos").textContent=new Set(dadosFiltrados.map(c=>c.fornecedor).filter(x=>x&&x!=="-")).size.toLocaleString("pt-BR");
+  $("contadorTabela").textContent=`${dadosFiltrados.length.toLocaleString("pt-BR")} registros`;
+}
+
+function destruirGraficos(){
+  Object.values(graficos).forEach(g=>{try{g.destroy()}catch(e){}});
+  graficos={};
+}
+
+const COR_VERMELHA = "#c1121f";
+const COR_VERMELHA_ESCURO = "#8b0000";
+const COR_VERMELHA_CLARA = "#e63946";
+const PALETA_VERMELHA = [
+  "#8b0000","#a30d17","#c1121f","#d62828","#e63946",
+  "#ef5350","#b71c1c","#9f1239","#be123c","#dc2626"
+];
+
+function agruparValor(campo){
+  const m={};
+  dadosFiltrados.forEach(c=>{
+    const k=String(c[campo]||"Outros").trim()||"Outros";
+    m[k]=(m[k]||0)+Number(c.valor||0);
+  });
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+
+function agruparQtd(campo){
+  const m={};
+  dadosFiltrados.forEach(c=>{
+    const k=String(c[campo]||"Outros").trim()||"Outros";
+    m[k]=(m[k]||0)+1;
+  });
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+
+function agruparMedia(campo){
+  const m={};
+  dadosFiltrados.forEach(c=>{
+    const k=String(c[campo]||"Outros").trim()||"Outros";
+    if(!m[k])m[k]={qtd:0,valor:0};
+    m[k].qtd++;
+    m[k].valor+=Number(c.valor||0);
+  });
+  return Object.entries(m).map(([k,v])=>[k,v.valor/v.qtd,v.qtd])
+    .sort((a,b)=>b[1]-a[1]);
+}
+
+function tooltipMoeda(){
+  return {callbacks:{label:ctx=>`${ctx.dataset.label||"Valor"}: ${moeda(ctx.raw)}`}};
+}
+
+function atualizarGraficos(){
+  destruirGraficos();
+
+  // 1. Ranking completo dos fornecedores, com leitura financeira da consulta.
+  const forn=agruparValor("fornecedor").slice(0,15);
+  graficos.fornecedores=new Chart($("graficoFornecedores"),{
+    type:"bar",
+    data:{
+      labels:forn.map(x=>x[0]),
+      datasets:[{
+        label:"Valor contratado",
+        data:forn.map(x=>x[1]),
+        backgroundColor:COR_VERMELHA,
+        borderColor:COR_VERMELHA_ESCURO,
+        borderWidth:1,
+        borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        x:{beginAtZero:true,ticks:{callback:v=>moeda(v)}}
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:tooltipMoeda()
+      }
+    }
+  });
+
+  // 2. Situação: quantidade + percentual no tooltip.
+  const sit=agruparQtd("situacaoTexto");
+  const totalSit=sit.reduce((s,x)=>s+x[1],0);
+  graficos.situacoes=new Chart($("graficoSituacoes"),{
+    type:"doughnut",
+    data:{
+      labels:sit.map(x=>x[0]),
+      datasets:[{
+        data:sit.map(x=>x[1]),
+        backgroundColor:PALETA_VERMELHA.slice(0,sit.length),
+        borderColor:"#ffffff",
+        borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{position:"bottom"},
+        tooltip:{callbacks:{
+          label:ctx=>{
+            const n=Number(ctx.raw||0);
+            const p=totalSit?(n/totalSit*100):0;
+            return `${ctx.label}: ${n.toLocaleString("pt-BR")} (${p.toFixed(1)}%)`;
+          }
+        }}
+      }
+    }
+  });
+
+  // 3. Evolução dos vencimentos por ano.
+  const venc={};
+  dadosFiltrados.forEach(c=>{
+    const d=parseBR(c.vencimento);
+    const k=d?String(d.getFullYear()):"Sem data";
+    venc[k]=(venc[k]||0)+1;
+  });
+  const ven=Object.entries(venc).sort((a,b)=>{
+    if(a[0]==="Sem data")return 1;
+    if(b[0]==="Sem data")return -1;
+    return Number(a[0])-Number(b[0]);
+  });
+  graficos.vencimentos=new Chart($("graficoVencimentos"),{
+    type:"bar",
+    data:{
+      labels:ven.map(x=>x[0]),
+      datasets:[{
+        label:"Quantidade de contratos",
+        data:ven.map(x=>x[1]),
+        backgroundColor:COR_VERMELHA_CLARA,
+        borderColor:COR_VERMELHA_ESCURO,
+        borderWidth:1,
+        borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{y:{beginAtZero:true,ticks:{precision:0}}},
+      plugins:{legend:{display:false}}
+    }
+  });
+
+  // 4. Modalidade/licitação: ranking financeiro.
+  const lic=agruparValor("licitacao").slice(0,15);
+  graficos.licitacoes=new Chart($("graficoLicitacoes"),{
+    type:"bar",
+    data:{
+      labels:lic.map(x=>x[0]),
+      datasets:[{
+        label:"Valor contratado",
+        data:lic.map(x=>x[1]),
+        backgroundColor:COR_VERMELHA_ESCURO,
+        borderColor:"#650000",
+        borderWidth:1,
+        borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>moeda(v)}}},
+      plugins:{
+        legend:{display:false},
+        tooltip:tooltipMoeda()
+      }
+    }
+  });
+  const media=agruparMedia("fornecedor").slice(0,15);
+  graficos.mediaFornecedor=new Chart($("graficoMediaFornecedor"),{
+    type:"bar",
+    data:{
+      labels:media.map(x=>x[0]),
+      datasets:[{
+        label:"Valor médio por contrato",
+        data:media.map(x=>x[1]),
+        backgroundColor:COR_VERMELHA,
+        borderColor:COR_VERMELHA_ESCURO,
+        borderWidth:1,
+        borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{x:{beginAtZero:true,ticks:{callback:v=>moeda(v)}}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>`Valor médio: ${moeda(ctx.raw)}`}}
+      }
+    }
+  });
+
+}
+
+function atualizarTabela(){
+  const tbody=$("tbody");
+  if(!dadosFiltrados.length){tbody.innerHTML='<tr><td colspan="10" class="text-center py-4">Nenhum contrato encontrado.</td></tr>';return;}
+  tbody.innerHTML=dadosFiltrados.map(c=>{
+    const dt=parseBR(c.vencimento), hoje=new Date(); hoje.setHours(0,0,0,0);
+    const classe=c.situacao==="0"?"tr-cancelado":(dt&&dt<hoje?"tr-vencido":"");
+    const badge=MAPA_SITUACAO[c.situacao]?.badge||"bg-secondary";
+    return `<tr class="${classe}">
+      <td><strong>${escapeHtml(c.contratoAnoNumero)}</strong><div class="small-muted">ID ${escapeHtml(c.identificador)}</div></td>
+      <td>${escapeHtml(c.dataAssinatura)}</td>
+      <td>${escapeHtml(c.inicio)}<br><span class="small-muted">até ${escapeHtml(c.vencimento)}</span></td>
+      <td><strong>${escapeHtml(c.fornecedor)}</strong></td>
+      <td><code>${escapeHtml(c.cpfCnpj)}</code></td>
+      <td>${escapeHtml(c.licitacao)}<br><span class="small-muted">Modalidade ${escapeHtml(c.modalidadeCodigo)}</span></td>
+      <td class="objeto" title="${escapeHtml(c.objeto)}">${escapeHtml(c.objetoTC||c.objeto||"-")}</td>
+      <td><strong>${moeda(c.valor)}</strong>${c.percentualAditado?`<div class="small-muted">Aditado: ${escapeHtml(c.percentualAditado)}%</div>`:""}</td>
+      <td><span class="badge ${badge}">${escapeHtml(c.situacaoTexto)}</span><div class="small-muted mt-1">Aditivo: ${escapeHtml(c.ultimoAditivo||"0")}</div></td>
+      <td>${escapeHtml(c.fiscalPrincipal)}<div class="small-muted">${c.fiscais} fiscal(is)</div></td>
+    </tr>`;
+  }).join("");
+}
+
+function limparFiltros(){
+  $("identificador").value="0";$("filtroTexto").value="";$("filtroFornecedor").value="";$("filtroSituacao").value="";
+  $("dataInicio").value="";$("dataFim").value="";atualizarDashboard();
+}
+function exportarCSV(){
+  if(!dadosFiltrados.length){alert("Não existem dados para exportar.");return;}
+  const cab=["Contrato","Identificador","Ano","Número","DataAssinatura","InicioVigencia","Vencimento","Fornecedor","CpfCnpj","Licitacao","Modalidade","ObjetoTC","Objeto","ValorContrato","Situacao","FiscalPrincipal","TotalFiscais","UltimoAditivo"];
+  const linhas=dadosFiltrados.map(c=>[c.contratoAnoNumero,c.identificador,c.ano,c.numero,c.dataAssinatura,c.inicio,c.vencimento,c.fornecedor,c.cpfCnpj,c.licitacao,c.modalidadeCodigo,c.objetoTC,c.objeto,c.valor,c.situacaoTexto,c.fiscalPrincipal,c.fiscais,c.ultimoAditivo]);
+  const csv=[cab,...linhas].map(l=>l.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download="contratos_campo_largo.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  $("btnConsultar").addEventListener("click",consultarAPI);
+  $("btnLimpar").addEventListener("click",limparFiltros);
+  $("btnCsv").addEventListener("click",exportarCSV);
+  ["filtroTexto","filtroFornecedor","filtroSituacao","dataInicio","dataFim"].forEach(id=>$(id).addEventListener("input",atualizarDashboard));
+  atualizarDashboard();
+});
+</script>
+
+<script id="defaults-ano-datas">
+document.addEventListener('DOMContentLoaded',function(){const anoAtual=new Date().getFullYear();const ano=document.getElementById('ano');const di=document.getElementById('dataInicial');const df=document.getElementById('dataFinal');if(ano)ano.value=String(anoAtual);if(di)di.value=`${anoAtual}-01-01`;if(df)df.value=`${anoAtual}-12-31`;});
+</script>
+</body>
+</html>
