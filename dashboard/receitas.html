@@ -31,7 +31,7 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
   z-index:2;
   cursor:pointer;
   user-select:none;
-  white-space: nowrap; /* Impede a quebra de linha no cabeçalho */
+  white-space: nowrap;
 }
 .table thead th:hover{background-color:var(--verde) !important;color:#fff}
 .status{font-size:.92rem}
@@ -43,6 +43,84 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .bg-primary{background-color:var(--verde) !important}
 .text-primary{color:var(--verde) !important}
 .text-bg-primary{background-color:var(--verde) !important}
+
+/* Estilos Customizados para o Filtro Multi-Seleção */
+.filtro-multi {
+  position: relative;
+}
+.filtro-multi-btn {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  height: 38px;
+}
+.filtro-multi-btn:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.filtro-multi-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+}
+.filtro-multi-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.15);
+  border-radius: 0.375rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  padding: 0.75rem;
+  margin-top: 2px;
+  min-width: 280px;
+}
+.filtro-multi-menu.show {
+  display: block;
+}
+.filtro-multi-acoes {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+.filtro-multi-acoes a {
+  text-decoration: none;
+  color: var(--verde);
+}
+.filtro-multi-acoes a:hover {
+  text-decoration: underline;
+}
+.filtro-multi-lista {
+  max-height: 200px;
+  overflow-y: auto;
+}
+.filtro-multi-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.filtro-multi-item label {
+  cursor: pointer;
+  line-height: 1.2;
+}
 </style>
 </head>
 
@@ -77,20 +155,45 @@ Consulta direta aos dados de receitas disponibilizados pelo Município de Campo 
 Aguardando consulta...
 </div>
 
+<!-- Alerta do FAPEN -->
+<div id="alertaFapen" class="alert alert-warning alert-dismissible fade show d-none" role="alert">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <strong>Aviso do FAPEN:</strong> A conta <code>4131101110000000000</code> (<em>Aluguéis e arrendamentos - principal</em>) está sendo contada com o Município.
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+
 <div class="card mb-4">
 <div class="card-body">
 <h5 class="card-title mb-3">Período e filtros</h5>
 
 <div class="row g-3">
 
-<div class="col-md-3">
+<div class="col-md-2">
 <label class="form-label fw-semibold">Data inicial</label>
 <input type="date" id="dataInicial" class="form-control" value="2026-01-01">
 </div>
 
-<div class="col-md-3">
+<div class="col-md-2">
 <label class="form-label fw-semibold">Data final</label>
 <input type="date" id="dataFinal" class="form-control" value="2026-12-31">
+</div>
+
+<div class="col-md-2">
+  <label class="form-label fw-semibold">Órgão</label>
+  <div class="dropdown filtro-multi">
+    <button type="button" class="filtro-multi-btn" id="btnFiltroOrgao">
+      <span class="filtro-multi-label" id="labelFiltroOrgao">Todos</span>
+      <i class="bi bi-caret-down-fill small"></i>
+    </button>
+    <div class="filtro-multi-menu" id="menuFiltroOrgao">
+      <input type="text" class="form-control form-control-sm mb-2" id="buscaFiltroOrgao" placeholder="Buscar órgão...">
+      <div class="filtro-multi-acoes">
+        <a href="#" id="linkTodasOrgao">Selecionar todos</a>
+        <a href="#" id="linkLimparOrgao">Limpar</a>
+      </div>
+      <div class="filtro-multi-lista" id="listaFiltroOrgao"></div>
+    </div>
+  </div>
 </div>
 
 <div class="col-md-4">
@@ -235,11 +338,36 @@ Dados provenientes da API de Dados Abertos do município.
 <script>
 const API_URL = "https://campolargo.atende.net/api/WCPDadosAbertos/receitas";
 
+const OPCOES_ORGAOS = [
+  { id: "FAPEN", nome: "INSTITUTO DE APOSENTADORIAS E PENSÕES DE CAMPO LARGO - PR (FAPEN)" },
+  { id: "EXECUTIVO", nome: "PODER EXECUTIVO MUNICIPAL DE CAMPO LARGO - PR" }
+];
+
+const CONTAS_FAPEN = new Set([
+  "4121501110000000000",
+  "4121501210000000000",
+  "4121501310000000000",
+  "4121501410000000000",
+  "4121502110000000000",
+  "4131102110000000000",
+  "4132104010100000000",
+  "4132104010200000000",
+  "4132104010500000000",
+  "4132104010700000000",
+  "4199903010000000000",
+  "4721502110000000000",
+  "4721502210000000000",
+  "4721502260000000000",
+  "4721551110000000000",
+  "4721551120000000000",
+  "4799901010000000000",
+  "9132104010100000000"
+]);
+
 let dados = [];
 let dadosFiltrados = [];
 let graficos = {};
 
-// Controle de ordenação da tabela
 let colunaOrdenacao = "";
 let direcaoOrdenacao = "asc";
 
@@ -256,21 +384,15 @@ function numero(valor){
   if(typeof valor === "number"){
     return Number.isFinite(valor) ? valor : 0;
   }
-
   if(valor === null || valor === undefined || valor === ""){
     return 0;
   }
-
-  let texto = String(valor)
-    .replace("R$","")
-    .trim();
-
+  let texto = String(valor).replace("R$","").trim();
   if(texto.includes(".") && texto.includes(",")){
     texto = texto.replace(/\./g,"").replace(",",".");
   }else if(texto.includes(",")){
     texto = texto.replace(",",".");
   }
-
   const n = Number(texto);
   return Number.isFinite(n) ? n : 0;
 }
@@ -299,6 +421,76 @@ function mostrarLoading(sim){
   $("loading").classList.toggle("d-none",!sim);
 }
 
+function inicializarFiltroOrgao() {
+  const lista = $("listaFiltroOrgao");
+  lista.innerHTML = "";
+
+  OPCOES_ORGAOS.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "filtro-multi-item";
+    div.innerHTML = `
+      <input type="checkbox" class="form-check-input chk-orgao" id="chk_${item.id}" value="${item.id}">
+      <label for="chk_${item.id}">${item.nome}</label>
+    `;
+    lista.appendChild(div);
+  });
+
+  $("btnFiltroOrgao").addEventListener("click", (e) => {
+    e.stopPropagation();
+    $("menuFiltroOrgao").classList.toggle("show");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#menuFiltroOrgao") && !e.target.closest("#btnFiltroOrgao")) {
+      $("menuFiltroOrgao").classList.remove("show");
+    }
+  });
+
+  $("buscaFiltroOrgao").addEventListener("input", (e) => {
+    const termo = e.target.value.toLowerCase();
+    document.querySelectorAll("#listaFiltroOrgao .filtro-multi-item").forEach(item => {
+      const texto = item.textContent.toLowerCase();
+      item.style.display = texto.includes(termo) ? "flex" : "none";
+    });
+  });
+
+  $("linkTodasOrgao").addEventListener("click", (e) => {
+    e.preventDefault();
+    document.querySelectorAll(".chk-orgao").forEach(chk => chk.checked = true);
+    atualizarDashboard();
+  });
+
+  $("linkLimparOrgao").addEventListener("click", (e) => {
+    e.preventDefault();
+    document.querySelectorAll(".chk-orgao").forEach(chk => chk.checked = false);
+    atualizarDashboard();
+  });
+
+  lista.addEventListener("change", (e) => {
+    if (e.target.classList.contains("chk-orgao")) {
+      atualizarDashboard();
+    }
+  });
+}
+
+function obterOrgaosSelecionados() {
+  return Array.from(document.querySelectorAll(".chk-orgao:checked")).map(c => c.value);
+}
+
+function atualizarLabelOrgao() {
+  const selecionados = obterOrgaosSelecionados();
+  const label = $("labelFiltroOrgao");
+
+  if (selecionados.length === 0 || selecionados.length === OPCOES_ORGAOS.length) {
+    label.textContent = "Todos";
+  } else if (selecionados.length === 1) {
+    if (selecionados[0] === "FAPEN") label.textContent = "FAPEN";
+    if (selecionados[0] === "EXECUTIVO") label.textContent = "Poder Executivo";
+  } else {
+    label.textContent = `${selecionados.length} selecionados`;
+  }
+}
+
 async function consultarAPI(){
   const inicio = $("dataInicial").value;
   const fim = $("dataFinal").value;
@@ -313,7 +505,6 @@ async function consultarAPI(){
     return;
   }
 
-  // Formata a data para DD/MM/AAAA sem usar encodeURIComponent para manter as barras normais
   const url = `${API_URL}?dataInicial=${dataBR(inicio)}&dataFinal=${dataBR(fim)}`;
 
   mostrarLoading(true);
@@ -322,9 +513,7 @@ async function consultarAPI(){
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Accept": "application/json"
-      }
+      headers: { "Accept": "application/json" }
     });
 
     if (!response.ok) {
@@ -350,7 +539,7 @@ async function consultarAPI(){
 
 function processarDados(lista) {
   dados = lista.map(item => ({
-    contaCodigo: item.contaCodigo ?? "",
+    contaCodigo: String(item.contaCodigo ?? "").trim(),
     contaDescricao: item.contaDescricao ?? "",
     valorArrecadado: numero(item.valorArrecadado)
   }));
@@ -360,12 +549,31 @@ function processarDados(lista) {
 
 function aplicarFiltros(){
   const conta = $("filtroConta").value.toLowerCase().trim();
+  const selecionados = obterOrgaosSelecionados();
+
+  const fapenAtivo = selecionados.includes("FAPEN");
+  const executivoAtivo = selecionados.includes("EXECUTIVO");
+
+  // Alerta exibido EXCLUSIVAMENTE se FAPEN for o único selecionado
+  const exibeAlertaFapen = fapenAtivo && selecionados.length === 1;
+  $("alertaFapen").classList.toggle("d-none", !exibeAlertaFapen);
 
   dadosFiltrados = dados.filter(item => {
     const okConta = !conta
       || String(item.contaDescricao).toLowerCase().includes(conta)
       || String(item.contaCodigo).toLowerCase().includes(conta);
-    return okConta;
+
+    let okOrgao = true;
+
+    if (selecionados.length === 1) {
+      if (fapenAtivo) {
+        okOrgao = CONTAS_FAPEN.has(item.contaCodigo);
+      } else if (executivoAtivo) {
+        okOrgao = !CONTAS_FAPEN.has(item.contaCodigo);
+      }
+    }
+
+    return okConta && okOrgao;
   });
 
   if (colunaOrdenacao) {
@@ -434,6 +642,7 @@ function soma(campo){
 }
 
 function atualizarDashboard(){
+  atualizarLabelOrgao();
   aplicarFiltros();
   atualizarCards();
   atualizarGraficos();
@@ -524,6 +733,7 @@ function atualizarTabela(){
 
 function limparFiltros(){
   $("filtroConta").value = "";
+  document.querySelectorAll(".chk-orgao").forEach(chk => chk.checked = false);
   colunaOrdenacao = "";
   direcaoOrdenacao = "asc";
   atualizarIconesOrdenacao();
@@ -536,9 +746,7 @@ function exportarCSV(){
     return;
   }
 
-  const cabecalho = [
-    "Codigo Conta","Descricao da Conta","Valor Arrecadado"
-  ];
+  const cabecalho = ["Codigo Conta","Descricao da Conta","Valor Arrecadado"];
 
   const linhas = dadosFiltrados.map(item=>[
     item.contaCodigo, item.contaDescricao, item.valorArrecadado
@@ -559,7 +767,8 @@ function exportarCSV(){
   URL.revokeObjectURL(url);
 }
 
-// Leitor do arquivo JSON local
+inicializarFiltroOrgao();
+
 $("inputJson").addEventListener("change", function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -588,7 +797,6 @@ $("btnLimpar").addEventListener("click", limparFiltros);
 $("btnCsv").addEventListener("click", exportarCSV);
 $("filtroConta").addEventListener("input", atualizarDashboard);
 
-// Inicia consulta ao carregar a página
 consultarAPI();
 </script>
 
