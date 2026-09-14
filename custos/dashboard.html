@@ -174,6 +174,21 @@ body {
   border-color: #084298;
 }
 
+.btn-setor.ativo[data-setor="infraestrutura"] {
+  background-color: #6f42c1;
+  border-color: #59359c;
+}
+
+.btn-setor.ativo[data-setor="social"] {
+  background-color: #fd7e14;
+  border-color: #d96505;
+}
+
+.btn-setor.ativo[data-setor="meioambiente"] {
+  background-color: #198754;
+  border-color: #146c43;
+}
+
 /* Tema dinâmico: essas classes usam a variável --tema, trocada via JS */
 .tema-hero {
   background: linear-gradient(135deg, #1a1d20, #2c3036) !important;
@@ -245,6 +260,15 @@ body {
     <button class="btn btn-setor btn-sm" data-setor="saude" onclick="mostrarPainel('saude')">
       <i class="bi bi-heart-pulse-fill me-1"></i> Saúde
     </button>
+    <button class="btn btn-setor btn-sm" data-setor="infraestrutura" onclick="mostrarPainel('infraestrutura')">
+      <i class="bi bi-signpost-2-fill me-1"></i> Infraestrutura Viária
+    </button>
+    <button class="btn btn-setor btn-sm" data-setor="social" onclick="mostrarPainel('social')">
+      <i class="bi bi-people-fill me-1"></i> Assistência Social
+    </button>
+    <button class="btn btn-setor btn-sm" data-setor="meioambiente" onclick="mostrarPainel('meioambiente')">
+      <i class="bi bi-tree-fill me-1"></i> Meio Ambiente
+    </button>
   </div>
 </div>
 
@@ -262,6 +286,9 @@ body {
 
   <div id="status" class="alert alert-info status">
     Aguardando consulta...
+  </div>
+  <div id="statusColunas" class="small-muted mb-3">
+    Colunas da fonte: aguardando carregamento...
   </div>
 
   <!-- Filtros -->
@@ -303,7 +330,7 @@ body {
 
         <div class="col-md-4">
           <label class="form-label fw-semibold small">Buscar Unidade / Objeto</label>
-          <input type="text" id="filtroBusca" class="form-control form-control-sm" placeholder="Ex: CMEI, Escola, Secretaria...">
+          <input type="text" id="filtroBusca" class="form-control form-control-sm" placeholder="Ex: CMEI, CRAS, Parque, Secretaria...">
         </div>
 
         <div class="col-md-2 d-flex align-items-end">
@@ -444,7 +471,7 @@ body {
 </div>
 <!-- /painelGeral -->
 
-<!-- ===== Painel Setorial (Educação / Saúde) ===== -->
+<!-- ===== Painel Setorial (Educação / Saúde / Infraestrutura Viária / Social / Meio Ambiente) ===== -->
 <div id="painelArea" class="d-none">
 
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
@@ -532,14 +559,19 @@ body {
         </div>
         <p class="small-muted mt-2 mb-0">
           <i class="bi bi-info-circle me-1"></i>
-          Endereços conforme a aba "Localização" da planilha oficial. Clique em <strong>"Ver no mapa"</strong> na tabela abaixo para focar em uma unidade, e use o ícone do bonequinho (Pegman) no canto do mapa para abrir o Street View da rua.
+          Localizações e endereços conforme a aba "Localização" da planilha oficial. Clique em <strong>"Ver no mapa"</strong> na tabela abaixo para focar em uma unidade, e use o ícone do bonequinho (Pegman) no canto do mapa para abrir o Street View da rua.
         </p>
       </div></div>
     </div>
     <div class="col-lg-5">
       <div class="card h-100"><div class="card-body">
-        <h5 class="card-title-custom h6 mb-3">Top Unidades por Custo</h5>
-        <div class="chart-box"><canvas id="graficoArea"></canvas></div>
+        <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
+          <h5 class="card-title-custom h6 mb-0">Top Unidades por Custo</h5>
+          <button type="button" id="btnExpandirUnidades" class="btn btn-sm btn-outline-custom" onclick="alternarTodasUnidades()">
+            <i class="bi bi-arrows-expand me-1"></i>Ver todas
+          </button>
+        </div>
+        <div id="containerGraficoArea" class="chart-box"><canvas id="graficoArea"></canvas></div>
       </div></div>
     </div>
   </section>
@@ -586,6 +618,36 @@ let dados = [];
 let dadosFiltrados = [];
 let graficos = {};
 
+let colunasDisponiveis = [];
+let mostrarTodasUnidades = false;
+
+const CAMPOS_NORMALIZADOS = {
+  "Data": "data",
+  "Objeto de Custo": "objetoCodigo",
+  "Item de Custo": "itemCusto",
+  "Valor Apropriado": "valor"
+};
+
+function obterColunasDisponiveis(linhas){
+  const conjunto = new Set();
+  linhas.forEach(linha => {
+    Object.keys(linha || {}).forEach(coluna => conjunto.add(coluna));
+  });
+  return [...conjunto];
+}
+
+function campo(item, nome){
+  const chaveNormalizada = CAMPOS_NORMALIZADOS[nome] || nome;
+  if(Object.prototype.hasOwnProperty.call(item, chaveNormalizada)){
+    return item[chaveNormalizada];
+  }
+  return item[nome];
+}
+
+function listarColunasDados(){
+  return [...colunasDisponiveis];
+}
+
 let secMap = {};
 let deptMap = {};
 let objMap = {};
@@ -597,7 +659,7 @@ let direcaoOrdenacao = "asc";
 let paginaAtual = 1;
 const ITENS_POR_PAGINA = 50;
 
-// ===== Painel Setorial (Educação / Saúde) =====
+// ===== Painéis Setoriais =====
 let setorAtual = "custos";
 let unidadesAreaAtual = [];
 let colunaOrdenacaoArea = "valor";
@@ -625,6 +687,45 @@ const CONFIG_SETOR = {
     sub: "Custos e localização de UBSs, hospitais e unidades de saúde.",
     codigoSecretaria: "0002.0014",
     palavrasChave: ["saude","saúde","ubs","hospital","posto de saude","posto de saúde","samu","clinica","clínica","enfermagem","atencao basica","atenção básica","vigilancia sanitaria","vigilância sanitária","farmacia","farmácia","policlinica","policlínica"]
+  },
+  infraestrutura: {
+    corTema: "#6f42c1", corTemaEscura: "#59359c", corTexto: "#ffffff",
+    icone: "bi-signpost-2-fill", titulo: "BI de Infraestrutura Viária",
+    badge: "INFRAESTRUTURA VIÁRIA", h1: "Painel de Infraestrutura Viária",
+    sub: "Custos, unidades e localizações relacionadas à infraestrutura viária.",
+    codigoSecretaria: "0002.0015",
+    palavrasChave: [
+      "infraestrutura viaria","infraestrutura viária","infraestrutura",
+      "viaria","viária","pavimentacao","pavimentação","pavimento",
+      "asfalto","recape","recapeamento","estrada","rodovia","rua",
+      "ponte","pontes","sinalizacao","sinalização","transito","trânsito",
+      "drenagem","galeria pluvial","calçada","calcada","meio fio",
+      "conservacao viaria","conservação viária","manutencao viaria","manutenção viária"
+    ]
+  },
+  social: {
+    corTema: "#fd7e14", corTemaEscura: "#d96505", corTexto: "#ffffff",
+    icone: "bi-people-fill", titulo: "BI de Assistência Social",
+    badge: "ASSISTÊNCIA SOCIAL", h1: "Painel de Assistência Social",
+    sub: "Custos e localização de CRAS, CREAS, abrigos e unidades de apoio social.",
+    codigoSecretaria: "0002.0007",
+    palavrasChave: [
+      "social","assistencia social","assistência social","cras","creas",
+      "abrigo","conselho tutelar","centro pop","acolhimento","familia",
+      "família","vulnerabilidade","cidadania","solidariedade"
+    ]
+  },
+  meioambiente: {
+    corTema: "#198754", corTemaEscura: "#146c43", corTexto: "#ffffff",
+    icone: "bi-tree-fill", titulo: "BI de Meio Ambiente",
+    badge: "MEIO AMBIENTE", h1: "Painel de Meio Ambiente",
+    sub: "Custos, parques, praças, serviços ambientais e gestão sustentável.",
+    codigoSecretaria: "0002.0016",
+    palavrasChave: [
+      "meio ambiente","ambiente","ambiental","parque","praça","praca",
+      "horto","residuos","resíduos","reciclagem","lixo","coleta",
+      "arborizacao","arborização","podas","jardim","jardinagem","fauna","flora","saneamento"
+    ]
   }
 };
 
@@ -772,6 +873,8 @@ function processarWorkbook(workbook){
 }
 
 function processarDados(linhas){
+  colunasDisponiveis = obterColunasDisponiveis(linhas);
+
   dados = linhas
     .filter(r => r["Objeto de Custo"])
     .map(r => {
@@ -781,7 +884,10 @@ function processarDados(linhas){
       const deptCod = partes.slice(0,3).join(".");
       const sec = secMap[secCod] || {};
       const loc = locMap[codigo];
+
       return {
+        ...r,
+        raw: { ...r },
         data: paraData(r["Data"]),
         objetoCodigo: codigo,
         objetoNome: objMap[codigo] || codigo,
@@ -796,6 +902,11 @@ function processarDados(linhas){
       };
     });
 
+  const indicador = $("statusColunas");
+  if(indicador){
+    indicador.innerHTML = `<i class="bi bi-database me-1"></i><strong>${colunasDisponiveis.length}</strong> colunas detectadas automaticamente na aba "Dados": ${colunasDisponiveis.map(escapeHtml).join(", ")}`;
+  }
+
   preencherFiltros();
   ajustarDatasPadrao();
   paginaAtual = 1;
@@ -803,12 +914,21 @@ function processarDados(linhas){
 }
 
 function ajustarDatasPadrao(){
-  const datasValidas = dados.map(d=>d.data).filter(Boolean);
-  if(!datasValidas.length) return;
-  const min = new Date(Math.min(...datasValidas));
-  const max = new Date(Math.max(...datasValidas));
-  $("dataInicial").value = dataISO(min);
-  $("dataFinal").value = dataISO(max);
+  const hoje = new Date();
+  const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+  $("dataInicial").value = dataISO(primeiroDia);
+  $("dataFinal").value = dataISO(ultimoDia);
+}
+
+function ajustarDatasPadraoArea(){
+  const hoje = new Date();
+  const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+  $("dataInicialArea").value = dataISO(primeiroDia);
+  $("dataFinalArea").value = dataISO(ultimoDia);
 }
 
 function preencherFiltros(){
@@ -967,7 +1087,6 @@ function agruparPorMes(){
 }
 
 function atualizarGraficos(){
-  // Evolução Mensal (Linha vibrante com área)
   const mensal = agruparPorMes();
   destruirGrafico("mensal");
   graficos.mensal = new Chart($("graficoMensal"), {
@@ -994,7 +1113,6 @@ function atualizarGraficos(){
     }
   });
 
-  // Custo por Secretaria (Doughnut Multicor)
   const secretaria = agrupar("secretaria", 12);
   destruirGrafico("secretaria");
   graficos.secretaria = new Chart($("graficoSecretaria"), {
@@ -1013,7 +1131,6 @@ function atualizarGraficos(){
     }
   });
 
-  // Top 10 Itens de Custo (Barras Horizontais com variação de cores)
   const item = agrupar("itemCusto", 10);
   destruirGrafico("item");
   graficos.item = new Chart($("graficoItem"), {
@@ -1034,7 +1151,6 @@ function atualizarGraficos(){
     }
   });
 
-  // Top 10 Departamentos (Barras Horizontais com variação de cores)
   const departamento = agrupar("departamento", 10);
   destruirGrafico("departamento");
   graficos.departamento = new Chart($("graficoDepartamento"), {
@@ -1099,11 +1215,28 @@ function exportarCSV(){
     return;
   }
 
-  const cabecalho = ["Data","Secretaria","Departamento","Objeto de Custo","Unidade/Objeto","Item de Custo","Valor Apropriado"];
-  const linhas = dadosFiltrados.map(item=>[
-    dataBRExibir(item.data), item.secretaria, item.departamento,
-    item.objetoCodigo, item.objetoNome, item.itemCusto, item.valor
-  ]);
+  const colunasOriginais = [...colunasDisponiveis];
+  const colunasExtras = ["Secretaria","Departamento","Unidade/Objeto","Endereço"];
+  const cabecalho = [...colunasOriginais, ...colunasExtras];
+
+  const linhas = dadosFiltrados.map(item=>{
+    const linhaOriginal = colunasOriginais.map(coluna => {
+      let valor = item.raw ? item.raw[coluna] : item[coluna];
+      if(coluna === "Data"){
+        const data = paraData(valor);
+        return data ? dataBRExibir(data) : valor;
+      }
+      return valor;
+    });
+
+    return [
+      ...linhaOriginal,
+      item.secretaria,
+      item.departamento,
+      item.objetoNome,
+      item.endereco || ""
+    ];
+  });
 
   const csv = [cabecalho,...linhas]
     .map(linha=> linha.map(valor=> `"${String(valor ?? "").replace(/"/g,'""')}"`).join(";"))
@@ -1120,7 +1253,6 @@ function exportarCSV(){
   URL.revokeObjectURL(url);
 }
 
-// Leitor de arquivo XLSX local (Fallback)
 $("inputXlsx").addEventListener("change", function(e){
   const file = e.target.files[0];
   if(!file) return;
@@ -1149,7 +1281,6 @@ function removerAcentos(texto){
 
 function limparEndereco(endereco){
   let e = String(endereco || "").trim();
-  // "Sn" = "sem número" na planilha; não é parte real do logradouro
   e = e.replace(/\bs\/?n\b/gi, "").replace(/\s{2,}/g, " ").trim();
   e = e.replace(/^[-,\s]+|[-,\s]+$/g, "");
   return e || null;
@@ -1158,7 +1289,7 @@ function limparEndereco(endereco){
 function pertenceAoSetor(item, setor){
   const cfg = CONFIG_SETOR[setor];
   if(!cfg) return false;
-  if(cfg.codigoSecretaria) return item.secretariaCodigo === cfg.codigoSecretaria;
+  if(cfg.codigoSecretaria && item.secretariaCodigo === cfg.codigoSecretaria) return true;
   if(!cfg.palavrasChave) return false;
   const texto = removerAcentos(`${item.secretaria} ${item.departamento} ${item.objetoNome} ${item.itemCusto}`);
   return cfg.palavrasChave.some(p => texto.includes(removerAcentos(p)));
@@ -1168,12 +1299,10 @@ function filtrarPorSetor(setor){
   return dados.filter(d => pertenceAoSetor(d, setor));
 }
 
-// ---------- Google Maps (sem necessidade de chave de API) ----------
-// Mapa embutido interativo (permite pan/zoom e o Pegman para Street View)
+// ---------- Google Maps ----------
 function urlEmbedGoogleMaps(consulta){
   return `https://www.google.com/maps?q=${encodeURIComponent(consulta)}&z=17&output=embed`;
 }
-// Link direto para abrir a localização em uma nova aba do Google Maps
 function urlAbrirGoogleMaps(consulta){
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(consulta)}`;
 }
@@ -1202,7 +1331,7 @@ function aplicarTema(setor){
   });
 }
 
-// ---------- Painel Setorial: Mapa, KPIs, Gráfico e Tabela ----------
+// ---------- Painel Setorial ----------
 function preencherFiltroItemArea(setor){
   const baseSetor = filtrarPorSetor(setor).filter(item => !item.naoUtilizar);
   const itens = [...new Set(baseSetor.map(d=>d.itemCusto))].sort((a,b)=>String(a).localeCompare(String(b),"pt-BR"));
@@ -1225,7 +1354,6 @@ function obterDadosSetorFiltrados(setor){
   });
 }
 
-// Entrada ao trocar de setor: reseta filtros/ordenação e popula as opções do setor selecionado
 function renderizarPainelArea(setor){
   const cfg = CONFIG_SETOR[setor];
 
@@ -1234,23 +1362,26 @@ function renderizarPainelArea(setor){
   $("descArea").textContent = cfg.sub;
   $("tituloMapa").textContent = `Mapa das Unidades - ${cfg.h1}`;
 
-  $("dataInicialArea").value = "";
-  $("dataFinalArea").value = "";
+  ajustarDatasPadraoArea();
   preencherFiltroItemArea(setor);
 
   colunaOrdenacaoArea = "valor";
   direcaoOrdenacaoArea = "desc";
+  mostrarTodasUnidades = false;
 
   atualizarPainelArea();
 }
 
-// Reaplica os filtros do setor atual (chamada pelos inputs de filtro) sem resetar as opções
+function alternarTodasUnidades(){
+  mostrarTodasUnidades = !mostrarTodasUnidades;
+  atualizarPainelArea();
+}
+
 function atualizarPainelArea(){
   const setor = setorAtual;
   const cfg = CONFIG_SETOR[setor];
   const dadosSetor = obterDadosSetorFiltrados(setor);
 
-  // Agrupar por unidade (código de objeto de custo), usando o endereço cadastrado na aba "Localização"
   const mapaUnidades = {};
   dadosSetor.forEach(item=>{
     const chave = item.objetoCodigo;
@@ -1265,9 +1396,8 @@ function atualizarPainelArea(){
   });
 
   const unidades = Object.values(mapaUnidades);
-  unidadesAreaAtual = unidades.filter(u => u.endereco); // tabela só exibe unidades com endereço cadastrado
+  unidadesAreaAtual = unidades.filter(u => u.endereco);
 
-  // KPIs
   const totalValor = dadosSetor.reduce((t,i)=> t + i.valor, 0);
   $("areaTotalValor").textContent = moeda(totalValor);
   $("areaTotalUnidades").textContent = unidades.length.toLocaleString("pt-BR");
@@ -1283,8 +1413,20 @@ function atualizarPainelArea(){
     return;
   }
 
-  // Gráfico Top Unidades por custo (considera todas as unidades do filtro, com ou sem endereço)
-  const topGrafico = [...unidades].sort((a,b)=> b.valor - a.valor).slice(0, 10);
+  const unidadesOrdenadas = [...unidades].sort((a,b)=> b.valor - a.valor);
+  const topGrafico = mostrarTodasUnidades ? unidadesOrdenadas : unidadesOrdenadas.slice(0, 10);
+  const btnExpandir = $("btnExpandirUnidades");
+  if(btnExpandir){
+    btnExpandir.innerHTML = mostrarTodasUnidades
+      ? '<i class="bi bi-arrows-collapse me-1"></i>Ver Top 10'
+      : '<i class="bi bi-arrows-expand me-1"></i>Ver todas';
+    btnExpandir.title = mostrarTodasUnidades ? "Voltar para as 10 maiores unidades" : "Expandir para todas as unidades";
+  }
+  const containerGrafico = $("containerGraficoArea");
+  if(containerGrafico){
+    const altura = Math.max(280, topGrafico.length * 38);
+    containerGrafico.style.height = `${altura}px`;
+  }
   destruirGrafico("area");
   graficos.area = new Chart($("graficoArea"), {
     type: "bar",
@@ -1308,7 +1450,6 @@ function atualizarPainelArea(){
   renderizarTabelaArea();
   atualizarIconesOrdenacaoArea();
 
-  // Mapa: foca por padrão na primeira unidade com endereço cadastrado
   if(unidadesAreaAtual.length){
     const primeira = unidadesAreaAtual[0];
     focarMapaGoogle(`${primeira.nome}, ${primeira.endereco}`);
@@ -1384,8 +1525,7 @@ function atualizarIconesOrdenacaoArea(){
 }
 
 function limparFiltrosArea(){
-  $("dataInicialArea").value = "";
-  $("dataFinalArea").value = "";
+  ajustarDatasPadraoArea();
   $("filtroItemArea").value = "";
   atualizarPainelArea();
 }
@@ -1427,7 +1567,6 @@ $("dataFinal").addEventListener("change", atualizarDashboard);
 $("btnPagAnterior").addEventListener("click", ()=>{ if(paginaAtual>1){ paginaAtual--; atualizarTabela(); } });
 $("btnPagProxima").addEventListener("click", ()=>{ paginaAtual++; atualizarTabela(); });
 
-// Inicializa tema padrão e a requisição de dados ao carregar
 aplicarTema("custos");
 consultarLink();
 </script>
