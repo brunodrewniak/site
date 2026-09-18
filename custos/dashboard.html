@@ -1182,7 +1182,7 @@ function processarWorkbook(workbook){
         tipo: /^CMEI\b/i.test(nome) ? "CMEI" : "Escola Municipal",
         data: paraData(r["Data"]),
         alunos: numero(r["Alunos"]),
-        professores: (r["Servidores"] === null || r["Servidores"] === undefined || r["Servidores"] === "") ? null : numero(r["Servidores"])
+        professores: (r["Professores"] === null || r["Professores"] === undefined || r["Professores"] === "") ? null : numero(r["Professores"])
       });
     });
   }
