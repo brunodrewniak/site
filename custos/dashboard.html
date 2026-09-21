@@ -11,6 +11,7 @@
 <!-- Bootstrap 5 & Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- SheetJS -->
@@ -286,19 +287,149 @@ body {
   70%  { box-shadow: 0 0 0 10px rgba(220,53,69,0); }
   100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
 }
+
+/* ===== Busca Inteligente na navbar ===== */
+#grupoBuscaNavbar { position: relative; }
+#statusBuscaVoz {
+  position: absolute; top: 100%; left:0; right:0; margin-top:4px;
+  background:#212529; color:#fff; font-size:.72rem; text-align:center;
+  padding:3px 8px; border-radius:6px; z-index:1050;
+}
+
+/* ===== Modo Claro / Escuro ===== */
+:root {
+  --superficie: #ffffff;
+  --texto-modo: #212529;
+  --borda-modo: #e9ecef;
+}
+:root[data-theme="dark"] {
+  --fundo: #14161a;
+  --superficie: #1e2126;
+  --texto-modo: #e9ecef;
+  --borda-modo: #33373d;
+}
+:root[data-theme="dark"] body { color: var(--texto-modo); }
+:root[data-theme="dark"] .card { background-color: var(--superficie); color: var(--texto-modo); }
+:root[data-theme="dark"] .card-title-custom { color: var(--texto-modo); }
+:root[data-theme="dark"] .kpi .valor,
+:root[data-theme="dark"] .kpi-tema .valor { color: var(--texto-modo); }
+:root[data-theme="dark"] .small-muted { color: #9aa1a8; }
+:root[data-theme="dark"] .menu-setorial {
+  background-color: var(--superficie);
+  border-bottom-color: var(--borda-modo);
+}
+:root[data-theme="dark"] .btn-setor {
+  background-color: #262a30;
+  color: var(--texto-modo);
+}
+:root[data-theme="dark"] .btn-setor:hover { background-color: #30353c; }
+:root[data-theme="dark"] .table {
+  --bs-table-color: var(--texto-modo);
+  --bs-table-bg: transparent;
+  --bs-table-striped-color: var(--texto-modo);
+  --bs-table-striped-bg: #24272c;
+  --bs-table-hover-color: var(--texto-modo);
+  --bs-table-hover-bg: #24272c;
+  border-color: var(--borda-modo);
+}
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select {
+  background-color: #24272c;
+  color: var(--texto-modo);
+  border-color: var(--borda-modo);
+}
+:root[data-theme="dark"] .form-control::placeholder { color: #7a828a; }
+:root[data-theme="dark"] .form-control:focus,
+:root[data-theme="dark"] .form-select:focus {
+  background-color: #24272c; color: var(--texto-modo);
+}
+:root[data-theme="dark"] .modal-content {
+  background-color: var(--superficie); color: var(--texto-modo);
+}
+:root[data-theme="dark"] .modal-header,
+:root[data-theme="dark"] .modal-footer { border-color: var(--borda-modo); }
+:root[data-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(1.4); }
+:root[data-theme="dark"] .busca-chip {
+  background:#262a30; color:#dee2e6; border-color:#3a3f47;
+}
+:root[data-theme="dark"] .busca-chip strong { color:#fff; }
+:root[data-theme="dark"] .busca-resposta-card {
+  background:#1a1d21; border-color:#2c3036;
+}
+:root[data-theme="dark"] .busca-resposta-valor { color:#fff; }
+:root[data-theme="dark"] .mapa-bairros-viewport,
+:root[data-theme="dark"] .mapa-viewport {
+  background: linear-gradient(180deg,#1c2024,#15181b);
+}
+:root[data-theme="dark"] .legenda-gradiente .barra { border-color:#3a3f47; }
+:root[data-theme="dark"] .alert-warning { background-color:#3a2f0f; color:#ffe69c; border-color:#5c4b16; }
+:root[data-theme="dark"] .mapa-bairros-info,
+:root[data-theme="dark"] #eduRodapeInfo,
+:root[data-theme="dark"] #socRodapeInfo,
+:root[data-theme="dark"] #maRodapeInfo { color:#9aa1a8; }
 </style>
+<script>
+  // Aplica o tema salvo (ou preferência do sistema) o quanto antes, evitando "flash" de tela.
+  (function(){
+    try{
+      var salvo = localStorage.getItem("bi-tema-modo");
+      var modo = salvo || ((window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", modo);
+    }catch(e){
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  })();
+</script>
 </head>
 
 <body>
 
 <nav class="navbar navbar-expand-lg navbar-dark sticky-top tema-navbar">
-  <div class="container">
-    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
-      <i id="iconeNavbar" class="bi bi-bar-chart-line-fill text-danger"></i> <span id="tituloNavbar">BI de Custos</span>
+  <div class="container-fluid flex-wrap gap-2 py-1">
+    <a class="navbar-brand fw-bold d-flex align-items-center gap-2 me-2" href="#">
+      <i id="iconeNavbar" class="bi bi-bar-chart-line-fill text-danger"></i>
+      <span id="tituloNavbar" class="d-none d-md-inline">BI de Custos</span>
     </a>
-    <span class="text-white-50 small">Campo Largo - PR</span>
+
+    <div class="flex-grow-1 mx-auto" style="max-width:520px; min-width:220px;">
+      <div class="input-group input-group-sm" id="grupoBuscaNavbar">
+        <button class="btn btn-outline-light" type="button" id="btnBuscaVoz" title="Perguntar por voz">
+          <i class="bi bi-mic-fill"></i>
+        </button>
+        <input type="text" id="campoBuscaInteligente" class="form-control"
+               placeholder='Busca Inteligente: pergunte por voz ou digite...'>
+        <button class="btn btn-danger" type="button" id="btnBuscaInteligente" title="Buscar">
+          <i class="bi bi-search"></i>
+        </button>
+        <div id="statusBuscaVoz" style="display:none;">
+          <i class="bi bi-soundwave me-1"></i>Ouvindo... fale sua pergunta.
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 ms-auto">
+      <span class="text-white-50 small d-none d-lg-inline">Campo Largo - PR</span>
+      <button class="btn btn-outline-light btn-sm" type="button" id="btnAlternarTema" title="Alternar tema claro/escuro">
+        <i class="bi bi-moon-stars-fill" id="iconeTema"></i>
+      </button>
+    </div>
   </div>
 </nav>
+
+<!-- Modal com o resultado da Busca Inteligente -->
+<div class="modal fade" id="modalBuscaInteligente" tabindex="-1" aria-labelledby="modalBuscaInteligenteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalBuscaInteligenteLabel"><i class="bi bi-search me-1"></i> Busca Inteligente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="resultadoBuscaInteligente"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Menu de Acesso Setorial -->
 <div class="menu-setorial py-2">
@@ -334,30 +465,6 @@ body {
 </header>
 
 <main class="container py-2">
-
-  <!-- Busca Inteligente -->
-  <div class="card mb-4" id="cardBuscaInteligente">
-    <div class="card-body">
-      <h5 class="card-title-custom h6 mb-1"><i class="bi bi-search me-1"></i> Busca Inteligente</h5>
-      <p class="small-muted mb-3">
-        Pergunte em linguagem natural, digitando ou por voz, ex.: "custo com merenda escolar na escola reino da loucinha em setembro"
-      </p>
-      <div class="input-group input-group-sm mb-1">
-        <input type="text" id="campoBuscaInteligente" class="form-control"
-               placeholder='Ex.: quanto foi gasto com combustível na secretaria de saúde em julho de 2026?'>
-        <button class="btn btn-outline-secondary" type="button" id="btnBuscaVoz" title="Perguntar por voz">
-          <i class="bi bi-mic-fill"></i>
-        </button>
-        <button class="btn btn-primary" type="button" id="btnBuscaInteligente">
-          <i class="bi bi-search me-1"></i>Buscar
-        </button>
-      </div>
-      <div id="statusBuscaVoz" class="small-muted mt-1" style="display:none;">
-        <i class="bi bi-soundwave me-1"></i>Ouvindo... fale sua pergunta.
-      </div>
-      <div id="resultadoBuscaInteligente" class="mt-3"></div>
-    </div>
-  </div>
 
 <div id="painelGeral">
 
@@ -1721,6 +1828,7 @@ function executarBuscaInteligente(){
   }
   if(!dados.length){
     saida.innerHTML = `<div class="alert alert-warning mb-0 py-2 small">Carregue os dados (botão "Consultar Dados") antes de fazer uma busca.</div>`;
+    abrirModalBusca();
     falarRespostaBusca("Ainda não há dados carregados. Clique em Consultar Dados antes de perguntar.");
     return;
   }
@@ -1770,6 +1878,7 @@ function executarBuscaInteligente(){
         Não consegui identificar item de custo, unidade, secretaria ou mês na pergunta.
         Tente algo como: <em>"custo com merenda escolar na escola reino da loucinha em setembro"</em>.
       </div>`;
+    abrirModalBusca();
     falarRespostaBusca("Não consegui entender sua pergunta. Tente citar um item de custo, uma unidade ou um mês.");
     return;
   }
@@ -1808,6 +1917,7 @@ function executarBuscaInteligente(){
         <div class="mb-2">${chips.join("")}</div>
         <div class="small-muted"><i class="bi bi-info-circle me-1"></i>Nenhum lançamento encontrado para esses critérios no período disponível.</div>
       </div>`;
+    abrirModalBusca();
     falarRespostaBusca(`Não encontrei nenhum lançamento${descricaoFalada ? " de " + descricaoFalada : ""}.`);
     return;
   }
@@ -1840,6 +1950,7 @@ function executarBuscaInteligente(){
     </div>`;
 
   const registrosTexto = registros === 1 ? "1 lançamento" : `${registros.toLocaleString("pt-BR")} lançamentos`;
+  abrirModalBusca();
   falarRespostaBusca(`${descricaoFalada ? "Custo com " + descricaoFalada + ": " : ""}${moeda(total)}, em ${registrosTexto}.`);
 }
 
@@ -1867,6 +1978,36 @@ function falarRespostaBusca(texto){
   }catch(e){
     console.warn("Não foi possível falar a resposta:", e);
   }
+}
+
+// Abre o pop-up (modal) com o resultado da Busca Inteligente
+function abrirModalBusca(){
+  const modalEl = $("modalBuscaInteligente");
+  if(!modalEl || typeof bootstrap === "undefined") return;
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+// ================= Modo Claro / Escuro =================
+function aplicarModoClaroEscuro(modo){
+  document.documentElement.setAttribute("data-theme", modo);
+  const icone = $("iconeTema");
+  if(icone) icone.className = modo === "dark" ? "bi bi-sun-fill" : "bi bi-moon-stars-fill";
+  try{ localStorage.setItem("bi-tema-modo", modo); }catch(e){ /* localStorage indisponível */ }
+
+  // Ajusta as cores padrão do Chart.js e redesenha os gráficos já renderizados na tela
+  if(typeof Chart !== "undefined"){
+    Chart.defaults.color = modo === "dark" ? "#c9d0d6" : "#495057";
+    Chart.defaults.borderColor = modo === "dark" ? "#33373d" : "#e9ecef";
+  }
+  if(typeof dados !== "undefined" && dados.length){
+    if(setorAtual === "custos") atualizarDashboard();
+    else atualizarPainelArea();
+  }
+}
+
+function alternarTema(){
+  const atual = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  aplicarModoClaroEscuro(atual === "dark" ? "light" : "dark");
 }
 
 // ================= Reconhecimento de voz (pergunta falada em pt-BR) =================
@@ -2789,6 +2930,10 @@ if(!SpeechRecognitionAPI){
   btnVozInexistente.disabled = true;
   btnVozInexistente.title = "Reconhecimento de voz não suportado neste navegador";
 }
+
+$("btnAlternarTema").addEventListener("click", alternarTema);
+// Sincroniza o ícone e as cores padrão do Chart.js com o tema já aplicado (definido no <head>)
+aplicarModoClaroEscuro(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
 
 $("tbodyArea").addEventListener("click", (ev)=>{
   const btn = ev.target.closest(".btn-ver-mapa");
