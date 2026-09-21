@@ -53,6 +53,62 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .gauge-label .valor-central{font-size:1.35rem;font-weight:800}
 .gauge-label .sub-central{font-size:.78rem;color:#6c757d}
 .chart-card-desc{font-size:.8rem;color:#6c757d}
+
+/* ---------- Área de impressão / PDF ---------- */
+#printArea{display:none}
+
+@media print{
+  @page{ size: A4 landscape; margin: 8mm; }
+
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{
+    display:block !important;
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    background:#fff;
+    color:#000;
+    font-family:Arial,Helvetica,sans-serif;
+  }
+
+  #printArea .print-header{ text-align:center; margin-bottom:6px; }
+  #printArea .print-header h1{ font-size:13pt; margin:0 0 2px; font-weight:800; }
+  #printArea .print-sub{ font-size:8.5pt; margin:0; }
+  #printArea .print-title{ font-size:11pt; font-weight:700; margin:2px 0; }
+  #printArea .print-anexo-linha{ font-size:8pt; font-weight:600; margin:8px 0 4px; border-bottom:1px solid #000; padding-bottom:2px; }
+
+  #printArea table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:7.3pt;
+    margin-bottom:10px;
+  }
+  #printArea th, #printArea td{
+    border:1px solid #000;
+    padding:1.5px 3px;
+  }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{
+    background:#e3e3e3 !important;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    font-weight:700;
+    text-align:center;
+    font-size:7pt;
+  }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.conta-nome{ text-align:left; white-space:nowrap; }
+  #printArea tr.nivel-0{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-1{ font-weight:600; }
+  #printArea tr.nivel-2{ font-weight:500; }
+  #printArea tr.nivel-3{ font-weight:400; }
+  #printArea .indent-1{ padding-left:.6rem !important; }
+  #printArea .indent-2{ padding-left:1.1rem !important; }
+  #printArea .indent-3{ padding-left:1.6rem !important; }
+
+  #printArea .print-footer{ font-size:7pt; color:#333; margin-top:4px; }
+}
 </style>
 </head>
 
@@ -98,7 +154,7 @@ Aguardando consulta...
 <input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
 </div>
 
-<div class="col-md-2">
+<div class="col-md-3">
 <label class="form-label fw-semibold">Período (bimestre)</label>
 <select id="filtroPeriodo" class="form-select">
 <option value="1">1º Bimestre (Jan-Fev)</option>
@@ -110,23 +166,25 @@ Aguardando consulta...
 </select>
 </div>
 
-<div class="col-md-2">
+<div class="col-md-3">
 <label class="form-label fw-semibold">Ente (código IBGE)</label>
 <input type="text" id="filtroEnte" class="form-control" value="4104204">
 </div>
 
-<div class="col-md-3">
-<label class="form-label fw-semibold">Anexo</label>
-<input type="text" id="filtroAnexo" class="form-control" value="RREO-Anexo 01">
-</div>
+<!-- Anexo e Tipo de demonstrativo são fixos (RREO / Anexo 1) e não ficam editáveis -->
+<input type="hidden" id="filtroAnexo" value="RREO-Anexo 01">
+<input type="hidden" id="filtroTipo" value="RREO">
 
-<div class="col-md-2">
-<label class="form-label fw-semibold">Tipo demonstrativo</label>
-<input type="text" id="filtroTipo" class="form-control" value="RREO">
+<div class="col-md-3">
+<label class="form-label fw-semibold">Demonstrativo</label>
+<div class="form-control bg-light text-muted d-flex align-items-center gap-2" style="cursor:default">
+<i class="bi bi-lock-fill small"></i>
+<span>RREO · Anexo 1 (fixo)</span>
+</div>
 </div>
 
 <div class="col-md-1 d-flex align-items-end">
-<button id="btnConsultar" class="btn btn-primary w-100">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar">
 <i class="bi bi-search"></i>
 </button>
 </div>
@@ -142,6 +200,10 @@ Aguardando consulta...
 <i class="bi bi-file-type-json"></i> Carregar JSON Local
 <input type="file" id="inputJson" accept=".json" style="display: none;">
 </label>
+
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm">
+<i class="bi bi-printer"></i> Imprimir / Gerar PDF
+</button>
 
 <div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
 <button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabelas</button>
@@ -255,9 +317,9 @@ API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cd
 <th style="min-width:320px">Receitas</th>
 <th class="valor">Previsão Inicial</th>
 <th class="valor">Previsão Atualizada (a)</th>
-<th class="valor">No Bimestre (b)</th>
+<th class="valor">No <span class="ord-bimestre">1</span>º Bimestre (b)</th>
 <th class="valor">% (b/a)</th>
-<th class="valor">Até o Bimestre (c)</th>
+<th class="valor">Até o <span class="ord-bimestre">1</span>º Bimestre (c)</th>
 <th class="valor">% (c/a)</th>
 <th class="valor">Saldo (a-c)</th>
 </tr>
@@ -278,9 +340,9 @@ API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cd
 <th style="min-width:320px">Receitas Intra-Orçamentárias</th>
 <th class="valor">Previsão Inicial</th>
 <th class="valor">Previsão Atualizada (a)</th>
-<th class="valor">No Bimestre (b)</th>
+<th class="valor">No <span class="ord-bimestre">1</span>º Bimestre (b)</th>
 <th class="valor">% (b/a)</th>
-<th class="valor">Até o Bimestre (c)</th>
+<th class="valor">Até o <span class="ord-bimestre">1</span>º Bimestre (c)</th>
 <th class="valor">% (c/a)</th>
 <th class="valor">Saldo (a-c)</th>
 </tr>
@@ -301,13 +363,13 @@ API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cd
 <th style="min-width:280px">Despesas</th>
 <th class="valor">Dotação Inicial (d)</th>
 <th class="valor">Dotação Atualizada (e)</th>
-<th class="valor">Empenhadas No Bimestre</th>
-<th class="valor">Empenhadas Até o Bimestre (f)</th>
+<th class="valor">Empenhadas No <span class="ord-bimestre">1</span>º Bimestre</th>
+<th class="valor">Empenhadas Até o <span class="ord-bimestre">1</span>º Bimestre (f)</th>
 <th class="valor">Saldo (g)=(e-f)</th>
-<th class="valor">Liquidadas No Bimestre</th>
-<th class="valor">Liquidadas Até o Bimestre (h)</th>
+<th class="valor">Liquidadas No <span class="ord-bimestre">1</span>º Bimestre</th>
+<th class="valor">Liquidadas Até o <span class="ord-bimestre">1</span>º Bimestre (h)</th>
 <th class="valor">Saldo (i)=(e-h)</th>
-<th class="valor">Pagas Até o Bimestre (j)</th>
+<th class="valor">Pagas Até o <span class="ord-bimestre">1</span>º Bimestre (j)</th>
 </tr>
 </thead>
 <tbody id="tbodyDespesas"></tbody>
@@ -326,13 +388,13 @@ API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cd
 <th style="min-width:280px">Despesas Intra-Orçamentárias</th>
 <th class="valor">Dotação Inicial (d)</th>
 <th class="valor">Dotação Atualizada (e)</th>
-<th class="valor">Empenhadas No Bimestre</th>
-<th class="valor">Empenhadas Até o Bimestre (f)</th>
+<th class="valor">Empenhadas No <span class="ord-bimestre">1</span>º Bimestre</th>
+<th class="valor">Empenhadas Até o <span class="ord-bimestre">1</span>º Bimestre (f)</th>
 <th class="valor">Saldo (g)=(e-f)</th>
-<th class="valor">Liquidadas No Bimestre</th>
-<th class="valor">Liquidadas Até o Bimestre (h)</th>
+<th class="valor">Liquidadas No <span class="ord-bimestre">1</span>º Bimestre</th>
+<th class="valor">Liquidadas Até o <span class="ord-bimestre">1</span>º Bimestre (h)</th>
 <th class="valor">Saldo (i)=(e-h)</th>
-<th class="valor">Pagas Até o Bimestre (j)</th>
+<th class="valor">Pagas Até o <span class="ord-bimestre">1</span>º Bimestre (j)</th>
 </tr>
 </thead>
 <tbody id="tbodyDespesasIntra"></tbody>
@@ -453,6 +515,114 @@ API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cd
 </div>
 
 </main>
+
+<!-- =====================================================================
+     ÁREA DE IMPRESSÃO / PDF
+     Fica sempre oculta na tela (display:none) e só é exibida quando o
+     navegador está no modo de impressão (ver regra @media print no <style>).
+     A ideia é reproduzir o leiaute do RREO - Anexo 1 (LRF, Art. 52).
+     ===================================================================== -->
+<div id="printArea">
+
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Relatório Resumido da Execução Orçamentária</div>
+<div class="print-title">BALANÇO ORÇAMENTÁRIO</div>
+<div class="print-sub">Orçamentos Fiscal e da Seguridade Social</div>
+<div class="print-sub" id="printEntidade">Entidade: -</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+
+<div class="print-anexo-linha">
+RREO - Anexo 1 (LRF, Art. 52, inciso I, alíneas "a" e "b" do inciso II e §1º)
+<span class="float-end">Em Reais</span>
+</div>
+
+<table>
+<thead>
+<tr>
+<th rowspan="2" style="min-width:220px;text-align:left">RECEITAS</th>
+<th rowspan="2">PREVISÃO<br>INICIAL</th>
+<th rowspan="2">PREVISÃO<br>ATUALIZADA (a)</th>
+<th colspan="4">RECEITAS REALIZADAS</th>
+<th rowspan="2">SALDO<br>(a-c)</th>
+</tr>
+<tr>
+<th>No <span class="ord-bimestre">1</span>º Bimestre (b)</th>
+<th>% (b/a)</th>
+<th>Até <span class="ord-bimestre">1</span>º Bimestre (c)</th>
+<th>% (c/a)</th>
+</tr>
+</thead>
+<tbody id="printTbodyReceitas"></tbody>
+</table>
+
+<table>
+<thead>
+<tr><th colspan="8" style="text-align:left;background:#eee">RECEITAS INTRA-ORÇAMENTÁRIAS</th></tr>
+<tr>
+<th style="min-width:220px;text-align:left">RECEITAS</th>
+<th>PREVISÃO<br>INICIAL</th>
+<th>PREVISÃO<br>ATUALIZADA (a)</th>
+<th>No <span class="ord-bimestre">1</span>º Bim. (b)</th>
+<th>% (b/a)</th>
+<th>Até <span class="ord-bimestre">1</span>º Bim. (c)</th>
+<th>% (c/a)</th>
+<th>SALDO (a-c)</th>
+</tr>
+</thead>
+<tbody id="printTbodyReceitasIntra"></tbody>
+</table>
+
+<div style="page-break-before:always"></div>
+
+<table>
+<thead>
+<tr>
+<th rowspan="2" style="min-width:200px;text-align:left">DESPESAS</th>
+<th rowspan="2">DOTAÇÃO<br>INICIAL (d)</th>
+<th rowspan="2">DOTAÇÃO<br>ATUALIZADA (e)</th>
+<th colspan="3">DESPESAS EMPENHADAS</th>
+<th colspan="3">DESPESAS LIQUIDADAS</th>
+<th rowspan="2">DESPESAS PAGAS<br>ATÉ <span class="ord-bimestre">1</span>º BIMESTRE (j)</th>
+</tr>
+<tr>
+<th>No <span class="ord-bimestre">1</span>º Bim.</th>
+<th>Até <span class="ord-bimestre">1</span>º Bim. (f)</th>
+<th>SALDO<br>(g)=(e-f)</th>
+<th>No <span class="ord-bimestre">1</span>º Bim.</th>
+<th>Até <span class="ord-bimestre">1</span>º Bim. (h)</th>
+<th>SALDO<br>(i)=(e-h)</th>
+</tr>
+</thead>
+<tbody id="printTbodyDespesas"></tbody>
+</table>
+
+<table>
+<thead>
+<tr><th colspan="10" style="text-align:left;background:#eee">DESPESAS INTRA-ORÇAMENTÁRIAS</th></tr>
+<tr>
+<th style="min-width:200px;text-align:left">DESPESAS</th>
+<th>DOTAÇÃO<br>INICIAL (d)</th>
+<th>DOTAÇÃO<br>ATUALIZADA (e)</th>
+<th>Empenhada<br>No Bim.</th>
+<th>Empenhada<br>Até Bim. (f)</th>
+<th>SALDO (g)</th>
+<th>Liquidada<br>No Bim.</th>
+<th>Liquidada<br>Até Bim. (h)</th>
+<th>SALDO (i)</th>
+<th>Paga<br>Até Bim. (j)</th>
+</tr>
+</thead>
+<tbody id="printTbodyDespesasIntra"></tbody>
+</table>
+
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>. Os valores refletem a última consulta realizada na tela "Ver Tabelas".
+</div>
+
+</div>
 
 <footer class="bg-dark text-white py-4">
 <div class="container text-center small">
@@ -701,10 +871,31 @@ function processarDados(lista){
   renderizarGraficos();
 }
 
+const BIMESTRE_INFO = {
+  1:{ordinal:"1º", meses:"Janeiro a Fevereiro"},
+  2:{ordinal:"2º", meses:"Março a Abril"},
+  3:{ordinal:"3º", meses:"Maio a Junho"},
+  4:{ordinal:"4º", meses:"Julho a Agosto"},
+  5:{ordinal:"5º", meses:"Setembro a Outubro"},
+  6:{ordinal:"6º", meses:"Novembro a Dezembro"},
+};
+
+function atualizarRotulosBimestre(periodo){
+  const n = Number(periodo) || 1;
+  document.querySelectorAll(".ord-bimestre").forEach(el => { el.textContent = n; });
+}
+
 function atualizarCabecalho(){
+  atualizarRotulosBimestre(metaConsulta.periodo || $("filtroPeriodo").value);
+
   if(metaConsulta.instituicao){
     $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
     $("kpiEnte").textContent = `${metaConsulta.instituicao} (IBGE ${metaConsulta.cod_ibge || "-"}) — ${(metaConsulta.populacao||0).toLocaleString("pt-BR")} hab.`;
+
+    const info = BIMESTRE_INFO[metaConsulta.periodo] || BIMESTRE_INFO[1];
+    $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
+    $("printEntidade").textContent = `Entidade: ${metaConsulta.instituicao} — Código IBGE: ${metaConsulta.cod_ibge || "-"}`;
+    $("printPeriodo").textContent = `Período de Referência: ${info.meses} de ${metaConsulta.exercicio || ""} / Bimestre ${info.ordinal}`;
   }
 }
 
@@ -783,10 +974,22 @@ function linhaDespesa(cod, nivel){
 }
 
 function renderizarTabelas(){
-  $("tbodyReceitas").innerHTML = ESTRUTURA_RECEITAS.map(e=>linhaReceita(e.cod, e.nivel)).join("");
-  $("tbodyReceitasIntra").innerHTML = ESTRUTURA_RECEITAS_INTRA.map(e=>linhaReceita(e.cod, e.nivel)).join("");
-  $("tbodyDespesas").innerHTML = ESTRUTURA_DESPESAS.map(e=>linhaDespesa(e.cod, e.nivel)).join("");
-  $("tbodyDespesasIntra").innerHTML = ESTRUTURA_DESPESAS_INTRA.map(e=>linhaDespesa(e.cod, e.nivel)).join("");
+  const htmlReceitas = ESTRUTURA_RECEITAS.map(e=>linhaReceita(e.cod, e.nivel)).join("");
+  const htmlReceitasIntra = ESTRUTURA_RECEITAS_INTRA.map(e=>linhaReceita(e.cod, e.nivel)).join("");
+  const htmlDespesas = ESTRUTURA_DESPESAS.map(e=>linhaDespesa(e.cod, e.nivel)).join("");
+  const htmlDespesasIntra = ESTRUTURA_DESPESAS_INTRA.map(e=>linhaDespesa(e.cod, e.nivel)).join("");
+
+  $("tbodyReceitas").innerHTML = htmlReceitas;
+  $("tbodyReceitasIntra").innerHTML = htmlReceitasIntra;
+  $("tbodyDespesas").innerHTML = htmlDespesas;
+  $("tbodyDespesasIntra").innerHTML = htmlDespesasIntra;
+
+  // A área de impressão usa exatamente as mesmas linhas (mesma ordem de colunas),
+  // apenas com um leiaute de página diferente (ver @media print no <style>).
+  $("printTbodyReceitas").innerHTML = htmlReceitas;
+  $("printTbodyReceitasIntra").innerHTML = htmlReceitasIntra;
+  $("printTbodyDespesas").innerHTML = htmlDespesas;
+  $("printTbodyDespesasIntra").innerHTML = htmlDespesasIntra;
 }
 
 // -------------------- Gráficos --------------------
@@ -1157,6 +1360,23 @@ $("inputJson").addEventListener("change", function(e){
   reader.readAsText(file);
 });
 
+function prepararEImprimir(){
+  if(!Object.keys(dadosPorConta).length){
+    alert("Não há dados carregados para imprimir. Faça uma consulta primeiro.");
+    return;
+  }
+
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+
+  // Garante que os rótulos de bimestre e o conteúdo da área de impressão
+  // estejam sincronizados com a última consulta antes de abrir o diálogo de impressão.
+  atualizarRotulosBimestre($("filtroPeriodo").value);
+
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
 $("btnConsultar").addEventListener("click", consultarAPI);
 $("btnCsv").addEventListener("click", exportarCSV);
 
