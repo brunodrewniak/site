@@ -265,6 +265,27 @@ body {
 .mapa-bairros-info .valor-destaque { font-size:1.05rem; font-weight:700; color:#59359c; }
 .zoom-hint-bairros { position:absolute; bottom:8px; right:10px; font-size:.68rem; color:#868e96; background:rgba(255,255,255,.8); padding:2px 8px; border-radius:10px; }
 
+/* ===== Busca Inteligente ===== */
+.busca-chip {
+  display:inline-block; background:#eef1f5; color:#495057; font-size:.75rem;
+  padding:3px 10px; border-radius:12px; margin:0 6px 6px 0; border:1px solid #dee2e6;
+}
+.busca-chip strong { color:#212529; }
+.busca-resposta-card {
+  border:1px solid #e9ecef; border-radius:10px; padding:14px 16px; background:#f8f9fb;
+}
+.busca-resposta-valor { font-size:1.6rem; font-weight:700; color:#212529; }
+.busca-resposta-tabela th, .busca-resposta-tabela td { font-size:.78rem; }
+
+#btnBuscaVoz.ouvindo {
+  background-color:#dc3545; border-color:#dc3545; color:#fff;
+  animation: pulsoMic 1.1s infinite;
+}
+@keyframes pulsoMic {
+  0%   { box-shadow: 0 0 0 0 rgba(220,53,69,0.5); }
+  70%  { box-shadow: 0 0 0 10px rgba(220,53,69,0); }
+  100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+}
 </style>
 </head>
 
@@ -313,6 +334,30 @@ body {
 </header>
 
 <main class="container py-2">
+
+  <!-- Busca Inteligente -->
+  <div class="card mb-4" id="cardBuscaInteligente">
+    <div class="card-body">
+      <h5 class="card-title-custom h6 mb-1"><i class="bi bi-search me-1"></i> Busca Inteligente</h5>
+      <p class="small-muted mb-3">
+        Pergunte em linguagem natural, digitando ou por voz, ex.: "custo com merenda escolar na escola reino da loucinha em setembro"
+      </p>
+      <div class="input-group input-group-sm mb-1">
+        <input type="text" id="campoBuscaInteligente" class="form-control"
+               placeholder='Ex.: quanto foi gasto com combustível na secretaria de saúde em julho de 2026?'>
+        <button class="btn btn-outline-secondary" type="button" id="btnBuscaVoz" title="Perguntar por voz">
+          <i class="bi bi-mic-fill"></i>
+        </button>
+        <button class="btn btn-primary" type="button" id="btnBuscaInteligente">
+          <i class="bi bi-search me-1"></i>Buscar
+        </button>
+      </div>
+      <div id="statusBuscaVoz" class="small-muted mt-1" style="display:none;">
+        <i class="bi bi-soundwave me-1"></i>Ouvindo... fale sua pergunta.
+      </div>
+      <div id="resultadoBuscaInteligente" class="mt-3"></div>
+    </div>
+  </div>
 
 <div id="painelGeral">
 
@@ -1169,20 +1214,22 @@ function processarWorkbook(workbook){
     });
   }
 
-  // Aba "Quantidades" — alunos e professores por unidade de ensino e mês (somente Educação)
+  // Aba "Quantidades" — alunos e professores/funcionários por unidade de ensino e mês (somente Educação)
+  // Aceita tanto o cabeçalho antigo ("Objeto de Custo" / "Professores") quanto o novo ("Centro de Custo" / "Funcionarios")
   quantidades = [];
   if(abaQuantidades){
     XLSX.utils.sheet_to_json(abaQuantidades, { defval:null }).forEach(r=>{
-      const cod = r["Objeto de Custo"];
+      const cod = r["Objeto de Custo"] ?? r["Centro de Custo"];
       if(!cod) return;
       const nome = String(r["Nome"] || "").trim();
+      const bruto = r["Professores"] ?? r["Funcionarios"] ?? r["Funcionários"];
       quantidades.push({
         objetoCodigo: String(cod).trim(),
         nome: nome,
         tipo: /^CMEI\b/i.test(nome) ? "CMEI" : "Escola Municipal",
         data: paraData(r["Data"]),
         alunos: numero(r["Alunos"]),
-        professores: (r["Professores"] === null || r["Professores"] === undefined || r["Professores"] === "") ? null : numero(r["Professores"])
+        professores: (bruto === null || bruto === undefined || bruto === "") ? null : numero(bruto)
       });
     });
   }
@@ -1617,6 +1664,262 @@ $("inputXlsx").addEventListener("change", function(e){
 // ---------- Utilitários ----------
 function removerAcentos(texto){
   return String(texto ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+}
+
+// ================= Busca Inteligente (linguagem natural) =================
+const MESES_BUSCA = {
+  "janeiro":0, "jan":0, "fevereiro":1, "fev":1, "marco":2, "mar":2,
+  "abril":3, "abr":3, "maio":4, "mai":4, "junho":5, "jun":5,
+  "julho":6, "jul":6, "agosto":7, "ago":7, "setembro":8, "set":8,
+  "outubro":9, "out":9, "novembro":10, "nov":10, "dezembro":11, "dez":11
+};
+const STOPWORDS_BUSCA = new Set([
+  "de","da","do","das","dos","em","no","na","nos","nas","para","com","sem",
+  "por","que","uma","um","uns","umas","e","a","o","as","os","ao","aos","à",
+  "quanto","quanta","quantos","quantas","foi","foram","qual","quais","custo",
+  "custos","valor","valores","total","gasto","gastos","gastou","gastaram",
+  "apropriado","apropriados","referente","referentes","mes","mês","ano","dia"
+]);
+
+function normalizarBusca(texto){
+  return removerAcentos(texto).replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
+}
+
+// Compara a query normalizada com uma lista de candidatos (strings originais),
+// pontuando pela fração de palavras significativas do candidato encontradas na query.
+function melhorCorrespondenciaBusca(queryNorm, candidatosUnicos, minScore=0.5, minPalavras=1){
+  let melhor = null;
+  candidatosUnicos.forEach(original=>{
+    const candNorm = normalizarBusca(original);
+    const palavras = candNorm.split(" ").filter(p=>p.length>2 && !STOPWORDS_BUSCA.has(p));
+    const base = palavras.length ? palavras : candNorm.split(" ").filter(Boolean);
+    if(!base.length) return;
+    const encontradas = base.filter(p => queryNorm.includes(p));
+    const score = encontradas.length / base.length;
+    // Exige pelo menos min(minPalavras, nº de palavras do candidato) — evita que um candidato
+    // com várias palavras "combine" só por causa de uma palavra genérica isolada (ex.: "saúde"
+    // presente tanto na secretaria quanto, por acaso, no nome de uma unidade qualquer).
+    const necessario = Math.min(minPalavras, base.length);
+    if(encontradas.length < necessario) return;
+    if(score < minScore) return;
+    if(!melhor || score > melhor.score ||
+       (score === melhor.score && encontradas.length > melhor.encontradas)){
+      melhor = { valor: original, score, encontradas: encontradas.length };
+    }
+  });
+  return melhor;
+}
+
+function executarBuscaInteligente(){
+  const campo = $("campoBuscaInteligente");
+  const saida = $("resultadoBuscaInteligente");
+  const perguntaOriginal = (campo.value || "").trim();
+
+  if(!perguntaOriginal){
+    saida.innerHTML = "";
+    return;
+  }
+  if(!dados.length){
+    saida.innerHTML = `<div class="alert alert-warning mb-0 py-2 small">Carregue os dados (botão "Consultar Dados") antes de fazer uma busca.</div>`;
+    falarRespostaBusca("Ainda não há dados carregados. Clique em Consultar Dados antes de perguntar.");
+    return;
+  }
+
+  const queryNorm = normalizarBusca(perguntaOriginal);
+
+  // ----- Mês -----
+  let mesEncontrado = null, mesTexto = null;
+  for(const chave in MESES_BUSCA){
+    if(new RegExp(`\\b${chave}\\b`).test(queryNorm)){
+      mesEncontrado = MESES_BUSCA[chave];
+      mesTexto = chave;
+      break;
+    }
+  }
+
+  // ----- Ano -----
+  const matchAno = queryNorm.match(/\b(20\d{2})\b/);
+  const anoEncontrado = matchAno ? Number(matchAno[1]) : null;
+
+  // ----- Item de Custo -----
+  const itensUnicos = [...new Set(dados.map(d=>d.itemCusto).filter(Boolean))];
+  const itemEncontrado = melhorCorrespondenciaBusca(queryNorm, itensUnicos, 0.5, 2);
+
+  // ----- Unidade / Objeto de Custo -----
+  const objetosUnicos = [...new Set(dados.map(d=>d.objetoNome).filter(Boolean))];
+  const objetoEncontrado = melhorCorrespondenciaBusca(queryNorm, objetosUnicos, 0.5, 2);
+
+  // ----- Secretaria (exige match mais forte, para evitar falso positivo em "municipal") -----
+  const secretariasUnicas = [...new Set(dados.map(d=>d.secretaria).filter(Boolean))];
+  const secretariaEncontrada = melhorCorrespondenciaBusca(queryNorm, secretariasUnicas, 0.6, 2);
+
+  // ----- Aplica os filtros identificados -----
+  let resultado = dados;
+  if(anoEncontrado) resultado = resultado.filter(d => d.data && d.data.getFullYear() === anoEncontrado);
+  if(mesEncontrado !== null) resultado = resultado.filter(d => d.data && d.data.getMonth() === mesEncontrado);
+  if(itemEncontrado) resultado = resultado.filter(d => d.itemCusto === itemEncontrado.valor);
+  if(objetoEncontrado) resultado = resultado.filter(d => d.objetoNome === objetoEncontrado.valor);
+  if(secretariaEncontrada) resultado = resultado.filter(d => d.secretaria === secretariaEncontrada.valor);
+
+  const nenhumCriterio = !mesEncontrado && mesEncontrado!==0 && !anoEncontrado && !itemEncontrado && !objetoEncontrado && !secretariaEncontrada;
+
+  if(nenhumCriterio){
+    saida.innerHTML = `
+      <div class="alert alert-warning mb-0 py-2 small">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Não consegui identificar item de custo, unidade, secretaria ou mês na pergunta.
+        Tente algo como: <em>"custo com merenda escolar na escola reino da loucinha em setembro"</em>.
+      </div>`;
+    falarRespostaBusca("Não consegui entender sua pergunta. Tente citar um item de custo, uma unidade ou um mês.");
+    return;
+  }
+
+  // ----- Monta os "chips" com os filtros interpretados -----
+  const chips = [];
+  if(secretariaEncontrada) chips.push(`<span class="busca-chip">Secretaria: <strong>${escapeHtml(secretariaEncontrada.valor)}</strong></span>`);
+  if(objetoEncontrado) chips.push(`<span class="busca-chip">Unidade: <strong>${escapeHtml(objetoEncontrado.valor)}</strong></span>`);
+  if(itemEncontrado) chips.push(`<span class="busca-chip">Item de Custo: <strong>${escapeHtml(itemEncontrado.valor)}</strong></span>`);
+  if(mesEncontrado !== null){
+    const nomesMes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    chips.push(`<span class="busca-chip">Mês: <strong>${nomesMes[mesEncontrado]}${anoEncontrado?"/"+anoEncontrado:""}</strong></span>`);
+  } else if(anoEncontrado){
+    chips.push(`<span class="busca-chip">Ano: <strong>${anoEncontrado}</strong></span>`);
+  }
+
+  const total = resultado.reduce((t,d)=>t+d.valor,0);
+  const registros = resultado.length;
+
+  // ----- Monta uma descrição curta, em texto simples, para a resposta falada -----
+  const partesFaladas = [];
+  if(itemEncontrado) partesFaladas.push(itemEncontrado.valor);
+  if(objetoEncontrado) partesFaladas.push(`na ${objetoEncontrado.valor}`);
+  else if(secretariaEncontrada) partesFaladas.push(`na ${secretariaEncontrada.valor}`);
+  if(mesEncontrado !== null){
+    const nomesMesFala = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+    partesFaladas.push(`em ${nomesMesFala[mesEncontrado]}${anoEncontrado?" de "+anoEncontrado:""}`);
+  } else if(anoEncontrado){
+    partesFaladas.push(`em ${anoEncontrado}`);
+  }
+  const descricaoFalada = partesFaladas.join(" ");
+
+  if(registros === 0){
+    saida.innerHTML = `
+      <div class="busca-resposta-card">
+        <div class="mb-2">${chips.join("")}</div>
+        <div class="small-muted"><i class="bi bi-info-circle me-1"></i>Nenhum lançamento encontrado para esses critérios no período disponível.</div>
+      </div>`;
+    falarRespostaBusca(`Não encontrei nenhum lançamento${descricaoFalada ? " de " + descricaoFalada : ""}.`);
+    return;
+  }
+
+  const linhasTabela = resultado
+    .slice()
+    .sort((a,b)=> (b.data?.getTime()||0) - (a.data?.getTime()||0))
+    .slice(0,25)
+    .map(d=>`
+      <tr>
+        <td>${d.data ? d.data.toLocaleDateString("pt-BR") : "—"}</td>
+        <td>${escapeHtml(d.secretaria)}</td>
+        <td>${escapeHtml(d.objetoNome)}</td>
+        <td>${escapeHtml(d.itemCusto)}</td>
+        <td class="text-end">${moeda(d.valor)}</td>
+      </tr>`).join("");
+
+  saida.innerHTML = `
+    <div class="busca-resposta-card">
+      <div class="mb-2">${chips.join("")}</div>
+      <div class="busca-resposta-valor">${moeda(total)}</div>
+      <div class="small-muted mb-3">em ${registros.toLocaleString("pt-BR")} lançamento(s)</div>
+      <div class="table-responsive">
+        <table class="table table-sm busca-resposta-tabela mb-0">
+          <thead><tr><th>Data</th><th>Secretaria</th><th>Unidade</th><th>Item de Custo</th><th class="text-end">Valor</th></tr></thead>
+          <tbody>${linhasTabela}</tbody>
+        </table>
+      </div>
+      ${registros>25 ? `<div class="small-muted mt-2">Mostrando 25 de ${registros.toLocaleString("pt-BR")} lançamentos.</div>` : ""}
+    </div>`;
+
+  const registrosTexto = registros === 1 ? "1 lançamento" : `${registros.toLocaleString("pt-BR")} lançamentos`;
+  falarRespostaBusca(`${descricaoFalada ? "Custo com " + descricaoFalada + ": " : ""}${moeda(total)}, em ${registrosTexto}.`);
+}
+
+// ================= Síntese de voz (resposta falada em pt-BR) =================
+let vozPtBR = null;
+function carregarVozPtBR(){
+  if(!("speechSynthesis" in window)) return;
+  const vozes = window.speechSynthesis.getVoices();
+  vozPtBR = vozes.find(v => v.lang === "pt-BR") || vozes.find(v => v.lang && v.lang.startsWith("pt")) || null;
+}
+if("speechSynthesis" in window){
+  carregarVozPtBR();
+  window.speechSynthesis.onvoiceschanged = carregarVozPtBR;
+}
+
+function falarRespostaBusca(texto){
+  if(!("speechSynthesis" in window) || !texto) return;
+  try{
+    window.speechSynthesis.cancel(); // interrompe qualquer fala anterior antes de iniciar a nova
+    const utter = new SpeechSynthesisUtterance(texto);
+    utter.lang = "pt-BR";
+    if(vozPtBR) utter.voice = vozPtBR;
+    utter.rate = 1;
+    window.speechSynthesis.speak(utter);
+  }catch(e){
+    console.warn("Não foi possível falar a resposta:", e);
+  }
+}
+
+// ================= Reconhecimento de voz (pergunta falada em pt-BR) =================
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+let reconhecimentoVoz = null;
+let ouvindoAgora = false;
+
+function iniciarBuscaPorVoz(){
+  const btnVoz = $("btnBuscaVoz");
+  const statusVoz = $("statusBuscaVoz");
+
+  if(!SpeechRecognitionAPI){
+    alert('Reconhecimento de voz não é suportado neste navegador. Tente usar o Google Chrome ou o Microsoft Edge.');
+    return;
+  }
+  if(ouvindoAgora){
+    reconhecimentoVoz && reconhecimentoVoz.stop();
+    return;
+  }
+
+  reconhecimentoVoz = new SpeechRecognitionAPI();
+  reconhecimentoVoz.lang = "pt-BR";
+  reconhecimentoVoz.interimResults = false;
+  reconhecimentoVoz.maxAlternatives = 1;
+  reconhecimentoVoz.continuous = false;
+
+  reconhecimentoVoz.onstart = ()=>{
+    ouvindoAgora = true;
+    btnVoz.classList.add("ouvindo");
+    statusVoz.style.display = "";
+  };
+  reconhecimentoVoz.onresult = (ev)=>{
+    const transcricao = ev.results[0][0].transcript;
+    $("campoBuscaInteligente").value = transcricao;
+    executarBuscaInteligente();
+  };
+  reconhecimentoVoz.onerror = (ev)=>{
+    statusVoz.style.display = "none";
+    if(ev.error !== "no-speech" && ev.error !== "aborted"){
+      console.warn("Erro no reconhecimento de voz:", ev.error);
+    }
+  };
+  reconhecimentoVoz.onend = ()=>{
+    ouvindoAgora = false;
+    btnVoz.classList.remove("ouvindo");
+    statusVoz.style.display = "none";
+  };
+
+  try{
+    reconhecimentoVoz.start();
+  }catch(e){
+    console.warn("Não foi possível iniciar o reconhecimento de voz:", e);
+  }
 }
 
 function limparEndereco(endereco){
@@ -2475,6 +2778,17 @@ $("btnCsv").addEventListener("click", exportarCSV);
 $("filtroSecretaria").addEventListener("change", ()=>{ atualizarFiltroDepartamento(); atualizarDashboard(); });
 $("filtroDepartamento").addEventListener("change", atualizarDashboard);
 $("filtroItem").addEventListener("change", atualizarDashboard);
+
+$("btnBuscaInteligente").addEventListener("click", executarBuscaInteligente);
+$("campoBuscaInteligente").addEventListener("keydown", (ev)=>{
+  if(ev.key === "Enter") executarBuscaInteligente();
+});
+$("btnBuscaVoz").addEventListener("click", iniciarBuscaPorVoz);
+if(!SpeechRecognitionAPI){
+  const btnVozInexistente = $("btnBuscaVoz");
+  btnVozInexistente.disabled = true;
+  btnVozInexistente.title = "Reconhecimento de voz não suportado neste navegador";
+}
 
 $("tbodyArea").addEventListener("click", (ev)=>{
   const btn = ev.target.closest(".btn-ver-mapa");
