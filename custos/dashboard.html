@@ -367,6 +367,32 @@ body {
 :root[data-theme="dark"] #eduRodapeInfo,
 :root[data-theme="dark"] #socRodapeInfo,
 :root[data-theme="dark"] #maRodapeInfo { color:#9aa1a8; }
+:root[data-theme="dark"] .btn-outline-custom {
+  color: var(--texto-modo);
+  border-color: #4a4f57;
+}
+:root[data-theme="dark"] .btn-outline-custom:hover {
+  background-color: var(--texto-modo);
+  border-color: var(--texto-modo);
+  color: #14161a;
+}
+:root[data-theme="dark"] .dropdown-menu {
+  background-color: var(--superficie);
+  border-color: var(--borda-modo);
+}
+:root[data-theme="dark"] .dropdown-menu .form-check-label { color: var(--texto-modo); }
+:root[data-theme="dark"] .btn-outline-secondary {
+  color: var(--texto-modo); border-color: #4a4f57;
+}
+:root[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: #30353c; color: var(--texto-modo);
+}
+
+/* === ADICIONE AQUI === */
+:root[data-theme="dark"] .text-muted,
+:root[data-theme="dark"] .small-muted {
+  color: #ffffff !important;
+}
 </style>
 <script>
   // Aplica o tema salvo (ou preferência do sistema) o quanto antes, evitando "flash" de tela.
@@ -673,19 +699,36 @@ body {
   <div class="card mb-3">
     <div class="card-body py-3">
       <div class="row g-3 align-items-end">
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label fw-semibold small">Data Inicial</label>
           <input type="date" id="dataInicialArea" class="form-control form-control-sm">
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label fw-semibold small">Data Final</label>
           <input type="date" id="dataFinalArea" class="form-control form-control-sm">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label fw-semibold small">Item de Custo</label>
           <select id="filtroItemArea" class="form-select form-select-sm">
             <option value="">Todos</option>
           </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Unidade / Objeto</label>
+          <div class="dropdown" id="dropdownUnidadeArea">
+            <button class="btn btn-outline-secondary btn-sm w-100 text-start dropdown-toggle d-flex justify-content-between align-items-center"
+                    type="button" id="btnUnidadeArea" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+              <span id="labelUnidadeArea" class="text-truncate">Todas as unidades</span>
+            </button>
+            <div class="dropdown-menu p-2 shadow" style="min-width:300px; max-width:380px;" aria-labelledby="btnUnidadeArea">
+              <input type="text" id="buscaUnidadeArea" class="form-control form-control-sm mb-2" placeholder="Buscar unidade...">
+              <div class="d-flex justify-content-between mb-2">
+                <button type="button" class="btn btn-sm btn-link p-0" id="btnSelecionarTodasUnidades">Selecionar todas</button>
+                <button type="button" class="btn btn-sm btn-link p-0 text-danger" id="btnLimparUnidades">Limpar seleção</button>
+              </div>
+              <div id="listaUnidadesArea" style="max-height:260px; overflow-y:auto;"></div>
+            </div>
+          </div>
         </div>
         <div class="col-md-2">
           <button id="btnLimparArea" class="btn btn-outline-secondary btn-sm w-100">
@@ -1115,6 +1158,8 @@ const ITENS_POR_PAGINA = 50;
 let setorAtual = "custos";
 let unidadesAreaAtual = [];
 let colunaOrdenacaoArea = "valor";
+let unidadesSelecionadasArea = [];   // seleção múltipla do filtro "Unidade / Objeto"
+let unidadesDisponiveisArea = [];    // lista completa de unidades do setor atual (para a busca no dropdown)
 let direcaoOrdenacaoArea = "desc";
 
 const CONFIG_SETOR = {
@@ -2126,6 +2171,49 @@ function preencherFiltroItemArea(setor){
     itens.map(i=> `<option value="${escapeHtml(i)}">${escapeHtml(i)}</option>`).join("");
 }
 
+// Filtro de Unidade/Objeto com seleção múltipla (usado em Educação, Saúde, Infraestrutura,
+// Desenvolvimento Social e da Mulher e Meio Ambiente)
+function preencherFiltroUnidadeArea(setor){
+  const baseSetor = filtrarPorSetor(setor).filter(item => !item.naoUtilizar);
+  unidadesDisponiveisArea = [...new Set(baseSetor.map(d=>d.objetoNome))].sort((a,b)=>String(a).localeCompare(String(b),"pt-BR"));
+  unidadesSelecionadasArea = []; // reseta a seleção ao trocar de setor
+  const campoBusca = $("buscaUnidadeArea");
+  if(campoBusca) campoBusca.value = "";
+  renderizarListaUnidadesArea(unidadesDisponiveisArea, "");
+  atualizarLabelUnidadeArea();
+}
+
+function renderizarListaUnidadesArea(unidades, filtroTexto){
+  const lista = $("listaUnidadesArea");
+  if(!lista) return;
+  const termo = removerAcentos(filtroTexto || "");
+  const filtradas = termo ? unidades.filter(u => removerAcentos(u).includes(termo)) : unidades;
+  if(!filtradas.length){
+    lista.innerHTML = `<div class="small-muted px-1 py-2">Nenhuma unidade encontrada.</div>`;
+    return;
+  }
+  lista.innerHTML = filtradas.map((u,i)=>{
+    const id = `chkUnidadeArea_${i}_${u.length}`;
+    const marcado = unidadesSelecionadasArea.includes(u) ? "checked" : "";
+    return `<div class="form-check">
+      <input class="form-check-input chk-unidade-area" type="checkbox" value="${escapeHtml(u)}" id="${id}" ${marcado}>
+      <label class="form-check-label small" for="${id}">${escapeHtml(u)}</label>
+    </div>`;
+  }).join("");
+}
+
+function atualizarLabelUnidadeArea(){
+  const label = $("labelUnidadeArea");
+  if(!label) return;
+  if(!unidadesSelecionadasArea.length){
+    label.textContent = "Todas as unidades";
+  } else if(unidadesSelecionadasArea.length === 1){
+    label.textContent = unidadesSelecionadasArea[0];
+  } else {
+    label.textContent = `${unidadesSelecionadasArea.length} unidades selecionadas`;
+  }
+}
+
 function obterDadosSetorFiltrados(setor){
   const inicio = $("dataInicialArea").value;
   const fim = $("dataFinalArea").value;
@@ -2137,7 +2225,8 @@ function obterDadosSetorFiltrados(setor){
     const okInicio = !inicio || (dataStr && dataStr >= inicio);
     const okFim = !fim || (dataStr && dataStr <= fim);
     const okItem = !item || d.itemCusto === item;
-    return okInicio && okFim && okItem;
+    const okUnidade = !unidadesSelecionadasArea.length || unidadesSelecionadasArea.includes(d.objetoNome);
+    return okInicio && okFim && okItem && okUnidade;
   });
 }
 
@@ -2155,6 +2244,7 @@ function renderizarPainelArea(setor){
 
   ajustarDatasPadraoArea();
   preencherFiltroItemArea(setor);
+  preencherFiltroUnidadeArea(setor);
 
   colunaOrdenacaoArea = "valor";
   direcaoOrdenacaoArea = "desc";
@@ -2721,6 +2811,11 @@ function atualizarIconesOrdenacaoArea(){
 function limparFiltrosArea(){
   ajustarDatasPadraoArea();
   $("filtroItemArea").value = "";
+  unidadesSelecionadasArea = [];
+  const campoBusca = $("buscaUnidadeArea");
+  if(campoBusca) campoBusca.value = "";
+  renderizarListaUnidadesArea(unidadesDisponiveisArea, "");
+  atualizarLabelUnidadeArea();
   atualizarPainelArea();
 }
 
@@ -2944,6 +3039,35 @@ $("dataInicialArea").addEventListener("change", atualizarPainelArea);
 $("dataFinalArea").addEventListener("change", atualizarPainelArea);
 $("filtroItemArea").addEventListener("change", atualizarPainelArea);
 $("btnLimparArea").addEventListener("click", limparFiltrosArea);
+
+$("listaUnidadesArea").addEventListener("change", (ev)=>{
+  if(!ev.target.classList.contains("chk-unidade-area")) return;
+  const valor = ev.target.value;
+  if(ev.target.checked){
+    if(!unidadesSelecionadasArea.includes(valor)) unidadesSelecionadasArea.push(valor);
+  } else {
+    unidadesSelecionadasArea = unidadesSelecionadasArea.filter(u => u !== valor);
+  }
+  atualizarLabelUnidadeArea();
+  atualizarPainelArea();
+});
+$("buscaUnidadeArea").addEventListener("input", (ev)=>{
+  renderizarListaUnidadesArea(unidadesDisponiveisArea, ev.target.value);
+});
+$("btnSelecionarTodasUnidades").addEventListener("click", (ev)=>{
+  ev.preventDefault();
+  unidadesSelecionadasArea = [...unidadesDisponiveisArea];
+  renderizarListaUnidadesArea(unidadesDisponiveisArea, $("buscaUnidadeArea").value);
+  atualizarLabelUnidadeArea();
+  atualizarPainelArea();
+});
+$("btnLimparUnidades").addEventListener("click", (ev)=>{
+  ev.preventDefault();
+  unidadesSelecionadasArea = [];
+  renderizarListaUnidadesArea(unidadesDisponiveisArea, $("buscaUnidadeArea").value);
+  atualizarLabelUnidadeArea();
+  atualizarPainelArea();
+});
 $("filtroBusca").addEventListener("input", atualizarDashboard);
 $("dataInicial").addEventListener("change", atualizarDashboard);
 $("dataFinal").addEventListener("change", atualizarDashboard);
