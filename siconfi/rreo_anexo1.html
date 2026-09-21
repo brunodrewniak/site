@@ -3,555 +3,1166 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RREO — Balanço Orçamentário | Campo Largo</title>
+<title>RREO - Anexo 1 | Balanço Orçamentário | Campo Largo</title>
+
+<!-- Bootstrap 5 & Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 :root{
-  --azul:#073b6f; --azul2:#0d6efd; --fundo:#eef2f6;
-  --linha:#cfd5dc; --cab:#e9edf2; --sub:#f7f8fa;
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--fundo);font-family:Arial,Helvetica,sans-serif;color:#111}
-.navbar{background:var(--azul)!important}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
 .hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
 .card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
-.pdf-page{
-  background:#fff; max-width:1450px; margin:24px auto; padding:24px 28px;
-  box-shadow:0 2px 14px rgba(0,0,0,.12); border:1px solid #d8dde3;
-}
-.pdf-header{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}
-.pdf-header h1{font-size:20px;margin:0;font-weight:700}
-.pdf-header h2{font-size:18px;margin:3px 0;font-weight:700}
-.pdf-header h3{font-size:16px;margin:3px 0;font-weight:700}
-.pdf-header .periodo{font-size:14px;font-weight:700;margin-top:7px}
-.meta{font-size:12px;color:#444;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.section-title{
-  background:#dfe3e8;border:1px solid #8e959d;padding:7px 9px;
-  font-weight:700;font-size:14px;text-transform:uppercase;margin-top:14px;
-}
-.pdf-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
-.pdf-table th,.pdf-table td{border:1px solid #9da4ab;padding:4px 5px;vertical-align:middle}
-.pdf-table th{background:#e5e8eb;text-align:center;font-weight:700}
-.pdf-table td.num{text-align:right;white-space:nowrap}
-.pdf-table td.conta{font-weight:500}
-.pdf-table tr.total td{font-weight:700;background:#f0f2f4}
-.pdf-table tr.subtotal td{font-weight:700;background:#f7f8fa}
-.pdf-table .conta-col{width:31%}
-.pdf-table .num-col{width:9.85%}
-.kpis{display:grid;grid-system:repeat(4,1fr);grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
-.kpi{border:1px solid #c7cdd4;border-left:5px solid var(--azul2);padding:10px;background:#fff}
-.kpi .label{font-size:11px;color:#666}.kpi .valor{font-size:18px;font-weight:700;color:var(--azul)}
-.small-muted{font-size:11px;color:#666}
-.status{font-size:13px}
-.sticky-controls{position:sticky;top:0;z-index:1000;background:rgba(238,242,246,.96);backdrop-filter:blur(5px);padding:10px 0}
-.api-url{word-break:break-all;font-size:11px}
-.footer-note{font-size:10px;color:#555;border-top:1px solid #999;margin-top:14px;padding-top:8px}
-@media(max-width:1000px){
-  .pdf-page{margin:10px;padding:12px}
-  .pdf-table{font-size:9px}
-  .kpis{grid-template-columns:repeat(2,1fr)}
-}
-@media print{
-  body{background:#fff}
-  .no-print,.sticky-controls,.navbar,.hero{display:none!important}
-  .pdf-page{box-shadow:none;border:0;margin:0;max-width:none;padding:8mm}
-  .pdf-table{font-size:9px}
-  @page{size:A4 landscape;margin:8mm}
-}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.3rem;font-weight:700;color:var(--azul-escuro)}
+.kpi .valor.positivo{color:var(--verde)}
+.kpi .valor.negativo{color:var(--vermelho)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-sm{height:260px;}
+.chart-box.chart-box-lg{height:420px;}
+.table-responsive{max-height:640px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.82rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rreo-table{font-size:.86rem}
+.rreo-table td.valor, .rreo-table th.valor{text-align:right;white-space:nowrap}
+.rreo-table tr.nivel-0{font-weight:700;background:#eef3fb}
+.rreo-table tr.nivel-1{font-weight:600;background:#f7f9fc}
+.rreo-table tr.nivel-2{font-weight:500}
+.rreo-table tr.nivel-3{color:#444}
+.rreo-table td.conta-nome{white-space:nowrap}
+.indent-1{padding-left:1.1rem !important}
+.indent-2{padding-left:2.1rem !important}
+.indent-3{padding-left:3.1rem !important}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.badge-fonte{font-size:.72rem}
+.gauge-wrap{position:relative;height:230px}
+.gauge-label{position:absolute;left:0;right:0;top:62%;text-align:center}
+.gauge-label .valor-central{font-size:1.35rem;font-weight:800}
+.gauge-label .sub-central{font-size:.78rem;color:#6c757d}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
 </style>
 </head>
+
 <body>
 
-<nav class="navbar navbar-dark no-print">
-  <div class="container-fluid px-4">
-    <span class="navbar-brand fw-bold"><i class="bi bi-bank2"></i> RREO — Campo Largo/PR</span>
-    <span class="text-white small">SICONFI / Tesouro Nacional</span>
-  </div>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-bank"></i> Contabilidade Pública
+</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
 </nav>
 
-<header class="hero py-4 no-print">
-  <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-      <div>
-        <span class="badge bg-light text-primary mb-2">RREO — ANEXO 01</span>
-        <h1 class="h3 fw-bold mb-1">Balanço Orçamentário</h1>
-        <div>Apresentação em HTML seguindo a estrutura do relatório oficial.</div>
-      </div>
-      <div class="text-end small">
-        Município de Campo Largo — PR<br>
-        Código do ente: <strong>4104204</strong>
-      </div>
-    </div>
-  </div>
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RREO - ANEXO 1 (LRF, Art. 52)</span>
+<h1 class="display-6 fw-bold">Balanço Orçamentário</h1>
+<p class="lead mb-0">
+Relatório Resumido da Execução Orçamentária consultado diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).
+</p>
+</div>
+</div>
+</div>
 </header>
 
-<main class="container-fluid px-3 px-lg-4">
-  <div class="sticky-controls no-print">
-    <div class="card">
-      <div class="card-body">
-        <div class="row g-2 align-items-end">
-          <div class="col-6 col-md-2">
-            <label class="form-label fw-semibold mb-1">Ano</label>
-            <select id="ano" class="form-select">
-              <option>2026</option><option>2025</option><option>2024</option><option>2023</option>
-            </select>
-          </div>
-          <div class="col-6 col-md-3">
-            <label class="form-label fw-semibold mb-1">Período / Bimestre</label>
-            <select id="periodo" class="form-select">
-              <option value="1">1º Bimestre — Janeiro a Fevereiro</option>
-              <option value="2">2º Bimestre — Janeiro a Abril</option>
-              <option value="3">3º Bimestre — Janeiro a Junho</option>
-              <option value="4">4º Bimestre — Janeiro a Agosto</option>
-              <option value="5">5º Bimestre — Janeiro a Outubro</option>
-              <option value="6">6º Bimestre — Janeiro a Dezembro</option>
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label fw-semibold mb-1">Anexo</label>
-            <input class="form-control" value="RREO-Anexo 01" disabled>
-          </div>
-          <div class="col-md-2">
-            <button id="consultar" class="btn btn-primary w-100"><i class="bi bi-search"></i> Buscar via API</button>
-          </div>
-          <div class="col-md-1">
-            <button id="imprimir" class="btn btn-outline-secondary w-100" title="Imprimir / salvar em PDF"><i class="bi bi-printer"></i></button>
-          </div>
-          <div class="col-md-2">
-            <label class="btn btn-outline-primary w-100 mb-0">
-              <i class="bi bi-file-earmark-code"></i> Carregar JSON
-              <input id="json" type="file" accept=".json" hidden>
-            </label>
-          </div>
-        </div>
-        <div class="mt-2 small-muted api-url" id="urlPreview"></div>
-        <div class="alert alert-info status mt-2 mb-0" id="status">Carregando dados...</div>
-      </div>
-    </div>
-  </div>
+<main class="container py-4">
 
-  <section class="pdf-page" id="relatorio">
-    <div class="pdf-header">
-      <h1>MUNICÍPIO DE CAMPO LARGO - PR</h1>
-      <h2>Relatório Resumido da Execução Orçamentária</h2>
-      <h3>BALANÇO ORÇAMENTÁRIO</h3>
-      <div>Orçamentos Fiscal e da Seguridade Social</div>
-      <div class="periodo" id="cabPeriodo">Período de Referência: Janeiro a Fevereiro de 2026 / Bimestre Janeiro-Fevereiro</div>
-    </div>
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
 
-    <div class="meta">
-      <span>Entidade: Município de Campo Largo</span>
-      <span>Exercício: <strong id="cabAno">2026</strong></span>
-      <span>Anexo: RREO - Anexo 1</span>
-    </div>
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
 
-    <div class="kpis">
-      <div class="kpi"><div class="label">Previsão/Orçamento principal</div><div class="valor" id="kpiPrev">—</div></div>
-      <div class="kpi"><div class="label">Receita realizada até o bimestre</div><div class="valor" id="kpiRec">—</div></div>
-      <div class="kpi"><div class="label">Despesa empenhada até o bimestre</div><div class="valor" id="kpiEmp">—</div></div>
-      <div class="kpi"><div class="label">Despesa liquidada até o bimestre</div><div class="valor" id="kpiLiq">—</div></div>
-    </div>
+<div class="row g-3">
 
-    <div class="section-title">RECEITAS</div>
-    <div class="table-responsive">
-      <table class="pdf-table" id="tabelaReceitas">
-        <thead><tr id="headReceitas"></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+<div class="col-md-2">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
+</div>
 
-    <div class="section-title">DESPESAS</div>
-    <div class="table-responsive">
-      <table class="pdf-table" id="tabelaDespesas">
-        <thead><tr id="headDespesas"></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+<div class="col-md-2">
+<label class="form-label fw-semibold">Período (bimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Bimestre (Jan-Fev)</option>
+<option value="2">2º Bimestre (Mar-Abr)</option>
+<option value="3">3º Bimestre (Mai-Jun)</option>
+<option value="4">4º Bimestre (Jul-Ago)</option>
+<option value="5">5º Bimestre (Set-Out)</option>
+<option value="6">6º Bimestre (Nov-Dez)</option>
+</select>
+</div>
 
-    <div class="section-title">NOTAS E FONTE</div>
-    <div class="footer-note">
-      FONTE: Sistema SICONFI — Tesouro Nacional / Secretaria do Tesouro Nacional. 
-      Esta apresentação reorganiza os dados retornados pela API ou arquivo JSON embarcado/local para reproduzir a estrutura do RREO - Anexo 01.
-    </div>
-  </section>
+<div class="col-md-2">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Anexo</label>
+<input type="text" id="filtroAnexo" class="form-control" value="RREO-Anexo 01">
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Tipo demonstrativo</label>
+<input type="text" id="filtroTipo" class="form-control" value="RREO">
+</div>
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100">
+<i class="bi bi-search"></i>
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabelas</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">
+API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code>
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Receita Prevista (atualizada)</div>
+<div id="kpiReceitaPrevista" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Receita Realizada até o bimestre</div>
+<div id="kpiReceitaRealizada" class="valor">R$ 0,00</div>
+<div id="kpiReceitaPercentual" class="small-muted"></div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Dotação Atualizada (despesa)</div>
+<div id="kpiDotacaoAtualizada" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Despesa Empenhada até o bimestre</div>
+<div id="kpiDespesaEmpenhada" class="valor">R$ 0,00</div>
+<div id="kpiDespesaPercentual" class="small-muted"></div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Despesa Liquidada até o bimestre</div>
+<div id="kpiDespesaLiquidada" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Despesa Paga até o bimestre</div>
+<div id="kpiDespesaPaga" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100" id="kpiResultadoCard">
+<div class="card-body">
+<div class="text-muted small">Resultado (Receita Realizada − Despesa Liquidada)</div>
+<div id="kpiResultado" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Ente / População</div>
+<div id="kpiEnte" class="valor" style="font-size:1rem">-</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<!-- ===================== VISÃO EM TABELAS ===================== -->
+<div id="viewTabelas">
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Receitas Orçamentárias (Exceto Intra-Orçamentárias)</h5>
+<span class="small-muted">RREO - Anexo 1 (LRF, Art. 52, inciso I, alíneas "a" e "b" do inciso II e §1º)</span>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark">
+<tr>
+<th style="min-width:320px">Receitas</th>
+<th class="valor">Previsão Inicial</th>
+<th class="valor">Previsão Atualizada (a)</th>
+<th class="valor">No Bimestre (b)</th>
+<th class="valor">% (b/a)</th>
+<th class="valor">Até o Bimestre (c)</th>
+<th class="valor">% (c/a)</th>
+<th class="valor">Saldo (a-c)</th>
+</tr>
+</thead>
+<tbody id="tbodyReceitas"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Receitas Intra-Orçamentárias</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark">
+<tr>
+<th style="min-width:320px">Receitas Intra-Orçamentárias</th>
+<th class="valor">Previsão Inicial</th>
+<th class="valor">Previsão Atualizada (a)</th>
+<th class="valor">No Bimestre (b)</th>
+<th class="valor">% (b/a)</th>
+<th class="valor">Até o Bimestre (c)</th>
+<th class="valor">% (c/a)</th>
+<th class="valor">Saldo (a-c)</th>
+</tr>
+</thead>
+<tbody id="tbodyReceitasIntra"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Despesas Orçamentárias (Exceto Intra-Orçamentárias)</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark">
+<tr>
+<th style="min-width:280px">Despesas</th>
+<th class="valor">Dotação Inicial (d)</th>
+<th class="valor">Dotação Atualizada (e)</th>
+<th class="valor">Empenhadas No Bimestre</th>
+<th class="valor">Empenhadas Até o Bimestre (f)</th>
+<th class="valor">Saldo (g)=(e-f)</th>
+<th class="valor">Liquidadas No Bimestre</th>
+<th class="valor">Liquidadas Até o Bimestre (h)</th>
+<th class="valor">Saldo (i)=(e-h)</th>
+<th class="valor">Pagas Até o Bimestre (j)</th>
+</tr>
+</thead>
+<tbody id="tbodyDespesas"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Despesas Intra-Orçamentárias</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark">
+<tr>
+<th style="min-width:280px">Despesas Intra-Orçamentárias</th>
+<th class="valor">Dotação Inicial (d)</th>
+<th class="valor">Dotação Atualizada (e)</th>
+<th class="valor">Empenhadas No Bimestre</th>
+<th class="valor">Empenhadas Até o Bimestre (f)</th>
+<th class="valor">Saldo (g)=(e-f)</th>
+<th class="valor">Liquidadas No Bimestre</th>
+<th class="valor">Liquidadas Até o Bimestre (h)</th>
+<th class="valor">Saldo (i)=(e-h)</th>
+<th class="valor">Pagas Até o Bimestre (j)</th>
+</tr>
+</thead>
+<tbody id="tbodyDespesasIntra"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<div class="alert alert-secondary small">
+¹ O déficit será apurado pela diferença entre a receita realizada e a despesa liquidada nos cinco primeiros bimestres e a despesa empenhada no último bimestre.
+</div>
+
+</div>
+
+<!-- ===================== VISÃO EM GRÁFICOS ===================== -->
+<div id="viewGraficos" class="d-none">
+
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">1. Previsto x Realizado das Receitas</h5>
+<div class="chart-card-desc mb-2" id="descPrevistoRealizado">Total geral das receitas.</div>
+<div class="chart-box"><canvas id="graficoPrevistoRealizado"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">2. Composição da Receita Arrecadada</h5>
+<div class="chart-card-desc mb-2">Correntes x Capital, e detalhamento das Correntes.</div>
+<div class="row">
+<div class="col-6"><div class="chart-box chart-box-sm"><canvas id="graficoComposicaoCorrentesCapital"></canvas></div></div>
+<div class="col-6"><div class="chart-box chart-box-sm"><canvas id="graficoComposicaoCorrentes"></canvas></div></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">3. Percentual de Execução por Tipo de Receita</h5>
+<div class="chart-card-desc mb-2">% (c/a) — Até o Bimestre / Previsão Atualizada.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoPercentualExecucaoReceita"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">4. Saldo a Arrecadar por Rubrica</h5>
+<div class="chart-card-desc mb-2" id="descSaldoArrecadar">Quanto falta arrecadar de cada fonte.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoSaldoArrecadar"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">5. Despesa: Dotação x Empenhado x Liquidado x Pago</h5>
+<div class="chart-card-desc mb-2">Total, Correntes e Capital.</div>
+<div class="chart-box"><canvas id="graficoDespesaEtapas"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">6. Despesas Correntes x Capital</h5>
+<div class="chart-card-desc mb-2">Valores liquidados até o bimestre; detalhamento das Correntes.</div>
+<div class="row">
+<div class="col-6"><div class="chart-box chart-box-sm"><canvas id="graficoDespesaCorrentesCapital"></canvas></div></div>
+<div class="col-6"><div class="chart-box chart-box-sm"><canvas id="graficoDespesaCorrentesDetalhe"></canvas></div></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">7. Resultado Orçamentário</h5>
+<div class="chart-card-desc mb-2">Receita arrecadada − Despesa liquidada, até o bimestre.</div>
+<div class="gauge-wrap">
+<canvas id="graficoResultadoGauge"></canvas>
+<div class="gauge-label">
+<div class="valor-central" id="resultadoGaugeValor">R$ 0,00</div>
+<div class="sub-central" id="resultadoGaugeSub">Superávit / Déficit</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">8. Funil de Execução da Despesa</h5>
+<div class="chart-card-desc mb-2">Dotação → Empenhado → Liquidado → Pago.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoFunilDespesa"></canvas></div>
+</div>
+</div>
+</div>
+
+</section>
+
+</div>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar um arquivo previamente baixado (mesma estrutura retornada pela API: objeto com a chave <code>items</code>).
+</div>
+
 </main>
 
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Balanço Orçamentário (RREO - Anexo 1) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
 <script>
-// Dados fornecidos (JSON embarcado de fallback)
-const EMBEDDED_JSON = {
-  "items": [
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitasExcetoIntraOrcamentarias","conta":"RECEITAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)","valor":916320221.27},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitasExcetoIntraOrcamentarias","conta":"RECEITAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)","valor":943010375.97},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitasExcetoIntraOrcamentarias","conta":"RECEITAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)","valor":152421451.04},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitasExcetoIntraOrcamentarias","conta":"RECEITAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)","valor":16.16},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitasExcetoIntraOrcamentarias","conta":"RECEITAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)","valor":152421451.04},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitasExcetoIntraOrcamentarias","conta":"RECEITAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)","valor":16.16},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitasExcetoIntraOrcamentarias","conta":"RECEITAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)","valor":790588924.93},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitasCorrentes","conta":"RECEITAS CORRENTES","valor":870341038.33},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitasCorrentes","conta":"RECEITAS CORRENTES","valor":877071459.35},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitasCorrentes","conta":"RECEITAS CORRENTES","valor":133418426.04},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitasCorrentes","conta":"RECEITAS CORRENTES","valor":15.21},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitasCorrentes","conta":"RECEITAS CORRENTES","valor":133418426.04},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitasCorrentes","conta":"RECEITAS CORRENTES","valor":15.21},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitasCorrentes","conta":"RECEITAS CORRENTES","valor":743653033.31},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitaTributaria","conta":"IMPOSTOS, TAXAS E CONTRIBUIÇÕES DE MELHORIA","valor":229761233.41},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitaTributaria","conta":"IMPOSTOS, TAXAS E CONTRIBUIÇÕES DE MELHORIA","valor":229811233.41},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitaTributaria","conta":"IMPOSTOS, TAXAS E CONTRIBUIÇÕES DE MELHORIA","valor":29354029.12},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitaTributaria","conta":"IMPOSTOS, TAXAS E CONTRIBUIÇÕES DE MELHORIA","valor":12.77},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitaTributaria","conta":"IMPOSTOS, TAXAS E CONTRIBUIÇÕES DE MELHORIA","valor":29354029.12},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitaTributaria","conta":"IMPOSTOS, TAXAS E CONTRIBUIÇÕES DE MELHORIA","valor":12.77},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitaTributaria","conta":"IMPOSTOS, TAXAS E CONTRIBUIÇÕES DE MELHORIA","valor":200457204.29},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"Impostos","conta":"Impostos","valor":210348576.08},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"Impostos","conta":"Impostos","valor":210348576.08},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"Impostos","conta":"Impostos","valor":23589237.7},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"Impostos","conta":"Impostos","valor":11.21},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"Impostos","conta":"Impostos","valor":23589237.7},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"Impostos","conta":"Impostos","valor":11.21},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"Impostos","conta":"Impostos","valor":186759338.38},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"Taxas","conta":"Taxas","valor":19404557.33},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"Taxas","conta":"Taxas","valor":19454557.33},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"Taxas","conta":"Taxas","valor":5763733.16},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"Taxas","conta":"Taxas","valor":29.63},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"Taxas","conta":"Taxas","valor":5763733.16},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"Taxas","conta":"Taxas","valor":29.63},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"Taxas","conta":"Taxas","valor":13690824.17},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ContribuicaoDeMelhoria","conta":"Contribuição de Melhoria","valor":8100},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ContribuicaoDeMelhoria","conta":"Contribuição de Melhoria","valor":8100},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ContribuicaoDeMelhoria","conta":"Contribuição de Melhoria","valor":1058.26},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ContribuicaoDeMelhoria","conta":"Contribuição de Melhoria","valor":13.06},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ContribuicaoDeMelhoria","conta":"Contribuição de Melhoria","valor":1058.26},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ContribuicaoDeMelhoria","conta":"Contribuição de Melhoria","valor":13.06},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ContribuicaoDeMelhoria","conta":"Contribuição de Melhoria","valor":7041.74},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitaDeContribuicoes","conta":"CONTRIBUIÇÕES","valor":37309000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitaDeContribuicoes","conta":"CONTRIBUIÇÕES","valor":37309000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitaDeContribuicoes","conta":"CONTRIBUIÇÕES","valor":4904611.93},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitaDeContribuicoes","conta":"CONTRIBUIÇÕES","valor":13.15},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitaDeContribuicoes","conta":"CONTRIBUIÇÕES","valor":4904611.93},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitaDeContribuicoes","conta":"CONTRIBUIÇÕES","valor":13.15},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitaDeContribuicoes","conta":"CONTRIBUIÇÕES","valor":32404388.07},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ContribuicoesSociais","conta":"Contribuições Sociais","valor":25110000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ContribuicoesSociais","conta":"Contribuições Sociais","valor":25110000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ContribuicoesSociais","conta":"Contribuições Sociais","valor":2733911.63},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ContribuicoesSociais","conta":"Contribuições Sociais","valor":10.89},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ContribuicoesSociais","conta":"Contribuições Sociais","valor":2733911.63},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ContribuicoesSociais","conta":"Contribuições Sociais","valor":10.89},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ContribuicoesSociais","conta":"Contribuições Sociais","valor":22376088.37},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ContribuicaoDeIluminacaoPublica","conta":"Contribuição para o Custeio do Serviço de Iluminação Pública","valor":12199000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ContribuicaoDeIluminacaoPublica","conta":"Contribuição para o Custeio do Serviço de Iluminação Pública","valor":12199000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ContribuicaoDeIluminacaoPublica","conta":"Contribuição para o Custeio do Serviço de Iluminação Pública","valor":2170700.3},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ContribuicaoDeIluminacaoPublica","conta":"Contribuição para o Custeio do Serviço de Iluminação Pública","valor":17.79},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ContribuicaoDeIluminacaoPublica","conta":"Contribuição para o Custeio do Serviço de Iluminação Pública","valor":2170700.3},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ContribuicaoDeIluminacaoPublica","conta":"Contribuição para o Custeio do Serviço de Iluminação Pública","valor":17.79},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ContribuicaoDeIluminacaoPublica","conta":"Contribuição para o Custeio do Serviço de Iluminação Pública","valor":10028299.7},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitaPatrimonial","conta":"RECEITA PATRIMONIAL","valor":66731310.67},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitaPatrimonial","conta":"RECEITA PATRIMONIAL","valor":72239840.96},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitaPatrimonial","conta":"RECEITA PATRIMONIAL","valor":6320457.9},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitaPatrimonial","conta":"RECEITA PATRIMONIAL","valor":8.75},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitaPatrimonial","conta":"RECEITA PATRIMONIAL","valor":6320457.9},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitaPatrimonial","conta":"RECEITA PATRIMONIAL","valor":8.75},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitaPatrimonial","conta":"RECEITA PATRIMONIAL","valor":65919383.06},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitasImobiliarias","conta":"Exploração do Patrimônio Imobiliário do Estado","valor":6723100},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitasImobiliarias","conta":"Exploração do Patrimônio Imobiliário do Estado","valor":6723100},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitasImobiliarias","conta":"Exploração do Patrimônio Imobiliário do Estado","valor":218132.94},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitasImobiliarias","conta":"Exploração do Patrimônio Imobiliário do Estado","valor":3.24},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitasImobiliarias","conta":"Exploração do Patrimônio Imobiliário do Estado","valor":218132.94},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitasImobiliarias","conta":"Exploração do Patrimônio Imobiliário do Estado","valor":3.24},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitasImobiliarias","conta":"Exploração do Patrimônio Imobiliário do Estado","valor":6504967.06},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitasDeValoresMobiliarios","conta":"Valores Mobiliários","valor":49380810.67},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitasDeValoresMobiliarios","conta":"Valores Mobiliários","valor":54889340.96},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitasDeValoresMobiliarios","conta":"Valores Mobiliários","valor":5359090.37},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitasDeValoresMobiliarios","conta":"Valores Mobiliários","valor":9.76},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitasDeValoresMobiliarios","conta":"Valores Mobiliários","valor":5359090.37},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitasDeValoresMobiliarios","conta":"Valores Mobiliários","valor":9.76},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitasDeValoresMobiliarios","conta":"Valores Mobiliários","valor":49530250.59},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitaDeConcessoesEPermissoes","conta":"Delegação de Serviços Públicos Mediante Concessão, Permissão, Autorização ou Licença","valor":627400},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitaDeConcessoesEPermissoes","conta":"Delegação de Serviços Públicos Mediante Concessão, Permissão, Autorização ou Licença","valor":627400},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitaDeConcessoesEPermissoes","conta":"Delegação de Serviços Públicos Mediante Concessão, Permissão, Autorização ou Licença","valor":61107.1},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitaDeConcessoesEPermissoes","conta":"Delegação de Serviços Públicos Mediante Concessão, Permissão, Autorização ou Licença","valor":9.74},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitaDeConcessoesEPermissoes","conta":"Delegação de Serviços Públicos Mediante Concessão, Permissão, Autorização ou Licença","valor":61107.1},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitaDeConcessoesEPermissoes","conta":"Delegação de Serviços Públicos Mediante Concessão, Permissão, Autorização ou Licença","valor":9.74},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitaDeConcessoesEPermissoes","conta":"Delegação de Serviços Públicos Mediante Concessão, Permissão, Autorização ou Licença","valor":566292.9},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"OutrasReceitasPatrimoniais","conta":"Demais Receitas Patrimoniais","valor":10000000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"OutrasReceitasPatrimoniais","conta":"Demais Receitas Patrimoniais","valor":10000000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"OutrasReceitasPatrimoniais","conta":"Demais Receitas Patrimoniais","valor":682127.49},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"OutrasReceitasPatrimoniais","conta":"Demais Receitas Patrimoniais","valor":6.82},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"OutrasReceitasPatrimoniais","conta":"Demais Receitas Patrimoniais","valor":682127.49},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"OutrasReceitasPatrimoniais","conta":"Demais Receitas Patrimoniais","valor":6.82},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"OutrasReceitasPatrimoniais","conta":"Demais Receitas Patrimoniais","valor":9317872.51},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitaIndustrial","conta":"RECEITA INDUSTRIAL","valor":190000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitaIndustrial","conta":"RECEITA INDUSTRIAL","valor":190000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitaIndustrial","conta":"RECEITA INDUSTRIAL","valor":926.86},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitaIndustrial","conta":"RECEITA INDUSTRIAL","valor":0.49},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitaIndustrial","conta":"RECEITA INDUSTRIAL","valor":926.86},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitaIndustrial","conta":"RECEITA INDUSTRIAL","valor":0.49},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitaIndustrial","conta":"RECEITA INDUSTRIAL","valor":189073.14},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ReceitaDeServicos","conta":"RECEITA DE SERVIÇOS","valor":18000000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ReceitaDeServicos","conta":"RECEITA DE SERVIÇOS","valor":18000000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ReceitaDeServicos","conta":"RECEITA DE SERVIÇOS","valor":2034389.92},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ReceitaDeServicos","conta":"RECEITA DE SERVIÇOS","valor":11.3},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ReceitaDeServicos","conta":"RECEITA DE SERVIÇOS","valor":2034389.92},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ReceitaDeServicos","conta":"RECEITA DE SERVIÇOS","valor":11.3},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ReceitaDeServicos","conta":"RECEITA DE SERVIÇOS","valor":15965610.08},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"ServicosEAtividadesReferentesANavegacaoEAoTransporte","conta":"Serviços e Atividades Referentes à Navegação e ao Transporte","valor":18000000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"ServicosEAtividadesReferentesANavegacaoEAoTransporte","conta":"Serviços e Atividades Referentes à Navegação e ao Transporte","valor":18000000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"ServicosEAtividadesReferentesANavegacaoEAoTransporte","conta":"Serviços e Atividades Referentes à Navegação e ao Transporte","valor":2034389.92},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"ServicosEAtividadesReferentesANavegacaoEAoTransporte","conta":"Serviços e Atividades Referentes à Navegação e ao Transporte","valor":11.3},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"ServicosEAtividadesReferentesANavegacaoEAoTransporte","conta":"Serviços e Atividades Referentes à Navegação e ao Transporte","valor":2034389.92},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"ServicosEAtividadesReferentesANavegacaoEAoTransporte","conta":"Serviços e Atividades Referentes à Navegação e ao Transporte","valor":11.3},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"ServicosEAtividadesReferentesANavegacaoEAoTransporte","conta":"Serviços e Atividades Referentes à Navegação e ao Transporte","valor":15965610.08},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"TransferenciasCorrentes","conta":"TRANSFERÊNCIAS CORRENTES","valor":503408694.25},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"TransferenciasCorrentes","conta":"TRANSFERÊNCIAS CORRENTES","valor":504580584.98},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"TransferenciasCorrentes","conta":"TRANSFERÊNCIAS CORRENTES","valor":88378064.97},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"TransferenciasCorrentes","conta":"TRANSFERÊNCIAS CORRENTES","valor":17.52},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"TransferenciasCorrentes","conta":"TRANSFERÊNCIAS CORRENTES","valor":88378064.97},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"TransferenciasCorrentes","conta":"TRANSFERÊNCIAS CORRENTES","valor":17.52},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"TransferenciasCorrentes","conta":"TRANSFERÊNCIAS CORRENTES","valor":416202520.01},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"TransferenciasCorrentesDaUniaoEDeSuasEntidades","conta":"Transferências da União e de suas Entidades","valor":238582987.25},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"TransferenciasCorrentesDaUniaoEDeSuasEntidades","conta":"Transferências da União e de suas Entidades","valor":239479465.47},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"TransferenciasCorrentesDaUniaoEDeSuasEntidades","conta":"Transferências da União e de suas Entidades","valor":38354902.63},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"TransferenciasCorrentesDaUniaoEDeSuasEntidades","conta":"Transferências da União e de suas Entidades","valor":16.02},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"TransferenciasCorrentesDaUniaoEDeSuasEntidades","conta":"Transferências da União e de suas Entidades","valor":38354902.63},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"TransferenciasCorrentesDaUniaoEDeSuasEntidades","conta":"Transferências da União e de suas Entidades","valor":16.02},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"TransferenciasCorrentesDaUniaoEDeSuasEntidades","conta":"Transferências da União e de suas Entidades","valor":201124562.84},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"TransferenciasCorrentesDosEstadosEDoDistritoFederalEDeSuasEntidades","conta":"Transferências dos Estados e do Distrito Federal e de suas Entidades","valor":149730007},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"TransferenciasCorrentesDosEstadosEDoDistritoFederalEDeSuasEntidades","conta":"Transferências dos Estados e do Distrito Federal e de suas Entidades","valor":149977159.86},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"TransferenciasCorrentesDosEstadosEDoDistritoFederalEDeSuasEntidades","conta":"Transferências dos Estados e do Distrito Federal e de suas Entidades","valor":28820208.01},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"TransferenciasCorrentesDosEstadosEDoDistritoFederalEDeSuasEntidades","conta":"Transferências dos Estados e do Distrito Federal e de suas Entidades","valor":19.22},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"TransferenciasCorrentesDosEstadosEDoDistritoFederalEDeSuasEntidades","conta":"Transferências dos Estados e do Distrito Federal e de suas Entidades","valor":28820208.01},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"TransferenciasCorrentesDosEstadosEDoDistritoFederalEDeSuasEntidades","conta":"Transferências dos Estados e do Distrito Federal e de suas Entidades","valor":19.22},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"TransferenciasCorrentesDosEstadosEDoDistritoFederalEDeSuasEntidades","conta":"Transferências dos Estados e do Distrito Federal e de suas Entidades","valor":121156951.85},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"TransferenciasCorrentesDosMunicipiosEDeSuasEntidades","conta":"Transferências dos Municípios e de suas Entidades","valor":95700},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"TransferenciasCorrentesDosMunicipiosEDeSuasEntidades","conta":"Transferências dos Municípios e de suas Entidades","valor":123959.65},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"TransferenciasCorrentesDosMunicipiosEDeSuasEntidades","conta":"Transferências dos Municípios e de suas Entidades","valor":46130.57},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"TransferenciasCorrentesDosMunicipiosEDeSuasEntidades","conta":"Transferências dos Municípios e de suas Entidades","valor":37.21},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"TransferenciasCorrentesDosMunicipiosEDeSuasEntidades","conta":"Transferências dos Municípios e de suas Entidades","valor":46130.57},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"TransferenciasCorrentesDosMunicipiosEDeSuasEntidades","conta":"Transferências dos Municípios e de suas Entidades","valor":37.21},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"TransferenciasCorrentesDosMunicipiosEDeSuasEntidades","conta":"Transferências dos Municípios e de suas Entidades","valor":77829.08},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO INICIAL","cod_conta":"TransferenciasCorrentesDeOutrasInstituicoesPublicas","conta":"Transferências de Outras Instituições Públicas","valor":115000000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"PREVISÃO ATUALIZADA (a)","cod_conta":"TransferenciasCorrentesDeOutrasInstituicoesPublicas","conta":"Transferências de Outras Instituições Públicas","valor":115000000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"TransferenciasCorrentesDeOutrasInstituicoesPublicas","conta":"Transferências de Outras Instituições Públicas","valor":21154823.76},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (b/a)","cod_conta":"TransferenciasCorrentesDeOutrasInstituicoesPublicas","conta":"Transferências de Outras Instituições Públicas","valor":18.4},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"TransferenciasCorrentesDeOutrasInstituicoesPublicas","conta":"Transferências de Outras Instituições Públicas","valor":21154823.76},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"% (c/a)","cod_conta":"TransferenciasCorrentesDeOutrasInstituicoesPublicas","conta":"Transferências de Outras Instituições Públicas","valor":18.4},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"SALDO (a-c)","cod_conta":"TransferenciasCorrentesDeOutrasInstituicoesPublicas","conta":"Transferências de Outras Instituições Públicas","valor":93845176.24},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"No Bimestre (b)","cod_conta":"OutrasTransferenciasCorrentes","conta":"Demais Transferências Correntes","valor":2000},
-    {"exercicio":2026,"demonstrativo":"RREO","periodo":1,"periodicidade":"B","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","populacao":144504,"anexo":"RREO-Anexo 01","esfera":"M","rotulo":"Padrão","coluna":"Até o Bimestre (c)","cod_conta":"OutrasTransferenciasCorrentes","conta":"Demais Transferências Correntes","valor":2000}
-  ]
-};
-
 const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo";
-const ID_ENTE = "4104204";
-const TIPO = "RREO";
-const ANEXO = "RREO-Anexo 01";
 
-const periodos = {
-  1:"Janeiro a Fevereiro", 2:"Janeiro a Abril", 3:"Janeiro a Junho",
-  4:"Janeiro a Agosto", 5:"Janeiro a Outubro", 6:"Janeiro a Dezembro"
-};
-
-let dados = [];
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c","#adb5bd"];
 
 const $ = id => document.getElementById(id);
 
-function moeda(v){
-  if(v===null || v===undefined || v==="") return "—";
-  if(typeof v === "number") return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
-  let s=String(v).trim().replace(/R\$/g,"").replace(/\s/g,"");
-  if(s.includes(",") && s.includes(".")) s=s.replace(/\./g,"").replace(",",".");
-  else if(s.includes(",")) s=s.replace(",",".");
-  let n=Number(s);
-  if(!Number.isFinite(n)) return String(v);
-  return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(n);
+// -------------------- Estrutura fixa do Anexo 1 (RREO) --------------------
+// Cada item: cod_conta oficial do Siconfi + nível de indentação (0 a 3).
+// Linhas cujo cod_conta não vier na resposta da API (ex.: contas zeradas que
+// o Siconfi às vezes omite) são simplesmente ignoradas na montagem da tabela.
+
+const ESTRUTURA_RECEITAS = [
+  {cod:"ReceitasExcetoIntraOrcamentarias", nivel:0},
+  {cod:"ReceitasCorrentes", nivel:1},
+  {cod:"ReceitaTributaria", nivel:2},
+  {cod:"Impostos", nivel:3},
+  {cod:"Taxas", nivel:3},
+  {cod:"ContribuicaoDeMelhoria", nivel:3},
+  {cod:"ReceitaDeContribuicoes", nivel:2},
+  {cod:"ContribuicoesSociais", nivel:3},
+  {cod:"ContribuicoesEconomicas", nivel:3},
+  {cod:"ContribuicaoDeIluminacaoPublica", nivel:3},
+  {cod:"ReceitaPatrimonial", nivel:2},
+  {cod:"ReceitasImobiliarias", nivel:3},
+  {cod:"ReceitasDeValoresMobiliarios", nivel:3},
+  {cod:"ReceitaDeConcessoesEPermissoes", nivel:3},
+  {cod:"OutrasReceitasPatrimoniais", nivel:3},
+  {cod:"ReceitaAgropecuaria", nivel:2},
+  {cod:"ReceitaIndustrial", nivel:2},
+  {cod:"ReceitaDeServicos", nivel:2},
+  {cod:"ServicosEAtividadesReferentesANavegacaoEAoTransporte", nivel:3},
+  {cod:"TransferenciasCorrentes", nivel:2},
+  {cod:"TransferenciasCorrentesDaUniaoEDeSuasEntidades", nivel:3},
+  {cod:"TransferenciasCorrentesDosEstadosEDoDistritoFederalEDeSuasEntidades", nivel:3},
+  {cod:"TransferenciasCorrentesDosMunicipiosEDeSuasEntidades", nivel:3},
+  {cod:"TransferenciasCorrentesDeOutrasInstituicoesPublicas", nivel:3},
+  {cod:"OutrasTransferenciasCorrentes", nivel:3},
+  {cod:"OutrasReceitasCorrentes", nivel:2},
+  {cod:"MultasEJurosDeMora", nivel:3},
+  {cod:"IndenizacoesERestituicoes", nivel:3},
+  {cod:"BensDireitosEValoresIncorporadosAoPatrimonioPublico", nivel:3},
+  {cod:"ReceitasCorrentesDiversas", nivel:3},
+  {cod:"ReceitasDeCapital", nivel:1},
+  {cod:"ReceitasDeOperacoesDeCredito", nivel:2},
+  {cod:"OperacoesDeCreditoInternas", nivel:3},
+  {cod:"AlienacaoDeBens", nivel:2},
+  {cod:"AlienacaoDeBensMoveis", nivel:3},
+  {cod:"TransferenciasDeCapital", nivel:2},
+  {cod:"TransferenciasDeCapitalDaUniaoEDeSuasEntidades", nivel:3},
+  {cod:"TransferenciasDeCapitalDosEstadosEDoDistritoFederalEDeSuasEntidades", nivel:3},
+  {cod:"ReceitasIntraOrcamentariasTotal", nivel:0},
+  {cod:"SubtotalDasReceitas", nivel:0},
+  {cod:"TotalReceitas", nivel:0},
+  {cod:"TotalReceitasComDeficit", nivel:0},
+  {cod:"SaldoDeExerciciosAnterioresUtilizadosParaCreditosAdicionais", nivel:0},
+  {cod:"SuperavitFinanceiro", nivel:1},
+];
+
+const ESTRUTURA_RECEITAS_INTRA = [
+  {cod:"ReceitasIntraOrcamentarias", nivel:0},
+  {cod:"ReceitasCorrentesIntra", nivel:1},
+  {cod:"ReceitaDeContribuicoesIntra", nivel:2},
+  {cod:"ContribuicoesSociaisIntra", nivel:3},
+  {cod:"OutrasReceitasCorrentesIntra", nivel:2},
+  {cod:"ReceitasCorrentesDiversasIntra", nivel:3},
+];
+
+const ESTRUTURA_DESPESAS = [
+  {cod:"DespesasExcetoIntraOrcamentarias", nivel:0},
+  {cod:"DespesasCorrentes", nivel:1},
+  {cod:"PessoalEEncargosSociais", nivel:2},
+  {cod:"JurosEEncargosDaDivida", nivel:2},
+  {cod:"OutrasDespesasCorrentes", nivel:2},
+  {cod:"DespesasDeCapital", nivel:1},
+  {cod:"Investimentos", nivel:2},
+  {cod:"InversoesFinanceiras", nivel:2},
+  {cod:"AmortizacaoDaDivida", nivel:2},
+  {cod:"ReservaDeContingencia", nivel:0},
+  {cod:"DespesasIntraOrcamentariasTotal", nivel:0},
+  {cod:"SubtotalDasDespesas", nivel:0},
+  {cod:"TotalDespesas", nivel:0},
+  {cod:"Superavit", nivel:0},
+  {cod:"TotalDespesasComSuperavit", nivel:0},
+];
+
+const ESTRUTURA_DESPESAS_INTRA = [
+  {cod:"DespesasIntraOrcamentarias", nivel:0},
+  {cod:"DespesasCorrentesIntra", nivel:1},
+  {cod:"PessoalEEncargosSociaisIntra", nivel:2},
+  {cod:"JurosEEncargosDaDividaIntra", nivel:2},
+  {cod:"OutrasDespesasCorrentesIntra", nivel:2},
+  {cod:"DespesasDeCapitalIntra", nivel:1},
+  {cod:"AmortizacaoDaDividaIntra", nivel:2},
+];
+
+// Colunas exatas retornadas pela API para receitas e despesas
+const COL = {
+  previsaoInicial: "PREVISÃO INICIAL",
+  previsaoAtualizada: "PREVISÃO ATUALIZADA (a)",
+  receitaNoBimestre: "No Bimestre (b)",
+  receitaPercBA: "% (b/a)",
+  receitaAteBimestre: "Até o Bimestre (c)",
+  receitaPercCA: "% (c/a)",
+  receitaSaldo: "SALDO (a-c)",
+
+  dotacaoInicial: "DOTAÇÃO INICIAL (d)",
+  dotacaoAtualizada: "DOTAÇÃO ATUALIZADA (e)",
+  empenhadoNoBimestre: "DESPESAS EMPENHADAS NO BIMESTRE",
+  empenhadoAteBimestre: "DESPESAS EMPENHADAS ATÉ O BIMESTRE (f)",
+  saldoEmpenho: "SALDO (g) = (e-f)",
+  liquidadoNoBimestre: "DESPESAS LIQUIDADAS NO BIMESTRE",
+  liquidadoAteBimestre: "DESPESAS LIQUIDADAS ATÉ O BIMESTRE (h)",
+  saldoLiquidacao: "SALDO (i) = (e-h)",
+  pagoAteBimestre: "DESPESAS PAGAS ATÉ O BIMESTRE (j)",
+};
+
+let dadosPorConta = {};   // { cod_conta: { conta: "...", valores: { coluna: valor } } }
+let metaConsulta = {};    // instituicao, populacao, exercicio, periodo, uf...
+let graficos = {};        // instâncias Chart.js ativas
+
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0);
+}
+function moedaCompacta(valor){
+  const v = Number(valor)||0;
+  const abs = Math.abs(v);
+  if(abs >= 1e9) return (v/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return (v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return (v/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function percent(valor){
+  return (Number(valor)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%";
+}
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+function mostrarStatus(texto,tipo="info"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none",!sim);
 }
 
-function esc(v){
-  return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+function getValor(cod, coluna){
+  const item = dadosPorConta[cod];
+  if(!item) return 0;
+  const v = item.valores[coluna];
+  return typeof v === "number" ? v : 0;
+}
+function getConta(cod, fallback){
+  const item = dadosPorConta[cod];
+  return item ? item.conta : (fallback || cod);
+}
+function existeConta(cod){
+  return !!dadosPorConta[cod];
 }
 
-function mostrarStatus(msg,tipo="info"){
-  $("status").className="alert alert-"+tipo+" status mt-2 mb-0";
-  $("status").textContent=msg;
-}
+function montarUrl(){
+  const exercicio = $("filtroExercicio").value.trim();
+  const periodo = $("filtroPeriodo").value.trim();
+  const tipo = $("filtroTipo").value.trim();
+  const anexo = $("filtroAnexo").value.trim();
+  const ente = $("filtroEnte").value.trim();
 
-function apiUrl(){
-  const p=new URLSearchParams({
-    an_exercicio:$("ano").value,
-    nr_periodo:$("periodo").value,
-    co_tipo_demonstrativo:TIPO,
-    no_anexo:ANEXO,
-    id_ente:ID_ENTE
+  const params = new URLSearchParams({
+    an_exercicio: exercicio,
+    nr_periodo: periodo,
+    co_tipo_demonstrativo: tipo,
+    no_anexo: anexo,
+    id_ente: ente
   });
-  return API_BASE+"?"+p.toString();
+  return `${API_BASE}?${params.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+
+  try {
+    const response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
+
+    if(!response.ok){
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const json = await response.json();
+    const lista = Array.isArray(json) ? json : json.items;
+
+    if(!Array.isArray(lista)){
+      throw new Error("Estrutura de resposta inesperada.");
+    }
+
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function processarDados(lista){
+  dadosPorConta = {};
+  metaConsulta = {};
+
+  lista.forEach(item=>{
+    if(!item || !item.cod_conta) return;
+
+    if(!dadosPorConta[item.cod_conta]){
+      dadosPorConta[item.cod_conta] = { conta: item.conta, valores: {} };
+    }
+    dadosPorConta[item.cod_conta].valores[item.coluna] = Number(item.valor) || 0;
+
+    if(!metaConsulta.instituicao){
+      metaConsulta = {
+        instituicao: item.instituicao,
+        populacao: item.populacao,
+        exercicio: item.exercicio,
+        periodo: item.periodo,
+        uf: item.uf,
+        cod_ibge: item.cod_ibge
+      };
+    }
+  });
+
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTabelas();
+  renderizarGraficos();
 }
 
 function atualizarCabecalho(){
-  const ano=$("ano").value, p=$("periodo").value;
-  $("cabAno").textContent=ano;
-  $("cabPeriodo").textContent=`Período de Referência: ${periodos[p]} de ${ano} / Bimestre ${p}`;
-  $("urlPreview").textContent="URL consultada: "+apiUrl();
-}
-
-function extrairItems(json){
-  if(Array.isArray(json)) return json;
-  if(Array.isArray(json.items)) return json.items;
-  if(Array.isArray(json.retorno)) return json.retorno;
-  if(Array.isArray(json.data)) return json.data;
-  return [];
-}
-
-function campo(o, chaves){
-  for(const k of chaves){
-    if(o[k]!==undefined && o[k]!==null && o[k]!=="") return o[k];
+  if(metaConsulta.instituicao){
+    $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+    $("kpiEnte").textContent = `${metaConsulta.instituicao} (IBGE ${metaConsulta.cod_ibge || "-"}) — ${(metaConsulta.populacao||0).toLocaleString("pt-BR")} hab.`;
   }
-  return "";
 }
 
-function normalizar(lista){
-  return lista.map((x,i)=>({
-    id:i,
-    ano:campo(x,["an_exercicio","exercicio","ano"]),
-    periodo:campo(x,["nr_periodo","periodo"]),
-    anexo:campo(x,["no_anexo","anexo"]),
-    conta:campo(x,["ds_conta","descricao_conta","conta","no_conta","desc_conta"]),
-    codigo:campo(x,["co_conta","codigo_conta","cod_conta","codigo"]),
-    coluna:campo(x,["no_coluna","coluna","ds_coluna","descricao_coluna"]),
-    valor:campo(x,["vl_conta","valor","vlr_conta","value"])
-  }));
-}
+function atualizarKPIs(){
+  const receitaPrevista = getValor("TotalReceitas", COL.previsaoAtualizada) || getValor("SubtotalDasReceitas", COL.previsaoAtualizada);
+  const receitaRealizada = getValor("TotalReceitas", COL.receitaAteBimestre) || getValor("SubtotalDasReceitas", COL.receitaAteBimestre);
+  const receitaPerc = getValor("TotalReceitas", COL.receitaPercCA) || getValor("SubtotalDasReceitas", COL.receitaPercCA);
 
-function normalizarColuna(c){
-  return String(c||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s+/g," ").trim();
-}
+  const dotacaoAtualizada = getValor("TotalDespesas", COL.dotacaoAtualizada) || getValor("SubtotalDasDespesas", COL.dotacaoAtualizada);
+  const despesaEmpenhada = getValor("TotalDespesas", COL.empenhadoAteBimestre) || getValor("SubtotalDasDespesas", COL.empenhadoAteBimestre);
+  const despesaLiquidada = getValor("TotalDespesas", COL.liquidadoAteBimestre) || getValor("SubtotalDasDespesas", COL.liquidadoAteBimestre);
+  const despesaPaga = getValor("TotalDespesas", COL.pagoAteBimestre) || getValor("SubtotalDasDespesas", COL.pagoAteBimestre);
 
-function isRevenue(item){
-  const c=normalizarColuna(item.coluna)+" "+normalizarColuna(item.conta);
-  return /PREVISAO|RECEITAS|RECEITA|ALIENACAO|TRANSFERENCIAS/.test(c) && !/DOTACAO|EMPENHAD|LIQUIDAD|PAGAS/.test(c);
-}
+  const empenhoPerc = dotacaoAtualizada ? (despesaEmpenhada/dotacaoAtualizada*100) : 0;
+  const resultado = receitaRealizada - despesaLiquidada;
 
-function isExpense(item){
-  const c=normalizarColuna(item.coluna)+" "+normalizarColuna(item.conta);
-  return /DOTACAO|EMPENHAD|LIQUIDAD|PAGAS|DESPESAS|RESERVA/.test(c);
-}
+  $("kpiReceitaPrevista").textContent = moeda(receitaPrevista);
+  $("kpiReceitaRealizada").textContent = moeda(receitaRealizada);
+  $("kpiReceitaPercentual").textContent = `${percent(receitaPerc)} da previsão atualizada`;
+  $("kpiDotacaoAtualizada").textContent = moeda(dotacaoAtualizada);
+  $("kpiDespesaEmpenhada").textContent = moeda(despesaEmpenhada);
+  $("kpiDespesaPercentual").textContent = `${percent(empenhoPerc)} da dotação atualizada`;
+  $("kpiDespesaLiquidada").textContent = moeda(despesaLiquidada);
+  $("kpiDespesaPaga").textContent = moeda(despesaPaga);
 
-function agrupar(lista){
-  const map=new Map();
-  for(const x of lista){
-    const chave=x.codigo || x.conta || ("linha-"+x.id);
-    if(!map.has(chave)) map.set(chave,{codigo:x.codigo,conta:x.conta,cols:[]});
-    map.get(chave).cols.push(x);
+  const elResultado = $("kpiResultado");
+  const cardResultado = $("kpiResultadoCard");
+  elResultado.textContent = moeda(resultado);
+  elResultado.classList.remove("positivo","negativo");
+  cardResultado.classList.remove("kpi-verde","kpi-vermelho");
+  if(resultado >= 0){
+    elResultado.classList.add("positivo");
+    cardResultado.classList.add("kpi-verde");
+  } else {
+    elResultado.classList.add("negativo");
+    cardResultado.classList.add("kpi-vermelho");
   }
-  return [...map.values()];
 }
 
-function obterValor(grupo, termos){
-  for(const item of grupo.cols){
-    const n=normalizarColuna(item.coluna);
-    if(termos.some(t=>n.includes(t))) return item.valor;
-  }
-  return null;
+// -------------------- Tabelas --------------------
+
+function linhaReceita(cod, nivel){
+  if(!existeConta(cod)) return "";
+  const nome = getConta(cod);
+  const indentClass = nivel > 0 ? `indent-${nivel}` : "";
+  return `
+    <tr class="nivel-${nivel}">
+      <td class="conta-nome ${indentClass}">${escapeHtml(nome)}</td>
+      <td class="valor">${moeda(getValor(cod, COL.previsaoInicial))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.previsaoAtualizada))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.receitaNoBimestre))}</td>
+      <td class="valor">${percent(getValor(cod, COL.receitaPercBA))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.receitaAteBimestre))}</td>
+      <td class="valor">${percent(getValor(cod, COL.receitaPercCA))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.receitaSaldo))}</td>
+    </tr>`;
 }
 
-const receitaCols=[
-  {h:"Previsão inicial",t:["PREVISAO INICIAL"]},
-  {h:"Previsão atualizada",t:["PREVISAO ATUALIZADA"]},
-  {h:"No bimestre",t:["NO BIMESTRE"]},
-  {h:"% No bimestre",t:["% (B/A)"]},
-  {h:"Até o bimestre",t:["ATE O BIMESTRE","ATÉ O BIMESTRE"]},
-  {h:"% Até o bimestre",t:["% (C/A)"]},
-  {h:"Saldo",t:["SALDO"]}
-];
+function linhaDespesa(cod, nivel){
+  if(!existeConta(cod)) return "";
+  const nome = getConta(cod);
+  const indentClass = nivel > 0 ? `indent-${nivel}` : "";
+  return `
+    <tr class="nivel-${nivel}">
+      <td class="conta-nome ${indentClass}">${escapeHtml(nome)}</td>
+      <td class="valor">${moeda(getValor(cod, COL.dotacaoInicial))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.dotacaoAtualizada))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.empenhadoNoBimestre))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.empenhadoAteBimestre))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.saldoEmpenho))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.liquidadoNoBimestre))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.liquidadoAteBimestre))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.saldoLiquidacao))}</td>
+      <td class="valor">${moeda(getValor(cod, COL.pagoAteBimestre))}</td>
+    </tr>`;
+}
 
-const despesaCols=[
-  {h:"Dotação inicial",t:["DOTACAO INICIAL"]},
-  {h:"Dotação atualizada",t:["DOTACAO ATUALIZADA"]},
-  {h:"Empenhadas no bimestre",t:["DESPESAS EMPENHADAS NO BIMESTRE","NO BIMESTRE"]},
-  {h:"Empenhadas até o bimestre",t:["DESPESAS EMPENHADAS ATÉ O BIMESTRE","EMPENHADAS ATE O BIMESTRE"]},
-  {h:"Saldo",t:["SALDO"]},
-  {h:"Liquidadas no bimestre",t:["DESPESAS LIQUIDADAS NO BIMESTRE"]},
-  {h:"Liquidadas até o bimestre",t:["DESPESAS LIQUIDADAS ATÉ O BIMESTRE"]},
-  {h:"Pagas até o bimestre",t:["DESPESAS PAGAS ATÉ O BIMESTRE","PAGAS ATÉ O BIMESTRE"]}
-];
+function renderizarTabelas(){
+  $("tbodyReceitas").innerHTML = ESTRUTURA_RECEITAS.map(e=>linhaReceita(e.cod, e.nivel)).join("");
+  $("tbodyReceitasIntra").innerHTML = ESTRUTURA_RECEITAS_INTRA.map(e=>linhaReceita(e.cod, e.nivel)).join("");
+  $("tbodyDespesas").innerHTML = ESTRUTURA_DESPESAS.map(e=>linhaDespesa(e.cod, e.nivel)).join("");
+  $("tbodyDespesasIntra").innerHTML = ESTRUTURA_DESPESAS_INTRA.map(e=>linhaDespesa(e.cod, e.nivel)).join("");
+}
 
-function renderTable(id,headId,groups,cols){
-  $(headId).innerHTML='<th class="conta-col">Conta</th>'+cols.map(c=>`<th class="num-col">${esc(c.h)}</th>`).join("");
-  const tbody=$(id).querySelector("tbody");
-  if(!groups.length){
-    tbody.innerHTML='<tr><td colspan="'+(cols.length+1)+'" class="text-center py-4">Nenhum registro encontrado para esta categoria.</td></tr>';
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(id){
+  if(graficos[id]){ graficos[id].destroy(); delete graficos[id]; }
+}
+
+function renderizarGraficos(){
+  graficoPrevistoRealizado();
+  graficoComposicaoReceita();
+  graficoPercentualExecucao();
+  graficoSaldoArrecadar();
+  graficoDespesaEtapas();
+  graficoDespesaComposicao();
+  graficoResultadoGauge();
+  graficoFunilDespesa();
+}
+
+// 1. Previsto x Realizado das receitas
+function graficoPrevistoRealizado(){
+  const previsto = getValor("TotalReceitas", COL.previsaoAtualizada) || getValor("SubtotalDasReceitas", COL.previsaoAtualizada);
+  const realizado = getValor("TotalReceitas", COL.receitaAteBimestre) || getValor("SubtotalDasReceitas", COL.receitaAteBimestre);
+  const perc = getValor("TotalReceitas", COL.receitaPercCA) || getValor("SubtotalDasReceitas", COL.receitaPercCA);
+
+  $("descPrevistoRealizado").textContent = `${moeda(previsto)} previsto x ${moeda(realizado)} arrecadado (${percent(perc)})`;
+
+  destruirGrafico("previstoRealizado");
+  graficos.previstoRealizado = new Chart($("graficoPrevistoRealizado"), {
+    type: "bar",
+    data: {
+      labels: ["Previsão Atualizada", "Realizado até o Bimestre"],
+      datasets: [{
+        data: [previsto, realizado],
+        backgroundColor: [CORES[0], CORES[4]]
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 2. Composição da receita arrecadada
+function graficoComposicaoReceita(){
+  const correntes = getValor("ReceitasCorrentes", COL.receitaAteBimestre);
+  const capital = getValor("ReceitasDeCapital", COL.receitaAteBimestre);
+
+  destruirGrafico("composicaoCC");
+  graficos.composicaoCC = new Chart($("graficoComposicaoCorrentesCapital"), {
+    type: "doughnut",
+    data: {
+      labels: ["Correntes", "Capital"],
+      datasets: [{ data: [correntes, capital], backgroundColor: [CORES[0], CORES[2]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:10} } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } },
+                title:{ display:true, text:"Correntes x Capital", font:{size:11} } }
+    }
+  });
+
+  const impostos = getValor("ReceitaTributaria", COL.receitaAteBimestre);
+  const transferencias = getValor("TransferenciasCorrentes", COL.receitaAteBimestre);
+  const contribuicoes = getValor("ReceitaDeContribuicoes", COL.receitaAteBimestre);
+  const patrimonial = getValor("ReceitaPatrimonial", COL.receitaAteBimestre);
+  const outras = Math.max(correntes - (impostos+transferencias+contribuicoes+patrimonial), 0);
+
+  destruirGrafico("composicaoCorrentes");
+  graficos.composicaoCorrentes = new Chart($("graficoComposicaoCorrentes"), {
+    type: "doughnut",
+    data: {
+      labels: ["Impostos, Taxas e C.M.", "Transferências", "Contribuições", "Patrimonial", "Outras"],
+      datasets: [{ data: [impostos, transferencias, contribuicoes, patrimonial, outras], backgroundColor: [CORES[0],CORES[1],CORES[2],CORES[3],CORES[10]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:9} } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } },
+                title:{ display:true, text:"Detalhamento das Correntes", font:{size:11} } }
+    }
+  });
+}
+
+// 3. Percentual de execução por tipo de receita
+function graficoPercentualExecucao(){
+  const contas = [
+    ["ReceitasDeOperacoesDeCredito","Operações de Crédito"],
+    ["ReceitasDeCapital","Receitas de Capital"],
+    ["AlienacaoDeBens","Alienação de Bens"],
+    ["TransferenciasDeCapital","Transferências de Capital"],
+    ["ReceitaTributaria","Impostos, Taxas e C.M."],
+    ["ReceitaDeContribuicoes","Contribuições"],
+    ["ReceitaPatrimonial","Receita Patrimonial"],
+    ["TransferenciasCorrentes","Transferências Correntes"],
+    ["OutrasReceitasCorrentes","Outras Receitas Correntes"],
+    ["ReceitasCorrentes","Receitas Correntes"],
+    ["TotalReceitas","Total das Receitas"],
+  ].filter(([cod])=> existeConta(cod));
+
+  const dados = contas.map(([cod,label])=>({label, valor:getValor(cod, COL.receitaPercCA)}))
+    .sort((a,b)=> b.valor - a.valor);
+
+  destruirGrafico("percExecucao");
+  graficos.percExecucao = new Chart($("graficoPercentualExecucaoReceita"), {
+    type: "bar",
+    data: {
+      labels: dados.map(d=>d.label),
+      datasets: [{ data: dados.map(d=>d.valor), backgroundColor: CORES[0] }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => percent(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => v + "%" } } }
+    }
+  });
+}
+
+// 4. Saldo a arrecadar por rubrica
+function graficoSaldoArrecadar(){
+  const contas = [
+    ["ReceitaTributaria","Impostos, Taxas e C.M."],
+    ["ReceitaDeContribuicoes","Contribuições"],
+    ["ReceitaPatrimonial","Receita Patrimonial"],
+    ["ReceitaDeServicos","Receita de Serviços"],
+    ["TransferenciasCorrentes","Transferências Correntes"],
+    ["OutrasReceitasCorrentes","Outras Receitas Correntes"],
+    ["ReceitasDeOperacoesDeCredito","Operações de Crédito"],
+    ["AlienacaoDeBens","Alienação de Bens"],
+    ["TransferenciasDeCapital","Transferências de Capital"],
+    ["ReceitasIntraOrcamentariasTotal","Receitas Intra-Orçamentárias"],
+  ].filter(([cod])=> existeConta(cod));
+
+  const dados = contas.map(([cod,label])=>({label, valor:getValor(cod, COL.receitaSaldo)}))
+    .sort((a,b)=> b.valor - a.valor);
+
+  const totalSaldo = getValor("TotalReceitas", COL.receitaSaldo) || getValor("SubtotalDasReceitas", COL.receitaSaldo);
+  $("descSaldoArrecadar").textContent = `Total ainda a arrecadar: ${moeda(totalSaldo)}`;
+
+  destruirGrafico("saldoArrecadar");
+  graficos.saldoArrecadar = new Chart($("graficoSaldoArrecadar"), {
+    type: "bar",
+    data: {
+      labels: dados.map(d=>d.label),
+      datasets: [{ data: dados.map(d=>d.valor), backgroundColor: CORES[1] }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 5. Despesa: dotação x empenhado x liquidado x pago
+function graficoDespesaEtapas(){
+  const grupos = [
+    ["DespesasExcetoIntraOrcamentarias","Total"],
+    ["DespesasCorrentes","Correntes"],
+    ["DespesasDeCapital","Capital"],
+  ].filter(([cod])=> existeConta(cod));
+
+  destruirGrafico("despesaEtapas");
+  graficos.despesaEtapas = new Chart($("graficoDespesaEtapas"), {
+    type: "bar",
+    data: {
+      labels: grupos.map(([,l])=>l),
+      datasets: [
+        { label:"Dotação Atualizada", backgroundColor: CORES[0], data: grupos.map(([cod])=>getValor(cod, COL.dotacaoAtualizada)) },
+        { label:"Empenhado", backgroundColor: CORES[2], data: grupos.map(([cod])=>getValor(cod, COL.empenhadoAteBimestre)) },
+        { label:"Liquidado", backgroundColor: CORES[4], data: grupos.map(([cod])=>getValor(cod, COL.liquidadoAteBimestre)) },
+        { label:"Pago", backgroundColor: CORES[3], data: grupos.map(([cod])=>getValor(cod, COL.pagoAteBimestre)) },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moeda(ctx.raw)}` } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 6. Despesas correntes x capital (+ detalhamento correntes)
+function graficoDespesaComposicao(){
+  const correntes = getValor("DespesasCorrentes", COL.liquidadoAteBimestre);
+  const capital = getValor("DespesasDeCapital", COL.liquidadoAteBimestre);
+
+  destruirGrafico("despesaCC");
+  graficos.despesaCC = new Chart($("graficoDespesaCorrentesCapital"), {
+    type: "doughnut",
+    data: {
+      labels: ["Correntes", "Capital"],
+      datasets: [{ data: [correntes, capital], backgroundColor: [CORES[0], CORES[2]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:10} } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } },
+                title:{ display:true, text:"Correntes x Capital (liquidado)", font:{size:11} } }
+    }
+  });
+
+  const pessoal = getValor("PessoalEEncargosSociais", COL.liquidadoAteBimestre);
+  const juros = getValor("JurosEEncargosDaDivida", COL.liquidadoAteBimestre);
+  const outras = getValor("OutrasDespesasCorrentes", COL.liquidadoAteBimestre);
+
+  destruirGrafico("despesaCorrentesDetalhe");
+  graficos.despesaCorrentesDetalhe = new Chart($("graficoDespesaCorrentesDetalhe"), {
+    type: "doughnut",
+    data: {
+      labels: ["Pessoal e Encargos", "Juros e Encargos da Dívida", "Outras Despesas Correntes"],
+      datasets: [{ data: [pessoal, juros, outras], backgroundColor: [CORES[0],CORES[3],CORES[1]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:9} } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } },
+                title:{ display:true, text:"Detalhamento das Correntes (liquidado)", font:{size:11} } }
+    }
+  });
+}
+
+// 7. Resultado orçamentário (indicador tipo gauge, meio-círculo)
+function graficoResultadoGauge(){
+  const receitaRealizada = getValor("TotalReceitas", COL.receitaAteBimestre) || getValor("SubtotalDasReceitas", COL.receitaAteBimestre);
+  const despesaLiquidada = getValor("TotalDespesas", COL.liquidadoAteBimestre) || getValor("SubtotalDasDespesas", COL.liquidadoAteBimestre);
+  const resultado = receitaRealizada - despesaLiquidada;
+  const positivo = resultado >= 0;
+
+  const base = Math.max(receitaRealizada, despesaLiquidada, 1);
+  const despesaFatia = Math.min(despesaLiquidada, base);
+  const resultadoFatia = Math.max(base - despesaFatia, 0);
+
+  $("resultadoGaugeValor").textContent = moeda(resultado);
+  $("resultadoGaugeValor").style.color = positivo ? "#198754" : "#dc3545";
+  $("resultadoGaugeSub").textContent = positivo ? "Superávit até o bimestre" : "Déficit até o bimestre";
+
+  destruirGrafico("resultadoGauge");
+  graficos.resultadoGauge = new Chart($("graficoResultadoGauge"), {
+    type: "doughnut",
+    data: {
+      labels: ["Despesa Liquidada", positivo ? "Superávit" : "Déficit"],
+      datasets: [{
+        data: [despesaFatia, resultadoFatia],
+        backgroundColor: [CORES[9], positivo ? CORES[4] : CORES[3]],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      circumference: 180, rotation: 270, cutout: "70%",
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:10} } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } } }
+    }
+  });
+}
+
+// 8. Funil de execução da despesa
+function graficoFunilDespesa(){
+  const cod = existeConta("DespesasExcetoIntraOrcamentarias") ? "DespesasExcetoIntraOrcamentarias" : "TotalDespesas";
+  const etapas = [
+    { label:"Dotação Atualizada", valor: getValor(cod, COL.dotacaoAtualizada) },
+    { label:"Empenhado", valor: getValor(cod, COL.empenhadoAteBimestre) },
+    { label:"Liquidado", valor: getValor(cod, COL.liquidadoAteBimestre) },
+    { label:"Pago", valor: getValor(cod, COL.pagoAteBimestre) },
+  ];
+
+  destruirGrafico("funilDespesa");
+  graficos.funilDespesa = new Chart($("graficoFunilDespesa"), {
+    type: "bar",
+    data: {
+      labels: etapas.map(e=>e.label),
+      datasets: [{ data: etapas.map(e=>e.valor), backgroundColor: [CORES[0],CORES[1],CORES[4],CORES[3]] }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  const todasEstruturas = [
+    ...ESTRUTURA_RECEITAS.map(e=>({...e, tipo:"Receita"})),
+    ...ESTRUTURA_RECEITAS_INTRA.map(e=>({...e, tipo:"Receita Intra"})),
+    ...ESTRUTURA_DESPESAS.map(e=>({...e, tipo:"Despesa"})),
+    ...ESTRUTURA_DESPESAS_INTRA.map(e=>({...e, tipo:"Despesa Intra"})),
+  ].filter(e=> existeConta(e.cod));
+
+  if(!todasEstruturas.length){
+    alert("Não existem dados para exportar.");
     return;
   }
-  tbody.innerHTML=groups.map(g=>{
-    const texto=esc(g.conta||"");
-    const destaque=/^(RECEITAS|DESPESAS|SUBTOTAL|TOTAL|SUPERAVIT|DEFICIT|RESERVA)/i.test(String(g.conta||"").trim());
-    return `<tr class="${destaque?'subtotal':''}">
-      <td class="conta">${texto}</td>
-      ${cols.map(c=>`<td class="num">${esc(moeda(obterValor(g,c.t)))}</td>`).join("")}
-    </tr>`;
-  }).join("");
+
+  const colunas = Array.from(new Set(
+    todasEstruturas.flatMap(e => Object.keys(dadosPorConta[e.cod].valores))
+  ));
+
+  const cabecalho = ["Tipo","Nível","Conta", ...colunas];
+  const linhas = todasEstruturas.map(e=>{
+    const item = dadosPorConta[e.cod];
+    return [e.tipo, e.nivel, item.conta, ...colunas.map(c => item.valores[c] ?? "")];
+  });
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "rreo_anexo1_campo_largo.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
-function atualizarKPIs(groupsRec,groupsDesp){
-  const rec=groupsRec.find(g=>/RECEITAS \(EXCETO INTRA|TOTAL DAS RECEITAS|SUBTOTAL DAS RECEITAS/i.test(g.conta||"")) || groupsRec[0];
-  const desp=groupsDesp.find(g=>/DESPESAS \(EXCETO INTRA|TOTAL DAS DESPESAS|SUBTOTAL DAS DESPESAS/i.test(g.conta||""));
-  
-  $("kpiPrev").textContent=rec?moeda(obterValor(rec,["PREVISAO ATUALIZADA","PREVISÃO ATUALIZADA"])):"—";
-  $("kpiRec").textContent=rec?moeda(obterValor(rec,["ATE O BIMESTRE","ATÉ O BIMESTRE"])):"—";
-  $("kpiEmp").textContent=desp?moeda(obterValor(desp,["DESPESAS EMPENHADAS ATÉ O BIMESTRE","EMPENHADAS ATE O BIMESTRE"])):"—";
-  $("kpiLiq").textContent=desp?moeda(obterValor(desp,["DESPESAS LIQUIDADAS ATÉ O BIMESTRE"])):"—";
-}
+// -------------------- Alternância Tabelas / Gráficos --------------------
 
-function render(){
-  const n=normalizar(dados);
-  const rec=n.filter(isRevenue), desp=n.filter(isExpense);
-  const gr=agrupar(rec), gd=agrupar(desp);
-  renderTable("tabelaReceitas","headReceitas",gr,receitaCols);
-  renderTable("tabelaDespesas","headDespesas",gd,despesaCols);
-  atualizarKPIs(gr,gd);
-  $("urlPreview").textContent="URL consultada: "+apiUrl();
-}
-
-async function consultar(){
-  atualizarCabecalho();
-  mostrarStatus("Consultando API do SICONFI...","info");
-  try{
-    const r=await fetch(apiUrl(),{headers:{Accept:"application/json"}});
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    const json=await r.json();
-    const novosDados=extrairItems(json);
-    if(!novosDados.length) throw new Error("A API respondeu sem registros.");
-    dados=novosDados;
-    render();
-    mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados via API do SICONFI.`,"success");
-  }catch(e){
-    console.warn("Falha na API, utilizando JSON de fallback/embarcado:", e.message);
-    dados=extrairItems(EMBEDDED_JSON);
-    render();
-    mostrarStatus(`API indisponível ou bloqueada por CORS. Dados carregados do JSON anexado (${dados.length} registros).`,"warning");
-  }
-}
-
-$("consultar").addEventListener("click",consultar);
-$("imprimir").addEventListener("click",()=>window.print());
-$("ano").addEventListener("change",atualizarCabecalho);
-$("periodo").addEventListener("change",atualizarCabecalho);
-$("json").addEventListener("change",ev=>{
-  const f=ev.target.files[0]; if(!f)return;
-  const rd=new FileReader();
-  rd.onload=()=>{
-    try{
-      dados=extrairItems(JSON.parse(rd.result));
-      if(!dados.length) throw new Error("JSON sem itens.");
-      render();
-      atualizarCabecalho();
-      mostrarStatus(`${dados.length.toLocaleString("pt-BR")} registros carregados do JSON local selecionado.`,"success");
-    }catch(e){mostrarStatus("Erro ao ler o arquivo JSON: "+e.message,"danger");}
-  };
-  rd.readAsText(f,"utf-8");
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  // Garante que os gráficos sejam redimensionados corretamente ao aparecerem
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
 });
 
-// Inicialização
-atualizarCabecalho();
-consultar();
+// -------------------- Leitor de JSON local --------------------
+
+$("inputJson").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.items;
+
+      if(!Array.isArray(lista)){
+        throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+      }
+
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+// Inicia consulta ao carregar a página
+consultarAPI();
 </script>
+
 </body>
 </html>
