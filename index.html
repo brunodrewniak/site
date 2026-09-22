@@ -67,7 +67,7 @@ h1,h2,h5.card-title,.navbar-brand{font-family:"Poppins",system-ui,sans-serif}
 .group-title{font-weight:700;color:var(--azul-escuro);margin:2.5rem 0 1.25rem;display:flex;align-items:center;gap:.6rem}
 .group-title i{font-size:1.4rem}
 .small-muted{font-size:.82rem;color:#6c757d}
-.dropdown-menu{box-shadow:0 .5rem 1.5rem rgba(0,0,0,.15)}
+.dropdown-menu{box-shadow:0 .5rem 1.5rem rgba(0,0,0,.15); max-height: 400px; overflow-y: auto;}
 .skill-badge{
   background:var(--azul-suave);color:var(--azul-escuro);
   padding:.5rem 1rem;border-radius:30px;font-weight:600;font-size:.88rem;
@@ -123,7 +123,7 @@ h1,h2,h5.card-title,.navbar-brand{font-family:"Poppins",system-ui,sans-serif}
 <i class="bi bi-graph-up-arrow"></i> Custos
 </a>
 <ul class="dropdown-menu dropdown-menu-end">
-<li><a class="dropdown-item" href="custos/objetos_de_custo"><i class="bi bi-diagram-3 me-2"></i>Objetos de Custo</a></li>
+  <li><a class="dropdown-item" href="custos/objetos_de_custo"><i class="bi bi-diagram-3 me-2"></i>Objetos de Custo</a></li>
   <li><a class="dropdown-item" href="custos/dashboard"><i class="bi bi-bar-chart-line me-2"></i>Dashboard de Custo</a></li>
 </ul>
 </li>
@@ -143,11 +143,48 @@ h1,h2,h5.card-title,.navbar-brand{font-family:"Poppins",system-ui,sans-serif}
 
 <li class="nav-item dropdown">
 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+<i class="bi bi-file-earmark-bar-graph"></i> SICONFI RREO
+</a>
+<ul class="dropdown-menu dropdown-menu-end">
+<li><a class="dropdown-item" href="siconfi/rreo_anexo1"><i class="bi bi-file-text me-2"></i>Anexo 1 - Balanço Orçamentário</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo2"><i class="bi bi-file-text me-2"></i>Anexo 2 - Despesas por Função/Subfunção</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo3"><i class="bi bi-file-text me-2"></i>Anexo 3 - Receita Corrente Líquida (RCL)</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo4"><i class="bi bi-file-text me-2"></i>Anexo 4 - Receitas/Despesas Previdenciárias</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo5"><i class="bi bi-file-text me-2"></i>Anexo 5 - Resultados Primário e Nominal</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo6"><i class="bi bi-file-text me-2"></i>Anexo 6 - Restos a Pagar</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo7"><i class="bi bi-file-text me-2"></i>Anexo 7 - Ensino (MDE)</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo8"><i class="bi bi-file-text me-2"></i>Anexo 8 - Emendas Individuais</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo9"><i class="bi bi-file-text me-2"></i>Anexo 9 - Operações de Crédito / Regra de Ouro</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo10"><i class="bi bi-file-text me-2"></i>Anexo 10 - Projeção Atuarial do RPPS</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo11"><i class="bi bi-file-text me-2"></i>Anexo 11 - Alienação de Ativos</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo12"><i class="bi bi-file-text me-2"></i>Anexo 12 - Saúde</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo13"><i class="bi bi-file-text me-2"></i>Anexo 13 - Parcerias Público-Privadas (PPP)</a></li>
+<li><a class="dropdown-item" href="siconfi/rreo_anexo14"><i class="bi bi-file-text me-2"></i>Anexo 14 - Demonstrativo Simplificado</a></li>
+</ul>
+</li>
+
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+<i class="bi bi-file-earmark-check"></i> SICONFI RGF
+</a>
+<ul class="dropdown-menu dropdown-menu-end">
+<li><a class="dropdown-item" href="siconfi/rgf_anexo1"><i class="bi bi-file-earmark-text me-2"></i>Anexo 1 - Despesa com Pessoal</a></li>
+<li><a class="dropdown-item" href="siconfi/rgf_anexo2"><i class="bi bi-file-earmark-text me-2"></i>Anexo 2 - Dívida Consolidada Líquida</a></li>
+<li><a class="dropdown-item" href="siconfi/rgf_anexo3"><i class="bi bi-file-earmark-text me-2"></i>Anexo 3 - Garantias e Contragarantias</a></li>
+<li><a class="dropdown-item" href="siconfi/rgf_anexo4"><i class="bi bi-file-earmark-text me-2"></i>Anexo 4 - Operações de Crédito</a></li>
+<li><a class="dropdown-item" href="siconfi/rgf_anexo5"><i class="bi bi-file-earmark-text me-2"></i>Anexo 5 - Disponibilidade de Caixa e RP</a></li>
+<li><a class="dropdown-item" href="siconfi/rgf_anexo6"><i class="bi bi-file-earmark-text me-2"></i>Anexo 6 - Restos a Pagar</a></li>
+</ul>
+</li>
+
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
 <i class="bi bi-box-seam-fill"></i> Suprimentos
 </a>
 <ul class="dropdown-menu dropdown-menu-end">
-<li><a class="dropdown-item" href="suprimentos/entrada"><i class="bi bi-box-arrow-in-down"></i>Entrada</a></li>
-  <li><a class="dropdown-item" href="suprimentos/saida"><i class="bi bi-box-arrow-in-up"></i>Saída</a></li>
+<li><a class="dropdown-item" href="suprimentos/entrada"><i class="bi bi-box-arrow-in-down me-2"></i>Entrada</a></li>
+<li><a class="dropdown-item" href="suprimentos/saida"><i class="bi bi-box-arrow-in-up me-2"></i>Saída</a></li>
+<li><a class="dropdown-item" href="suprimentos/contratos"><i class="bi bi-file-earmark-text me-2"></i>Contratos</a></li>
 </ul>
 </li>
 
@@ -354,6 +391,258 @@ a tomada de decisão.
 
 </div>
 
+<!-- SICONFI RREO -->
+<div class="group-title"><i class="bi bi-file-earmark-bar-graph"></i> SICONFI - Relatório Resumido da Execução Orçamentária (RREO)</div>
+<div class="row g-4">
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo1" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 1 - Balanço Orçamentário</h5>
+<div class="small-muted">Compara receita prevista x realizada e despesa fixada x executada.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo2" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 2 - Função/Subfunção</h5>
+<div class="small-muted">Detalhamento das despesas por áreas (Saúde, Educação, etc).</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo3" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 3 - Receita Corrente Líquida</h5>
+<div class="small-muted">Evolução da RCL nos últimos 12 meses.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo4" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 4 - Previdência (RPPS)</h5>
+<div class="small-muted">Avaliação das receitas e despesas previdenciárias.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo5" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 5 - Resultados Primário e Nominal</h5>
+<div class="small-muted">Avaliação do cumprimento das metas fiscais.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo6" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 6 - Restos a Pagar</h5>
+<div class="small-muted">Controle de despesas inscritas em restos a pagar.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo7" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 7 - Educação (MDE)</h5>
+<div class="small-muted">Cumprimento dos limites constitucionais de ensino.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo8" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 8 - Emendas Individuais</h5>
+<div class="small-muted">Execução das emendas parlamentares individuais.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo9" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 9 - Operações de Crédito</h5>
+<div class="small-muted">Comprovação do cumprimento da Regra de Ouro.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo10" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 10 - Projeção Atuarial RPPS</h5>
+<div class="small-muted">Projeção de longo prazo da previdência própria.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo11" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 11 - Alienação de Ativos</h5>
+<div class="small-muted">Aplicação dos recursos oriundos de venda de bens.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo12" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 12 - Saúde</h5>
+<div class="small-muted">Aplicação mínima obrigatória em ações e serviços de saúde.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo13" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 13 - PPP</h5>
+<div class="small-muted">Demonstrativo das Parcerias Público-Privadas.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rreo_anexo14" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-text"></i>
+<h5 class="mt-3 mb-1">Anexo 14 - Simplificado RREO</h5>
+<div class="small-muted">Resumo executivo do RREO para transparência social.</div>
+</div>
+</div>
+</a>
+</div>
+
+</div>
+
+<!-- SICONFI RGF -->
+<div class="group-title"><i class="bi bi-file-earmark-check"></i> SICONFI - Relatório de Gestão Fiscal (RGF)</div>
+<div class="row g-4">
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rgf_anexo1" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-earmark-text"></i>
+<h5 class="mt-3 mb-1">Anexo 1 - Despesa com Pessoal</h5>
+<div class="small-muted">Controle do teto de gastos com pessoal em relação à RCL.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rgf_anexo2" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-earmark-text"></i>
+<h5 class="mt-3 mb-1">Anexo 2 - Dívida Consolidada Líquida</h5>
+<div class="small-muted">Estoque total e limites da dívida pública consolidada.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rgf_anexo3" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-earmark-text"></i>
+<h5 class="mt-3 mb-1">Anexo 3 - Garantias e Contragarantias</h5>
+<div class="small-muted">Avais e garantias concedidas em operações de crédito.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rgf_anexo4" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-earmark-text"></i>
+<h5 class="mt-3 mb-1">Anexo 4 - Operações de Crédito</h5>
+<div class="small-muted">Contratações de empréstimos e limites anuais.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rgf_anexo5" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-earmark-text"></i>
+<h5 class="mt-3 mb-1">Anexo 5 - Caixa e Restos a Pagar</h5>
+<div class="small-muted">Suficiência de caixa e cumprimento do Art. 42 da LRF.</div>
+</div>
+</div>
+</a>
+</div>
+
+<div class="col-md-6 col-xl-4">
+<a href="siconfi/rgf_anexo6" class="text-decoration-none text-dark">
+<div class="card link-card h-100">
+<div class="card-body text-center py-4">
+<i class="bi bi-file-earmark-text"></i>
+<h5 class="mt-3 mb-1">Anexo 6 - Restos a Pagar</h5>
+<div class="small-muted">Detalhamento do estoque de Restos a Pagar de anos anteriores.</div>
+</div>
+</div>
+</a>
+</div>
+
+
+</div>
 
 <div class="group-title"><i class="bi bi-box-seam-fill"></i> Suprimentos</div>
   
