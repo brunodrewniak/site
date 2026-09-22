@@ -907,7 +907,7 @@ function atualizarCabecalho(){
   atualizarRotulosBimestre(metaConsulta.periodo || $("filtroPeriodo").value);
 
   if(metaConsulta.instituicao){
-    $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+    $("navInstituicao").textContent = `${metaConsulta.instituicao}`;
     $("kpiEnte").textContent = `${metaConsulta.instituicao} (IBGE ${metaConsulta.cod_ibge || "-"}) — ${(metaConsulta.populacao||0).toLocaleString("pt-BR")} hab.`;
 
     const info = BIMESTRE_INFO[metaConsulta.periodo] || BIMESTRE_INFO[1];
