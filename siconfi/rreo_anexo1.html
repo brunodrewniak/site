@@ -57,6 +57,9 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 /* ---------- Área de impressão / PDF ---------- */
 #printArea{display:none}
 
+#printArea .print-page{ page-break-after:always; }
+#printArea .print-page-last{ page-break-after:auto; }
+
 @media print{
   @page{ size: A4 landscape; margin: 8mm; }
 
@@ -72,21 +75,25 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
     font-family:Arial,Helvetica,sans-serif;
   }
 
-  #printArea .print-header{ text-align:center; margin-bottom:6px; }
-  #printArea .print-header h1{ font-size:13pt; margin:0 0 2px; font-weight:800; }
-  #printArea .print-sub{ font-size:8.5pt; margin:0; }
-  #printArea .print-title{ font-size:11pt; font-weight:700; margin:2px 0; }
-  #printArea .print-anexo-linha{ font-size:8pt; font-weight:600; margin:8px 0 4px; border-bottom:1px solid #000; padding-bottom:2px; }
+  #printArea .print-header{ text-align:center; margin-bottom:4px; line-height:1.15; }
+  #printArea .print-header h1{ font-size:11pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:7.5pt; margin:0; }
+  #printArea .print-title{ font-size:9pt; font-weight:700; margin:1px 0; }
+  #printArea .print-anexo-linha{ font-size:7pt; font-weight:600; margin:4px 0 3px; border-bottom:1px solid #000; padding-bottom:1px; }
+  #printArea .print-header-mini{ font-size:8.5pt; font-weight:700; text-align:center; margin-bottom:5px; border-bottom:1px solid #000; padding-bottom:3px; }
 
   #printArea table{
     width:100%;
     border-collapse:collapse;
-    font-size:7.3pt;
-    margin-bottom:10px;
+    font-size:6.6pt;
+    line-height:1.05;
+    margin-bottom:6px;
+    table-layout:fixed;
   }
   #printArea th, #printArea td{
     border:1px solid #000;
-    padding:1.5px 3px;
+    padding:1px 3px;
+    overflow:hidden;
   }
   #printArea thead{ display:table-header-group; }
   #printArea tr{ page-break-inside:avoid; }
@@ -95,7 +102,8 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
     -webkit-print-color-adjust:exact; print-color-adjust:exact;
     font-weight:700;
     text-align:center;
-    font-size:7pt;
+    font-size:6.4pt;
+    line-height:1.1;
   }
   #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
   #printArea td.conta-nome{ text-align:left; white-space:nowrap; }
@@ -103,11 +111,11 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
   #printArea tr.nivel-1{ font-weight:600; }
   #printArea tr.nivel-2{ font-weight:500; }
   #printArea tr.nivel-3{ font-weight:400; }
-  #printArea .indent-1{ padding-left:.6rem !important; }
-  #printArea .indent-2{ padding-left:1.1rem !important; }
-  #printArea .indent-3{ padding-left:1.6rem !important; }
+  #printArea .indent-1{ padding-left:.5rem !important; }
+  #printArea .indent-2{ padding-left:.9rem !important; }
+  #printArea .indent-3{ padding-left:1.3rem !important; }
 
-  #printArea .print-footer{ font-size:7pt; color:#333; margin-top:4px; }
+  #printArea .print-footer{ font-size:6.6pt; color:#333; margin-top:3px; }
 }
 </style>
 </head>
@@ -149,12 +157,12 @@ Aguardando consulta...
 
 <div class="row g-3">
 
-<div class="col-md-2">
+<div class="col-md-3">
 <label class="form-label fw-semibold">Exercício</label>
 <input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
 </div>
 
-<div class="col-md-3">
+<div class="col-md-4">
 <label class="form-label fw-semibold">Período (bimestre)</label>
 <select id="filtroPeriodo" class="form-select">
 <option value="1">1º Bimestre (Jan-Fev)</option>
@@ -166,22 +174,14 @@ Aguardando consulta...
 </select>
 </div>
 
-<div class="col-md-3">
+<div class="col-md-4">
 <label class="form-label fw-semibold">Ente (código IBGE)</label>
 <input type="text" id="filtroEnte" class="form-control" value="4104204">
 </div>
 
-<!-- Anexo e Tipo de demonstrativo são fixos (RREO / Anexo 1) e não ficam editáveis -->
+<!-- Anexo e Tipo de demonstrativo são fixos (RREO / Anexo 1) e não ficam editáveis nem visíveis -->
 <input type="hidden" id="filtroAnexo" value="RREO-Anexo 01">
 <input type="hidden" id="filtroTipo" value="RREO">
-
-<div class="col-md-3">
-<label class="form-label fw-semibold">Demonstrativo</label>
-<div class="form-control bg-light text-muted d-flex align-items-center gap-2" style="cursor:default">
-<i class="bi bi-lock-fill small"></i>
-<span>RREO · Anexo 1 (fixo)</span>
-</div>
-</div>
 
 <div class="col-md-1 d-flex align-items-end">
 <button id="btnConsultar" class="btn btn-primary w-100" title="Consultar">
@@ -524,6 +524,8 @@ API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cd
      ===================================================================== -->
 <div id="printArea">
 
+<div class="print-page">
+
 <div class="print-header">
 <h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
 <div class="print-sub">Relatório Resumido da Execução Orçamentária</div>
@@ -557,11 +559,16 @@ RREO - Anexo 1 (LRF, Art. 52, inciso I, alíneas "a" e "b" do inciso II e §1º)
 <tbody id="printTbodyReceitas"></tbody>
 </table>
 
+</div>
+
+<div class="print-page">
+
+<div class="print-header-mini" id="printMiniHeader1">MUNICÍPIO DE CAMPO LARGO - PR — BALANÇO ORÇAMENTÁRIO — Receitas Intra-Orçamentárias</div>
+
 <table>
 <thead>
-<tr><th colspan="8" style="text-align:left;background:#eee">RECEITAS INTRA-ORÇAMENTÁRIAS</th></tr>
 <tr>
-<th style="min-width:220px;text-align:left">RECEITAS</th>
+<th style="min-width:220px;text-align:left">RECEITAS INTRA-ORÇAMENTÁRIAS</th>
 <th>PREVISÃO<br>INICIAL</th>
 <th>PREVISÃO<br>ATUALIZADA (a)</th>
 <th>No <span class="ord-bimestre">1</span>º Bim. (b)</th>
@@ -574,7 +581,11 @@ RREO - Anexo 1 (LRF, Art. 52, inciso I, alíneas "a" e "b" do inciso II e §1º)
 <tbody id="printTbodyReceitasIntra"></tbody>
 </table>
 
-<div style="page-break-before:always"></div>
+</div>
+
+<div class="print-page">
+
+<div class="print-header-mini" id="printMiniHeader2">MUNICÍPIO DE CAMPO LARGO - PR — BALANÇO ORÇAMENTÁRIO — Despesas Orçamentárias</div>
 
 <table>
 <thead>
@@ -598,11 +609,16 @@ RREO - Anexo 1 (LRF, Art. 52, inciso I, alíneas "a" e "b" do inciso II e §1º)
 <tbody id="printTbodyDespesas"></tbody>
 </table>
 
+</div>
+
+<div class="print-page print-page-last">
+
+<div class="print-header-mini" id="printMiniHeader3">MUNICÍPIO DE CAMPO LARGO - PR — BALANÇO ORÇAMENTÁRIO — Despesas Intra-Orçamentárias</div>
+
 <table>
 <thead>
-<tr><th colspan="10" style="text-align:left;background:#eee">DESPESAS INTRA-ORÇAMENTÁRIAS</th></tr>
 <tr>
-<th style="min-width:200px;text-align:left">DESPESAS</th>
+<th style="min-width:200px;text-align:left">DESPESAS INTRA-ORÇAMENTÁRIAS</th>
 <th>DOTAÇÃO<br>INICIAL (d)</th>
 <th>DOTAÇÃO<br>ATUALIZADA (e)</th>
 <th>Empenhada<br>No Bim.</th>
@@ -620,6 +636,8 @@ RREO - Anexo 1 (LRF, Art. 52, inciso I, alíneas "a" e "b" do inciso II e §1º)
 <div class="print-footer">
 Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
 Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>. Os valores refletem a última consulta realizada na tela "Ver Tabelas".
+</div>
+
 </div>
 
 </div>
@@ -896,6 +914,11 @@ function atualizarCabecalho(){
     $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
     $("printEntidade").textContent = `Entidade: ${metaConsulta.instituicao} — Código IBGE: ${metaConsulta.cod_ibge || "-"}`;
     $("printPeriodo").textContent = `Período de Referência: ${info.meses} de ${metaConsulta.exercicio || ""} / Bimestre ${info.ordinal}`;
+
+    const nomeUpper = String(metaConsulta.instituicao || "").toUpperCase();
+    $("printMiniHeader1").textContent = `${nomeUpper} — BALANÇO ORÇAMENTÁRIO — Receitas Intra-Orçamentárias — ${info.ordinal} Bimestre/${metaConsulta.exercicio || ""}`;
+    $("printMiniHeader2").textContent = `${nomeUpper} — BALANÇO ORÇAMENTÁRIO — Despesas Orçamentárias — ${info.ordinal} Bimestre/${metaConsulta.exercicio || ""}`;
+    $("printMiniHeader3").textContent = `${nomeUpper} — BALANÇO ORÇAMENTÁRIO — Despesas Intra-Orçamentárias — ${info.ordinal} Bimestre/${metaConsulta.exercicio || ""}`;
   }
 }
 
