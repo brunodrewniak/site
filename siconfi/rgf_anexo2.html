@@ -700,7 +700,7 @@ function atualizarCabecalho(){
   const quad = NOME_QUADRIMESTRE[metaConsulta.periodo] || NOME_QUADRIMESTRE[1];
   const poder = NOME_PODER[metaConsulta.co_poder] || metaConsulta.co_poder || "-";
 
-  $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+  $("navInstituicao").textContent = `${metaConsulta.instituicao}`;
   $("kpiEnte").textContent = `${metaConsulta.instituicao} — Poder ${poder} — ${quad.ordinal} Quadrimestre/${metaConsulta.exercicio}`;
 
   $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
