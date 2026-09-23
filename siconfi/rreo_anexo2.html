@@ -111,12 +111,12 @@ Relatório Resumido da Execução Orçamentária consultado diretamente na API d
 
 <div class="row g-3">
 
-<div class="col-md-2">
+<div class="col-md-3">
 <label class="form-label fw-semibold">Exercício</label>
 <input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
 </div>
 
-<div class="col-md-3">
+<div class="col-md-4">
 <label class="form-label fw-semibold">Período (bimestre)</label>
 <select id="filtroPeriodo" class="form-select">
 <option value="1">1º Bimestre (Jan-Fev)</option>
@@ -128,20 +128,12 @@ Relatório Resumido da Execução Orçamentária consultado diretamente na API d
 </select>
 </div>
 
-<div class="col-md-3">
+<div class="col-md-4">
 <label class="form-label fw-semibold">Ente (código IBGE)</label>
 <input type="text" id="filtroEnte" class="form-control" value="4104204">
 </div>
 
-<div class="col-md-2">
-<label class="form-label fw-semibold">Esfera</label>
-<select id="filtroEsfera" class="form-select">
-<option value="M" selected>Municipal</option>
-<option value="E">Estadual</option>
-<option value="U">União</option>
-</select>
-</div>
-
+<input type="hidden" id="filtroEsfera" value="M">
 <input type="hidden" id="filtroAnexo" value="RREO-Anexo 02">
 <input type="hidden" id="filtroTipo" value="RREO">
 
