@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RREO - Anexo 2 | Despesas por Função/Subfunção | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.25rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-sm{height:260px;}
+.chart-box.chart-box-lg{height:440px;}
+.table-responsive{max-height:640px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.78rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rreo-table{font-size:.83rem}
+.rreo-table td.valor, .rreo-table th.valor{text-align:right;white-space:nowrap}
+.rreo-table tr.nivel-0{font-weight:700;background:#eef3fb}
+.rreo-table tr.nivel-1{font-weight:700;background:#f7f9fc}
+.rreo-table tr.nivel-2{font-weight:400;color:#333}
+.rreo-table td.conta-nome{white-space:nowrap}
+.indent-1{padding-left:1rem !important}
+.indent-2{padding-left:2rem !important}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+
+#printArea{display:none}
+#printArea .print-page{ page-break-after:always; }
+#printArea .print-page-last{ page-break-after:auto; }
+
+@media print{
+  @page{ size: A4 landscape; margin: 8mm; }
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{
+    display:block !important; position:absolute; left:0; top:0; width:100%;
+    background:#fff; color:#000; font-family:Arial,Helvetica,sans-serif;
+  }
+  #printArea .print-header{ text-align:center; margin-bottom:4px; line-height:1.15; }
+  #printArea .print-header h1{ font-size:11pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:7.5pt; margin:0; }
+  #printArea .print-title{ font-size:9pt; font-weight:700; margin:1px 0; }
+  #printArea .print-anexo-linha{ font-size:7pt; font-weight:600; margin:4px 0 3px; border-bottom:1px solid #000; padding-bottom:1px; }
+  #printArea .print-header-mini{ font-size:8.5pt; font-weight:700; text-align:center; margin-bottom:5px; border-bottom:1px solid #000; padding-bottom:3px; }
+  #printArea table{ width:100%; border-collapse:collapse; font-size:6.4pt; line-height:1.05; margin-bottom:6px; table-layout:fixed; }
+  #printArea th, #printArea td{ border:1px solid #000; padding:1px 3px; overflow:hidden; }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{ background:#e3e3e3 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; text-align:center; font-size:6.2pt; line-height:1.1; }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.conta-nome{ text-align:left; white-space:nowrap; }
+  #printArea tr.nivel-0{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-1{ font-weight:700; background:#f6f6f6 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-2{ font-weight:400; }
+  #printArea .indent-1{ padding-left:.5rem !important; }
+  #printArea .indent-2{ padding-left:.9rem !important; }
+  #printArea .print-footer{ font-size:6.6pt; color:#333; margin-top:3px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#"><i class="bi bi-bank"></i> Contabilidade Pública</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RREO - ANEXO 2 (LRF, Art. 52, inciso II, alínea "c")</span>
+<h1 class="display-6 fw-bold">Despesas por Função/Subfunção</h1>
+<p class="lead mb-0">
+Relatório Resumido da Execução Orçamentária consultado diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">Aguardando consulta...</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+
+<div class="row g-3">
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Período (bimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Bimestre (Jan-Fev)</option>
+<option value="2" selected>2º Bimestre (Mar-Abr)</option>
+<option value="3">3º Bimestre (Mai-Jun)</option>
+<option value="4">4º Bimestre (Jul-Ago)</option>
+<option value="5">5º Bimestre (Set-Out)</option>
+<option value="6">6º Bimestre (Nov-Dez)</option>
+</select>
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Esfera</label>
+<select id="filtroEsfera" class="form-select">
+<option value="M" selected>Municipal</option>
+<option value="E">Estadual</option>
+<option value="U">União</option>
+</select>
+</div>
+
+<input type="hidden" id="filtroAnexo" value="RREO-Anexo 02">
+<input type="hidden" id="filtroTipo" value="RREO">
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar"><i class="bi bi-search"></i></button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm"><i class="bi bi-printer"></i> Imprimir / Gerar PDF</button>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabelas</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code></div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Dotação Atualizada (Total Exceto Intra)</div>
+<div id="kpiDotacaoAtualizada" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Despesa Empenhada até o Bimestre</div>
+<div id="kpiEmpenhada" class="valor">R$ 0,00</div>
+<div id="kpiEmpenhadaPerc" class="small-muted"></div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Despesa Liquidada até o Bimestre</div>
+<div id="kpiLiquidada" class="valor">R$ 0,00</div>
+<div id="kpiLiquidadaPerc" class="small-muted"></div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100"><div class="card-body">
+<div class="text-muted small">Função com maior execução liquidada</div>
+<div id="kpiFuncaoTop" class="valor" style="font-size:1rem">-</div>
+</div></div>
+</div>
+
+</section>
+
+<div id="viewTabelas">
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Despesas por Função/Subfunção (Exceto Intra-Orçamentárias)</h5>
+<span class="small-muted">RREO - Anexo 2</span>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="theadPrincipal"></tr></thead>
+<tbody id="tbodyPrincipal"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Despesas por Função/Subfunção (Intra-Orçamentárias)</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="theadIntra"></tr></thead>
+<tbody id="tbodyIntra"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Total Geral (I + II)</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="theadTotal"></tr></thead>
+<tbody id="tbodyTotal"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+</div>
+
+<div id="viewGraficos" class="d-none">
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">1. Dotação Atualizada por Função</h5>
+<div class="chart-card-desc mb-2">Funções com maior dotação atualizada (exceto intra).</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoDotacaoFuncao"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">2. Empenhado x Liquidado por Função</h5>
+<div class="chart-card-desc mb-2">Valores até o bimestre, por função.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoEmpenhadoLiquidado"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">3. % de Execução Liquidada por Função</h5>
+<div class="chart-card-desc mb-2">Liquidado até o bimestre ÷ Dotação atualizada.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoPercExecucao"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">4. Composição da Dotação por Função</h5>
+<div class="chart-card-desc mb-2">Participação de cada função no total (exceto intra).</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoComposicaoFuncao"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">5. Funil da Despesa (Total)</h5>
+<div class="chart-card-desc mb-2">Dotação Atualizada → Empenhado → Liquidado.</div>
+<div class="chart-box"><canvas id="graficoFunil"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">6. Saldo a Executar por Função</h5>
+<div class="chart-card-desc mb-2">Dotação atualizada − Liquidado até o bimestre.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoSaldoFuncao"></canvas></div>
+</div></div>
+</div>
+
+</section>
+</div>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar um arquivo previamente baixado (mesma estrutura retornada pela API: objeto com a chave <code>items</code>).
+</div>
+
+</main>
+
+<div id="printArea">
+<div class="print-page">
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Relatório Resumido da Execução Orçamentária</div>
+<div class="print-title">DEMONSTRATIVO DA EXECUÇÃO DAS DESPESAS POR FUNÇÃO/SUBFUNÇÃO</div>
+<div class="print-sub">Orçamentos Fiscal e da Seguridade Social</div>
+<div class="print-sub" id="printEntidade">Entidade: -</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+<div class="print-anexo-linha">RREO - Anexo 2 (LRF, Art. 52, inciso II, alínea "c")<span class="float-end">Em Reais</span></div>
+<table>
+<thead><tr id="printTheadPrincipal"></tr></thead>
+<tbody id="printTbodyPrincipal"></tbody>
+</table>
+</div>
+
+<div class="print-page print-page-last">
+<div class="print-header-mini" id="printMiniHeader2">MUNICÍPIO DE CAMPO LARGO - PR — DESPESAS POR FUNÇÃO/SUBFUNÇÃO — Intra-Orçamentárias e Total</div>
+<table>
+<thead><tr id="printTheadIntra"></tr></thead>
+<tbody id="printTbodyIntra"></tbody>
+</table>
+<table>
+<thead><tr id="printTheadTotal"></tr></thead>
+<tbody id="printTbodyTotal"></tbody>
+</table>
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>.
+</div>
+</div>
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Despesas por Função/Subfunção (RREO - Anexo 2) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c","#adb5bd","#6610f2","#d63384","#fd7e14","#84a98c"];
+const $ = id => document.getElementById(id);
+
+// Lista oficial das Funções de Governo (Portaria MOG 42/1999 e alterações).
+// Usada para identificar quais linhas do Anexo 2 são "Função" (nível 1, em negrito)
+// -- tudo o que não estiver nesta lista e não for total geral é tratado como Subfunção (nível 2).
+const FUNCOES = new Set([
+  "Legislativa","Judiciária","Essencial à Justiça","Administração","Defesa Nacional",
+  "Segurança Pública","Relações Exteriores","Assistência Social","Previdência Social",
+  "Saúde","Trabalho","Educação","Cultura","Direitos da Cidadania","Urbanismo","Habitação",
+  "Saneamento","Gestão Ambiental","Ciência e Tecnologia","Agricultura","Organização Agrária",
+  "Indústria","Comércio e Serviços","Comunicações","Energia","Transporte","Desporto e Lazer",
+  "Encargos Especiais","Reserva de Contingência"
+]);
+
+const TOTAL_LINHAS = new Set([
+  "DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)",
+  "DESPESAS (INTRA-ORÇAMENTÁRIAS) (II)",
+  "TOTAL (III) = (I + II)"
+]);
+
+let dadosPorConta = {};     // { "SECAO::conta": { conta, nivel, secao, valores:{coluna:valor} } }
+let ordemPrincipal = [];    // chaves na ordem oficial, seção EXCETO_INTRA
+let ordemIntra = [];        // chaves na ordem oficial, seção INTRA
+let colunasEncontradas = []; // colunas na ordem retornada pela API
+let metaConsulta = {};
+let graficos = {};
+let COL = {};
+
+function moeda(valor){ return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0); }
+function moedaCompacta(valor){
+  const v = Number(valor)||0, abs = Math.abs(v);
+  if(abs >= 1e9) return (v/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return (v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return (v/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function percent(valor){ return (Number(valor)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%"; }
+function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function mostrarStatus(t,tipo="info"){ const el=$("status"); el.className="alert alert-"+tipo+" status"; el.textContent=t; }
+function mostrarLoading(s){ $("loading").classList.toggle("d-none",!s); }
+
+const BIMESTRE_INFO = {
+  1:{ordinal:"1º", meses:"Janeiro a Fevereiro"}, 2:{ordinal:"2º", meses:"Março a Abril"},
+  3:{ordinal:"3º", meses:"Maio a Junho"}, 4:{ordinal:"4º", meses:"Julho a Agosto"},
+  5:{ordinal:"5º", meses:"Setembro a Outubro"}, 6:{ordinal:"6º", meses:"Novembro a Dezembro"},
+};
+function ordinalAtual(){
+  const p = parseInt($("filtroPeriodo").value,10);
+  return (BIMESTRE_INFO[p] || BIMESTRE_INFO[1]).ordinal.replace("º","");
+}
+
+function montarUrl(){
+  const params = new URLSearchParams({
+    an_exercicio: $("filtroExercicio").value.trim(),
+    nr_periodo: $("filtroPeriodo").value.trim(),
+    co_tipo_demonstrativo: $("filtroTipo").value.trim(),
+    no_anexo: $("filtroAnexo").value.trim(),
+    co_esfera: $("filtroEsfera").value.trim(),
+    id_ente: $("filtroEnte").value.trim()
+  });
+  return `${API_BASE}?${params.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+  try {
+    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function processarDados(lista){
+  dadosPorConta = {}; ordemPrincipal = []; ordemIntra = []; colunasEncontradas = []; metaConsulta = {};
+
+  const porColuna = {};
+  lista.forEach(item=>{
+    if(!item || !item.conta || !item.coluna) return;
+    if(!porColuna[item.coluna]) { porColuna[item.coluna] = []; colunasEncontradas.push(item.coluna); }
+    porColuna[item.coluna].push(item);
+    if(!metaConsulta.instituicao){
+      metaConsulta = { instituicao:item.instituicao, populacao:item.populacao, exercicio:item.exercicio, periodo:item.periodo, uf:item.uf, cod_ibge:item.cod_ibge };
+    }
+  });
+
+  if(!colunasEncontradas.length){ mostrarStatus("A consulta não retornou registros para os parâmetros informados.","warning"); return; }
+
+  // Monta a ordem oficial (função/subfunção, com seção e nível) a partir da 1ª coluna encontrada.
+  const primeira = porColuna[colunasEncontradas[0]];
+  let secaoAtual = "EXCETO_INTRA";
+  const ordemMestre = primeira.map(item=>{
+    let nivel = 2, secao = secaoAtual;
+    if(TOTAL_LINHAS.has(item.conta)){
+      nivel = 0;
+      if(item.conta.includes("(II)")) secaoAtual = "INTRA";
+      else if(item.conta.includes("(III)")) secaoAtual = "TOTAL";
+      else secaoAtual = "EXCETO_INTRA";
+      secao = secaoAtual;
+    } else if(FUNCOES.has(item.conta)){
+      nivel = 1; secao = secaoAtual;
+    } else {
+      nivel = 2; secao = secaoAtual;
+    }
+    return { conta:item.conta, nivel, secao };
+  });
+
+  ordemMestre.forEach(m=>{
+    const key = m.secao + "::" + m.conta;
+    if(m.secao === "EXCETO_INTRA") ordemPrincipal.push(key);
+    else if(m.secao === "INTRA") ordemIntra.push(key);
+  });
+
+  colunasEncontradas.forEach(coluna=>{
+    porColuna[coluna].forEach((item, idx)=>{
+      const m = ordemMestre[idx];
+      if(!m) return;
+      const key = m.secao + "::" + m.conta;
+      if(!dadosPorConta[key]) dadosPorConta[key] = { conta:item.conta, nivel:m.nivel, secao:m.secao, valores:{} };
+      dadosPorConta[key].valores[coluna] = Number(item.valor) || 0;
+    });
+  });
+
+  mapearColunasChave();
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTabelas();
+  renderizarGraficos();
+}
+
+function acharColuna(regex){ return colunasEncontradas.find(c=>regex.test(c)) || null; }
+function mapearColunasChave(){
+  COL = {
+    dotacaoInicial: acharColuna(/DOTA[CÇ][AÃ]O\s+INICIAL/i),
+    dotacaoAtualizada: acharColuna(/DOTA[CÇ][AÃ]O\s+ATUALIZADA/i),
+    empenhadoNoBimestre: acharColuna(/EMPENHADAS\s+NO\s+BIMESTRE/i),
+    empenhadoAteBimestre: acharColuna(/EMPENHADAS\s+AT[EÉ]/i),
+    liquidadoNoBimestre: acharColuna(/LIQUIDADAS\s+NO\s+BIMESTRE/i),
+    liquidadoAteBimestre: acharColuna(/LIQUIDADAS\s+AT[EÉ]/i),
+  };
+}
+
+function atualizarCabecalho(){
+  const info = BIMESTRE_INFO[metaConsulta.periodo] || BIMESTRE_INFO[1];
+  $("navInstituicao").textContent = metaConsulta.instituicao || "-";
+  $("printInstituicao").textContent = (metaConsulta.instituicao || "MUNICÍPIO DE CAMPO LARGO - PR").toUpperCase();
+  $("printEntidade").textContent = `Entidade: ${metaConsulta.cod_ibge || "-"}`;
+  $("printPeriodo").textContent = `Período de Referência: Janeiro a ${info.meses.split(" a ")[1]} de ${metaConsulta.exercicio || "-"} / Bimestre ${info.meses}`;
+}
+
+function valorConta(key, coluna){
+  const item = dadosPorConta[key];
+  if(!item || !coluna) return 0;
+  return item.valores[coluna] || 0;
+}
+
+function atualizarKPIs(){
+  const keyI = "EXCETO_INTRA::DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)";
+  const dot = valorConta(keyI, COL.dotacaoAtualizada);
+  const emp = valorConta(keyI, COL.empenhadoAteBimestre);
+  const liq = valorConta(keyI, COL.liquidadoAteBimestre);
+
+  $("kpiDotacaoAtualizada").textContent = moeda(dot);
+  $("kpiEmpenhada").textContent = moeda(emp);
+  $("kpiEmpenhadaPerc").textContent = dot ? `${percent(emp/dot*100)} da dotação atualizada` : "";
+  $("kpiLiquidada").textContent = moeda(liq);
+  $("kpiLiquidadaPerc").textContent = dot ? `${percent(liq/dot*100)} da dotação atualizada` : "";
+
+  let topFuncao = "-", topValor = -1;
+  ordemPrincipal.forEach(key=>{
+    const item = dadosPorConta[key];
+    if(item && item.nivel === 1){
+      const v = valorConta(key, COL.liquidadoAteBimestre);
+      if(v > topValor){ topValor = v; topFuncao = item.conta; }
+    }
+  });
+  $("kpiFuncaoTop").textContent = topFuncao === "-" ? "-" : `${topFuncao} (${moeda(topValor)})`;
+}
+
+// -------------------- Tabelas --------------------
+
+function formatarRotuloColuna(coluna){
+  const ord = ordinalAtual();
+  let texto = escapeHtml(coluna);
+  texto = texto.replace(/NO BIMESTRE/gi, `No <span class="ord-bimestre">${ord}</span>º Bimestre`);
+  texto = texto.replace(/AT[ÉE] O BIMESTRE/gi, `Até o <span class="ord-bimestre">${ord}</span>º Bimestre`);
+  return texto;
+}
+
+function renderizarCabecalho(theadId){
+  const tr = $(theadId);
+  let html = `<th style="min-width:260px">Função/Subfunção</th>`;
+  colunasEncontradas.forEach(c=>{ html += `<th class="valor">${formatarRotuloColuna(c)}</th>`; });
+  tr.innerHTML = html;
+}
+
+function linhaHtml(key, isPrint){
+  const item = dadosPorConta[key];
+  if(!item) return "";
+  const indentClass = item.nivel === 2 ? "indent-1" : "";
+  let html = `<tr class="nivel-${item.nivel}"><td class="conta-nome ${indentClass}">${escapeHtml(item.conta)}</td>`;
+  colunasEncontradas.forEach(c=>{
+    const v = item.valores[c] || 0;
+    const isPerc = /^%/.test(c);
+    html += `<td class="valor">${isPerc ? percent(v) : moeda(v)}</td>`;
+  });
+  html += `</tr>`;
+  return html;
+}
+
+function renderizarTabelas(){
+  renderizarCabecalho("theadPrincipal");
+  renderizarCabecalho("theadIntra");
+  renderizarCabecalho("theadTotal");
+  renderizarCabecalho("printTheadPrincipal");
+  renderizarCabecalho("printTheadIntra");
+  renderizarCabecalho("printTheadTotal");
+
+  $("tbodyPrincipal").innerHTML = ordemPrincipal.map(k=>linhaHtml(k)).join("");
+  $("tbodyIntra").innerHTML = ordemIntra.map(k=>linhaHtml(k)).join("");
+  $("printTbodyPrincipal").innerHTML = ordemPrincipal.map(k=>linhaHtml(k)).join("");
+  $("printTbodyIntra").innerHTML = ordemIntra.map(k=>linhaHtml(k)).join("");
+
+  const keyTotal = "TOTAL::TOTAL (III) = (I + II)";
+  const htmlTotal = dadosPorConta[keyTotal] ? linhaHtml(keyTotal) : "";
+  $("tbodyTotal").innerHTML = htmlTotal;
+  $("printTbodyTotal").innerHTML = htmlTotal;
+}
+
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(nome){ if(graficos[nome]){ graficos[nome].destroy(); delete graficos[nome]; } }
+
+function funcoesPrincipais(){
+  return ordemPrincipal
+    .map(k=>dadosPorConta[k])
+    .filter(item=>item && item.nivel === 1);
+}
+
+function graficoDotacaoFuncao(){
+  const funcoes = funcoesPrincipais()
+    .map(f=>({ nome:f.conta, valor: f.valores[COL.dotacaoAtualizada] || 0 }))
+    .sort((a,b)=>b.valor - a.valor);
+  destruirGrafico("dotacaoFuncao");
+  graficos.dotacaoFuncao = new Chart($("graficoDotacaoFuncao"), {
+    type:"bar",
+    data:{ labels: funcoes.map(f=>f.nome), datasets:[{ label:"Dotação Atualizada", data: funcoes.map(f=>f.valor), backgroundColor: CORES[0] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoEmpenhadoLiquidado(){
+  const funcoes = funcoesPrincipais()
+    .map(f=>({ nome:f.conta, emp: f.valores[COL.empenhadoAteBimestre] || 0, liq: f.valores[COL.liquidadoAteBimestre] || 0 }))
+    .sort((a,b)=>b.emp - a.emp).slice(0,12);
+  destruirGrafico("empLiq");
+  graficos.empLiq = new Chart($("graficoEmpenhadoLiquidado"), {
+    type:"bar",
+    data:{ labels: funcoes.map(f=>f.nome), datasets:[
+      { label:"Empenhado até o bimestre", data: funcoes.map(f=>f.emp), backgroundColor: CORES[0] },
+      { label:"Liquidado até o bimestre", data: funcoes.map(f=>f.liq), backgroundColor: CORES[4] }
+    ] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moeda(ctx.raw)}` } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoPercExecucao(){
+  const funcoes = funcoesPrincipais()
+    .map(f=>{
+      const dot = f.valores[COL.dotacaoAtualizada] || 0;
+      const liq = f.valores[COL.liquidadoAteBimestre] || 0;
+      return { nome:f.conta, perc: dot ? (liq/dot*100) : 0 };
+    })
+    .sort((a,b)=>b.perc - a.perc);
+  destruirGrafico("percExec");
+  graficos.percExec = new Chart($("graficoPercExecucao"), {
+    type:"bar",
+    data:{ labels: funcoes.map(f=>f.nome), datasets:[{ label:"% Liquidado / Dotação Atualizada", data: funcoes.map(f=>f.perc.toFixed(2)), backgroundColor: CORES[4] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => percent(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => v + "%" } } } }
+  });
+}
+
+function graficoComposicaoFuncao(){
+  const funcoes = funcoesPrincipais()
+    .map(f=>({ nome:f.conta, valor: f.valores[COL.dotacaoAtualizada] || 0 }))
+    .sort((a,b)=>b.valor - a.valor);
+  const top = funcoes.slice(0,8);
+  const outrasValor = funcoes.slice(8).reduce((s,f)=>s+f.valor,0);
+  const labels = top.map(f=>f.nome).concat(outrasValor > 0 ? ["Demais funções"] : []);
+  const valores = top.map(f=>f.valor).concat(outrasValor > 0 ? [outrasValor] : []);
+  destruirGrafico("composicao");
+  graficos.composicao = new Chart($("graficoComposicaoFuncao"), {
+    type:"doughnut",
+    data:{ labels, datasets:[{ data: valores, backgroundColor: CORES }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"right", labels:{ boxWidth:10, font:{size:10} } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } } } }
+  });
+}
+
+function graficoFunil(){
+  const keyI = "EXCETO_INTRA::DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)";
+  const etapas = [
+    { label:"Dotação Atualizada", valor: valorConta(keyI, COL.dotacaoAtualizada) },
+    { label:"Empenhado até o bimestre", valor: valorConta(keyI, COL.empenhadoAteBimestre) },
+    { label:"Liquidado até o bimestre", valor: valorConta(keyI, COL.liquidadoAteBimestre) },
+  ];
+  destruirGrafico("funil");
+  graficos.funil = new Chart($("graficoFunil"), {
+    type:"bar",
+    data:{ labels: etapas.map(e=>e.label), datasets:[{ data: etapas.map(e=>e.valor), backgroundColor:[CORES[0],CORES[1],CORES[4]] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoSaldoFuncao(){
+  const funcoes = funcoesPrincipais()
+    .map(f=>({ nome:f.conta, saldo: (f.valores[COL.dotacaoAtualizada]||0) - (f.valores[COL.liquidadoAteBimestre]||0) }))
+    .sort((a,b)=>b.saldo - a.saldo);
+  destruirGrafico("saldoFuncao");
+  graficos.saldoFuncao = new Chart($("graficoSaldoFuncao"), {
+    type:"bar",
+    data:{ labels: funcoes.map(f=>f.nome), datasets:[{ label:"Saldo a executar", data: funcoes.map(f=>f.saldo), backgroundColor: CORES[3] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function renderizarGraficos(){
+  graficoDotacaoFuncao();
+  graficoEmpenhadoLiquidado();
+  graficoPercExecucao();
+  graficoComposicaoFuncao();
+  graficoFunil();
+  graficoSaldoFuncao();
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  const todasChaves = [...ordemPrincipal, ...ordemIntra];
+  if(!todasChaves.length){ alert("Não existem dados para exportar."); return; }
+
+  const cabecalho = ["Seção","Nível","Função/Subfunção", ...colunasEncontradas];
+  const linhas = todasChaves.map(key=>{
+    const item = dadosPorConta[key];
+    return [item.secao, item.nivel, item.conta, ...colunasEncontradas.map(c => item.valores[c] ?? "")];
+  });
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "rreo_anexo2_campo_largo.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// -------------------- Alternância Tabelas / Gráficos --------------------
+
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+// -------------------- Leitor de JSON local --------------------
+
+$("inputJson").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.items;
+      if(!Array.isArray(lista)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+function prepararEImprimir(){
+  if(!Object.keys(dadosPorConta).length){ alert("Não há dados carregados para imprimir. Faça uma consulta primeiro."); return; }
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+  renderizarTabelas();
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+consultarAPI();
+</script>
+
+</body>
+</html>
