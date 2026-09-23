@@ -24,17 +24,17 @@ O site reúne uma coleção de **dashboards e relatórios analíticos** estrutur
 ## 📊 Painéis e Ferramentas Disponíveis
 
 ### 💰 Custos
-* 📈 **[Objetos de Custo](custos/objetos_de_custo)** — Apuração, classificação e distribuição de custos do setor público.
+* 📈 **[Objetos de Custo](custos/objetos_de_custo.html)** — Apuração, classificação e distribuição de custos do setor público.
 
 ### 📉 Dashboards Orçamentários e Financeiros
-* 💸 **[Despesas](dashboard/despesas)** — Acompanhamento do ciclo da despesa (Empenhado, Liquidado e Pago).
-* 📑 **[Despesas Orçadas](dashboard/despesasorcadas)** — Análise comparativa entre a previsão orçamentária e a execução real.
-* 💵 **[Receitas](dashboard/receitas)** — Monitoramento da arrecadação realizada.
-* 🏦 **[Receitas Orçadas](dashboard/receitasorcadas)** — Previsão x arrecadação efetiva.
-* 👥 **[Servidores](dashboard/servidores)** — Panorama do quadro de pessoal e despesa com pessoal.
+* 💸 **[Despesas](dashboard/despesas.html)** — Acompanhamento do ciclo da despesa (Empenhado, Liquidado e Pago).
+* 📑 **[Despesas Orçadas](dashboard/despesasorcadas.html)** — Análise comparativa entre a previsão orçamentária e a execução real.
+* 💵 **[Receitas](dashboard/receitas.html)** — Monitoramento da arrecadação realizada.
+* 🏦 **[Receitas Orçadas](dashboard/receitasorcadas.html)** — Previsão x arrecadação efetiva.
+* 👥 **[Servidores](dashboard/servidores.html)** — Panorama do quadro de pessoal e despesa com pessoal.
 
 ### 📚 PCASP
-* 📖 **[Plano de Contas](pcasp/plano_de_contas)** — Estrutura e consulta do Plano de Contas Aplicado ao Setor Público.
+* 📖 **[Plano de Contas](pcasp/plano_de_contas.html)** — Estrutura e consulta do Plano de Contas Aplicado ao Setor Público.
 
 ---
 
