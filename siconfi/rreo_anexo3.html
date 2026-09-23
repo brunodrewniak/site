@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RREO - Anexo 3 | Receita Corrente Líquida | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.2rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-lg{height:440px;}
+.table-responsive{max-height:640px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.74rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rreo-table{font-size:.78rem}
+.rreo-table td.valor, .rreo-table th.valor{text-align:right;white-space:nowrap}
+.rreo-table tr.nivel-0{font-weight:700;background:#eef3fb}
+.rreo-table tr.nivel-1{font-weight:600;background:#f9fafc}
+.rreo-table tr.nivel-2{font-weight:400;color:#333}
+.rreo-table td.conta-nome{white-space:nowrap}
+.indent-1{padding-left:1rem !important}
+.indent-2{padding-left:2rem !important}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+
+#printArea{display:none}
+
+@media print{
+  @page{ size: A4 landscape; margin: 7mm; }
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{
+    display:block !important; position:absolute; left:0; top:0; width:100%;
+    background:#fff; color:#000; font-family:Arial,Helvetica,sans-serif;
+  }
+  #printArea .print-header{ text-align:center; margin-bottom:4px; line-height:1.15; }
+  #printArea .print-header h1{ font-size:11pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:7.5pt; margin:0; }
+  #printArea .print-title{ font-size:9pt; font-weight:700; margin:1px 0; }
+  #printArea .print-anexo-linha{ font-size:7pt; font-weight:600; margin:4px 0 3px; border-bottom:1px solid #000; padding-bottom:1px; }
+  #printArea table{ width:100%; border-collapse:collapse; font-size:5.8pt; line-height:1.05; margin-bottom:6px; table-layout:fixed; }
+  #printArea th, #printArea td{ border:1px solid #000; padding:1px 2px; overflow:hidden; }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{ background:#e3e3e3 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; text-align:center; font-size:5.6pt; line-height:1.1; }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.conta-nome{ text-align:left; white-space:nowrap; }
+  #printArea tr.nivel-0{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-1{ font-weight:600; background:#f6f6f6 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-2{ font-weight:400; }
+  #printArea .indent-1{ padding-left:.5rem !important; }
+  #printArea .indent-2{ padding-left:.9rem !important; }
+  #printArea .print-footer{ font-size:6.6pt; color:#333; margin-top:3px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#"><i class="bi bi-bank"></i> Contabilidade Pública</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RREO - ANEXO 3 (LRF, Art. 53, inciso I)</span>
+<h1 class="display-6 fw-bold">Receita Corrente Líquida</h1>
+<p class="lead mb-0">
+Evolução da Receita Realizada nos últimos 12 meses, consultada diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">Aguardando consulta...</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+
+<div class="row g-3">
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Período (bimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Bimestre (ref. Fevereiro)</option>
+<option value="2" selected>2º Bimestre (ref. Abril)</option>
+<option value="3">3º Bimestre (ref. Junho)</option>
+<option value="4">4º Bimestre (ref. Agosto)</option>
+<option value="5">5º Bimestre (ref. Outubro)</option>
+<option value="6">6º Bimestre (ref. Dezembro)</option>
+</select>
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Esfera</label>
+<select id="filtroEsfera" class="form-select">
+<option value="M" selected>Municipal</option>
+<option value="E">Estadual</option>
+<option value="U">União</option>
+</select>
+</div>
+
+<input type="hidden" id="filtroAnexo" value="RREO-Anexo 03">
+<input type="hidden" id="filtroTipo" value="RREO">
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar"><i class="bi bi-search"></i></button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm"><i class="bi bi-printer"></i> Imprimir / Gerar PDF</button>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabela</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code></div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Receita Corrente Líquida (Últimos 12 meses)</div>
+<div id="kpiRcl" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Receitas Correntes (Últimos 12 meses)</div>
+<div id="kpiReceitasCorrentes" class="valor">R$ 0,00</div>
+<div id="kpiReceitasCorrentesPerc" class="small-muted"></div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">RCL Ajustada p/ Despesa com Pessoal (IX)</div>
+<div id="kpiRclPessoal" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100"><div class="card-body">
+<div class="text-muted small">Arrecadação do último mês de referência</div>
+<div id="kpiUltimoMes" class="valor" style="font-size:1rem">-</div>
+</div></div>
+</div>
+
+</section>
+
+<div id="viewTabelas">
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Evolução da Receita Realizada nos Últimos 12 Meses</h5>
+<span class="small-muted">RREO - Anexo 3</span>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="theadPrincipal"></tr></thead>
+<tbody id="tbodyPrincipal"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+</div>
+
+<div id="viewGraficos" class="d-none">
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">1. Evolução Mensal: Receitas Correntes x RCL</h5>
+<div class="chart-card-desc mb-2">Valores mensais nos últimos 12 meses.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoEvolucao"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">2. Composição da Receita Corrente</h5>
+<div class="chart-card-desc mb-2">Participação de cada categoria no total dos últimos 12 meses.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoComposicao"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">3. Detalhamento das Transferências Correntes</h5>
+<div class="chart-card-desc mb-2">Totais dos últimos 12 meses por origem da transferência.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoTransferencias"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">4. Receitas Correntes x Deduções x RCL</h5>
+<div class="chart-card-desc mb-2">Totais dos últimos 12 meses.</div>
+<div class="chart-box"><canvas id="graficoResumo"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">5. Formação da RCL Ajustada</h5>
+<div class="chart-card-desc mb-2">RCL (III) → Ajustada p/ Endividamento (V) → Ajustada p/ Despesa com Pessoal (IX).</div>
+<div class="chart-box"><canvas id="graficoRclAjustada"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">6. Realizado x Previsão Atualizada</h5>
+<div class="chart-card-desc mb-2">Receitas Correntes: total dos últimos 12 meses x previsão atualizada do exercício.</div>
+<div class="chart-box"><canvas id="graficoPrevisao"></canvas></div>
+</div></div>
+</div>
+
+</section>
+</div>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar um arquivo previamente baixado (mesma estrutura retornada pela API: objeto com a chave <code>items</code>).
+</div>
+
+</main>
+
+<div id="printArea">
+<div class="print-page">
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO</h1>
+<div class="print-sub">Prestação de Contas</div>
+<div class="print-title">DEMONSTRATIVO DA RECEITA CORRENTE LÍQUIDA</div>
+<div class="print-sub" id="printEntidade">Entidade: -</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+<div class="print-anexo-linha">RREO - Anexo 3 (LRF, Art. 53, inciso I)<span class="float-end">Em Reais</span></div>
+<table>
+<thead><tr id="printTheadPrincipal"></tr></thead>
+<tbody id="printTbodyPrincipal"></tbody>
+</table>
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>.
+</div>
+</div>
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Receita Corrente Líquida (RREO - Anexo 3) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c","#adb5bd","#6610f2","#d63384","#84a98c"];
+const $ = id => document.getElementById(id);
+
+const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const REF_MES_POR_PERIODO = { 1:2, 2:4, 3:6, 4:8, 5:10, 6:12 };
+
+// Categorias de nível 1 da seção "RECEITAS CORRENTES (I)" que possuem subitens (nível 2).
+const CATEGORIA_COM_FILHOS = new Set([
+  "Impostos, Taxas e Contribuições de Melhoria",
+  "Receita Patrimonial",
+  "Transferências Correntes"
+]);
+// Categorias de nível 1 sem subitens.
+const CATEGORIA_SEM_FILHOS = new Set([
+  "Contribuições","Receita Agropecuária","Receita Industrial","Receita de Serviços","Outras Receitas Correntes"
+]);
+
+function eLinhaTotal(conta){
+  return /^RECEITAS CORRENTES\s*\(I\)/i.test(conta) ||
+         /^DEDU[ÇC][ÕO]ES\s*\(II\)/i.test(conta) ||
+         /^RECEITA CORRENTE L[IÍ]QUIDA\s*\(III\)/i.test(conta) ||
+         /LIMITES DE ENDIVIDAMENTO\s*\(V\)/i.test(conta) ||
+         /LIMITES DA DESPESA COM PESSOAL\s*\(IX\)/i.test(conta);
+}
+function eLinhaAjuste(conta){
+  return /\(IV\)$/.test(conta) || /\(VI\)$/.test(conta) || /\(VII\)$/.test(conta) || /\(VIII\)$/.test(conta);
+}
+
+let dadosPorConta = {};   // { conta: { conta, nivel, pai, valores:{coluna:valor} } }
+let ordemPrincipal = [];  // contas na ordem oficial do demonstrativo
+let colunasEncontradas = []; // colunas (meses + total + previsão) na ordem retornada pela API
+let metaConsulta = {};
+let graficos = {};
+let KEYS = {};
+let COLM = {};
+
+function moeda(valor){ return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0); }
+function moedaCompacta(valor){
+  const v = Number(valor)||0, abs = Math.abs(v);
+  if(abs >= 1e9) return (v/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return (v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return (v/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function mostrarStatus(t,tipo="info"){ const el=$("status"); el.className="alert alert-"+tipo+" status"; el.textContent=t; }
+function mostrarLoading(s){ $("loading").classList.toggle("d-none",!s); }
+
+function montarUrl(){
+  const params = new URLSearchParams({
+    an_exercicio: $("filtroExercicio").value.trim(),
+    nr_periodo: $("filtroPeriodo").value.trim(),
+    co_tipo_demonstrativo: $("filtroTipo").value.trim(),
+    no_anexo: $("filtroAnexo").value.trim(),
+    co_esfera: $("filtroEsfera").value.trim(),
+    id_ente: $("filtroEnte").value.trim()
+  });
+  return `${API_BASE}?${params.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+  try {
+    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+// Calcula o mês/ano de referência de cada coluna "<MR>", "<MR-1>" ... "<MR-11>"
+// a partir do bimestre selecionado (o mês de referência é o último mês do bimestre).
+function dataReferencia(){
+  const exercicio = parseInt($("filtroExercicio").value,10) || new Date().getFullYear();
+  const periodo = parseInt($("filtroPeriodo").value,10) || 1;
+  const mesRef = REF_MES_POR_PERIODO[periodo] || 2;
+  return { exercicio, mesRef };
+}
+function dataDaColunaMR(coluna){
+  const m = /^<MR(-(\d+))?>$/.exec(coluna);
+  if(!m) return null;
+  const k = m[2] ? parseInt(m[2],10) : 0;
+  const { exercicio, mesRef } = dataReferencia();
+  const d = new Date(exercicio, (mesRef - 1) - k, 1);
+  return d;
+}
+function rotuloMes(d){ return `${MESES_PT[d.getMonth()]}/${d.getFullYear()}`; }
+
+function formatarRotuloColuna(coluna){
+  const dataMR = dataDaColunaMR(coluna);
+  if(dataMR) return rotuloMes(dataMR);
+  if(/^TOTAL/i.test(coluna)) return "Total (Últimos 12 meses)";
+  if(/^PREVIS[ÃA]O/i.test(coluna)) return "Previsão Atualizada (Exercício)";
+  return escapeHtml(coluna);
+}
+
+function processarDados(lista){
+  dadosPorConta = {}; ordemPrincipal = []; colunasEncontradas = []; metaConsulta = {};
+
+  const porColuna = {};
+  lista.forEach(item=>{
+    if(!item || !item.conta || !item.coluna) return;
+    if(!porColuna[item.coluna]) { porColuna[item.coluna] = []; colunasEncontradas.push(item.coluna); }
+    porColuna[item.coluna].push(item);
+    if(!metaConsulta.instituicao){
+      metaConsulta = { instituicao:item.instituicao, exercicio:item.exercicio, periodo:item.periodo, uf:item.uf, cod_ibge:item.cod_ibge };
+    }
+  });
+
+  if(!colunasEncontradas.length){ mostrarStatus("A consulta não retornou registros para os parâmetros informados.","warning"); return; }
+
+  // Ordena as colunas: meses (do mais antigo ao mais recente), depois Total e Previsão.
+  colunasEncontradas.sort((a,b)=>{
+    const ka = /^<MR(-(\d+))?>$/.exec(a), kb = /^<MR(-(\d+))?>$/.exec(b);
+    const va = ka ? (ka[2] ? parseInt(ka[2],10) : 0) : -1000;
+    const vb = kb ? (kb[2] ? parseInt(kb[2],10) : 0) : -1000;
+    if(ka && kb) return vb - va; // MR-11 antes de MR
+    if(ka && !kb) return -1;
+    if(!ka && kb) return 1;
+    if(/^TOTAL/i.test(a)) return -1;
+    if(/^TOTAL/i.test(b)) return 1;
+    return 0;
+  });
+
+  // Monta a ordem oficial (conta / nível / pai) a partir da 1ª coluna encontrada.
+  const primeira = porColuna[colunasEncontradas[0]];
+  let modoFilho = false, aggregadorAtivo = null;
+  const ordemMestre = primeira.map(item=>{
+    const conta = item.conta;
+    let nivel, pai = null;
+    if(eLinhaTotal(conta)){ nivel = 0; modoFilho = false; aggregadorAtivo = null; }
+    else if(eLinhaAjuste(conta)){ nivel = 1; modoFilho = false; aggregadorAtivo = null; }
+    else if(CATEGORIA_COM_FILHOS.has(conta)){ nivel = 1; modoFilho = true; aggregadorAtivo = conta; }
+    else if(CATEGORIA_SEM_FILHOS.has(conta)){ nivel = 1; modoFilho = false; aggregadorAtivo = null; }
+    else if(modoFilho){ nivel = 2; pai = aggregadorAtivo; }
+    else { nivel = 1; }
+    return { conta, nivel, pai };
+  });
+
+  ordemMestre.forEach(m=>{ ordemPrincipal.push(m.conta); });
+
+  colunasEncontradas.forEach(coluna=>{
+    porColuna[coluna].forEach((item, idx)=>{
+      const m = ordemMestre[idx];
+      if(!m) return;
+      if(!dadosPorConta[m.conta]) dadosPorConta[m.conta] = { conta:item.conta, nivel:m.nivel, pai:m.pai, valores:{} };
+      dadosPorConta[m.conta].valores[coluna] = Number(item.valor) || 0;
+    });
+  });
+
+  mapearContasChave();
+  mapearColunasChave();
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTabela();
+  renderizarGraficos();
+}
+
+function acharConta(regex){ return ordemPrincipal.find(c=>regex.test(c)) || null; }
+function mapearContasChave(){
+  KEYS = {
+    receitasCorrentes: acharConta(/^RECEITAS CORRENTES\s*\(I\)/i),
+    deducoes: acharConta(/^DEDU[ÇC][ÕO]ES\s*\(II\)/i),
+    rcl: acharConta(/^RECEITA CORRENTE L[IÍ]QUIDA\s*\(III\)/i),
+    rclEndividamento: acharConta(/LIMITES DE ENDIVIDAMENTO\s*\(V\)/i),
+    rclPessoal: acharConta(/LIMITES DA DESPESA COM PESSOAL\s*\(IX\)/i),
+  };
+}
+function acharColunaMeta(regex){ return colunasEncontradas.find(c=>regex.test(c)) || null; }
+function mapearColunasChave(){
+  COLM = {
+    total12: acharColunaMeta(/^TOTAL/i),
+    previsao: acharColunaMeta(/^PREVIS[ÃA]O/i),
+    mrAtual: colunasEncontradas.find(c=>c === "<MR>") || null,
+  };
+}
+
+function atualizarCabecalho(){
+  $("navInstituicao").textContent = metaConsulta.instituicao || "-";
+  $("printInstituicao").textContent = (metaConsulta.instituicao || "MUNICÍPIO DE CAMPO LARGO").toUpperCase();
+  $("printEntidade").textContent = `Entidade: ${metaConsulta.cod_ibge || "-"}`;
+  const { exercicio, mesRef } = dataReferencia();
+  $("printPeriodo").textContent = `Período de Referência: Janeiro a ${MESES_PT[mesRef-1]} de ${exercicio}`;
+}
+
+function valorConta(key, coluna){
+  const item = dadosPorConta[key];
+  if(!item || !coluna) return 0;
+  return item.valores[coluna] || 0;
+}
+
+function atualizarKPIs(){
+  const rcl12 = valorConta(KEYS.rcl, COLM.total12);
+  const rc12 = valorConta(KEYS.receitasCorrentes, COLM.total12);
+  const rcPrevisao = valorConta(KEYS.receitasCorrentes, COLM.previsao);
+  const rclPessoal12 = valorConta(KEYS.rclPessoal, COLM.total12);
+  const rcMR = valorConta(KEYS.receitasCorrentes, COLM.mrAtual);
+
+  $("kpiRcl").textContent = moeda(rcl12);
+  $("kpiReceitasCorrentes").textContent = moeda(rc12);
+  $("kpiReceitasCorrentesPerc").textContent = rcPrevisao ? `${(rc12/rcPrevisao*100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}% da previsão atualizada` : "";
+  $("kpiRclPessoal").textContent = moeda(rclPessoal12);
+
+  const dataMR = COLM.mrAtual ? dataDaColunaMR(COLM.mrAtual) : null;
+  $("kpiUltimoMes").textContent = dataMR ? `${rotuloMes(dataMR)}: ${moeda(rcMR)}` : "-";
+}
+
+// -------------------- Tabela --------------------
+
+function renderizarCabecalho(theadId){
+  const tr = $(theadId);
+  let html = `<th style="min-width:230px">Especificação</th>`;
+  colunasEncontradas.forEach(c=>{ html += `<th class="valor">${formatarRotuloColuna(c)}</th>`; });
+  tr.innerHTML = html;
+}
+
+function linhaHtml(key){
+  const item = dadosPorConta[key];
+  if(!item) return "";
+  const indentClass = item.nivel === 2 ? "indent-2" : (item.nivel === 1 ? "indent-1" : "");
+  let html = `<tr class="nivel-${item.nivel}"><td class="conta-nome ${indentClass}">${escapeHtml(item.conta)}</td>`;
+  colunasEncontradas.forEach(c=>{
+    html += `<td class="valor">${moeda(item.valores[c] || 0)}</td>`;
+  });
+  html += `</tr>`;
+  return html;
+}
+
+function renderizarTabela(){
+  renderizarCabecalho("theadPrincipal");
+  renderizarCabecalho("printTheadPrincipal");
+  const html = ordemPrincipal.map(k=>linhaHtml(k)).join("");
+  $("tbodyPrincipal").innerHTML = html;
+  $("printTbodyPrincipal").innerHTML = html;
+}
+
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(nome){ if(graficos[nome]){ graficos[nome].destroy(); delete graficos[nome]; } }
+
+function colunasMeses(){
+  return colunasEncontradas.filter(c=>/^<MR(-(\d+))?>$/.test(c));
+}
+
+function graficoEvolucao(){
+  const meses = colunasMeses();
+  const labels = meses.map(c=>rotuloMes(dataDaColunaMR(c)));
+  const receitas = meses.map(c=>valorConta(KEYS.receitasCorrentes, c));
+  const rcl = meses.map(c=>valorConta(KEYS.rcl, c));
+  destruirGrafico("evolucao");
+  graficos.evolucao = new Chart($("graficoEvolucao"), {
+    type:"line",
+    data:{ labels, datasets:[
+      { label:"Receitas Correntes (I)", data: receitas, borderColor: CORES[0], backgroundColor: CORES[0]+"33", tension:.3, fill:true },
+      { label:"RCL (III)", data: rcl, borderColor: CORES[4], backgroundColor: CORES[4]+"33", tension:.3, fill:true }
+    ] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moeda(ctx.raw)}` } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function categoriasReceitaNivel1(){
+  return ordemPrincipal
+    .map(k=>dadosPorConta[k])
+    .filter(item=>item && item.nivel === 1 && (CATEGORIA_COM_FILHOS.has(item.conta) || CATEGORIA_SEM_FILHOS.has(item.conta)));
+}
+
+function graficoComposicao(){
+  const categorias = categoriasReceitaNivel1()
+    .map(f=>({ nome:f.conta, valor: f.valores[COLM.total12] || 0 }))
+    .sort((a,b)=>b.valor - a.valor);
+  destruirGrafico("composicao");
+  graficos.composicao = new Chart($("graficoComposicao"), {
+    type:"doughnut",
+    data:{ labels: categorias.map(c=>c.nome), datasets:[{ data: categorias.map(c=>c.valor), backgroundColor: CORES }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"right", labels:{ boxWidth:10, font:{size:10} } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } } } }
+  });
+}
+
+function graficoTransferencias(){
+  const itens = ordemPrincipal
+    .map(k=>dadosPorConta[k])
+    .filter(item=>item && item.nivel === 2 && item.pai === "Transferências Correntes")
+    .map(f=>({ nome:f.conta, valor: f.valores[COLM.total12] || 0 }))
+    .sort((a,b)=>b.valor - a.valor);
+  destruirGrafico("transferencias");
+  graficos.transferencias = new Chart($("graficoTransferencias"), {
+    type:"bar",
+    data:{ labels: itens.map(i=>i.nome), datasets:[{ label:"Total últimos 12 meses", data: itens.map(i=>i.valor), backgroundColor: CORES[1] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoResumo(){
+  const dados = [
+    { label:"Receitas Correntes (I)", valor: valorConta(KEYS.receitasCorrentes, COLM.total12) },
+    { label:"Deduções (II)", valor: valorConta(KEYS.deducoes, COLM.total12) },
+    { label:"RCL (III)", valor: valorConta(KEYS.rcl, COLM.total12) },
+  ];
+  destruirGrafico("resumo");
+  graficos.resumo = new Chart($("graficoResumo"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor:[CORES[0],CORES[3],CORES[4]] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoRclAjustada(){
+  const dados = [
+    { label:"RCL (III)", valor: valorConta(KEYS.rcl, COLM.total12) },
+    { label:"Ajustada p/ Endividamento (V)", valor: valorConta(KEYS.rclEndividamento, COLM.total12) },
+    { label:"Ajustada p/ Desp. c/ Pessoal (IX)", valor: valorConta(KEYS.rclPessoal, COLM.total12) },
+  ];
+  destruirGrafico("rclAjustada");
+  graficos.rclAjustada = new Chart($("graficoRclAjustada"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor: CORES[4] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoPrevisao(){
+  const dados = [
+    { label:"Realizado (Últimos 12 meses)", valor: valorConta(KEYS.receitasCorrentes, COLM.total12) },
+    { label:"Previsão Atualizada (Exercício)", valor: valorConta(KEYS.receitasCorrentes, COLM.previsao) },
+  ];
+  destruirGrafico("previsao");
+  graficos.previsao = new Chart($("graficoPrevisao"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor:[CORES[0],CORES[2]] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function renderizarGraficos(){
+  graficoEvolucao();
+  graficoComposicao();
+  graficoTransferencias();
+  graficoResumo();
+  graficoRclAjustada();
+  graficoPrevisao();
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  if(!ordemPrincipal.length){ alert("Não existem dados para exportar."); return; }
+
+  const cabecalho = ["Nível","Especificação", ...colunasEncontradas.map(c=>formatarRotuloColuna(c).replace(/<[^>]+>/g,""))];
+  const linhas = ordemPrincipal.map(key=>{
+    const item = dadosPorConta[key];
+    return [item.nivel, item.conta, ...colunasEncontradas.map(c => item.valores[c] ?? "")];
+  });
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "rreo_anexo3_campo_largo.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// -------------------- Alternância Tabela / Gráficos --------------------
+
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+// -------------------- Leitor de JSON local --------------------
+
+$("inputJson").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.items;
+      if(!Array.isArray(lista)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+function prepararEImprimir(){
+  if(!ordemPrincipal.length){ alert("Não há dados carregados para imprimir. Faça uma consulta primeiro."); return; }
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+  renderizarTabela();
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+consultarAPI();
+</script>
+
+</body>
+</html>
