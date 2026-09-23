@@ -677,7 +677,7 @@ const NOME_QUADRIMESTRE = {
 function atualizarCabecalho(){
   if(!metaConsulta.instituicao) return;
 
-  $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+  $("navInstituicao").textContent = `${metaConsulta.instituicao}`;
 
   const quad = NOME_QUADRIMESTRE[metaConsulta.periodo] || NOME_QUADRIMESTRE[1];
   const poder = NOME_PODER[metaConsulta.co_poder] || metaConsulta.co_poder || "-";
