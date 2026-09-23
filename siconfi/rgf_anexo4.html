@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RGF - Anexo 4 | Operações de Crédito | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --amarelo:#c9a300;
+  --laranja:#fd7e14;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-amarelo{border-left-color:var(--amarelo)}
+.kpi.kpi-laranja{border-left-color:var(--laranja)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.25rem;font-weight:700;color:var(--azul-escuro)}
+.kpi .valor.cor-verde{color:var(--verde)}
+.kpi .valor.cor-amarelo{color:var(--amarelo)}
+.kpi .valor.cor-laranja{color:var(--laranja)}
+.kpi .valor.cor-vermelho{color:var(--vermelho)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-sm{height:260px;}
+.chart-box.chart-box-lg{height:400px;}
+.table-responsive{max-height:640px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.78rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rgf-table{font-size:.82rem}
+.rgf-table td.valor, .rgf-table th.valor{text-align:right;white-space:nowrap}
+.rgf-table tr.nivel-0{font-weight:700;background:#eef3fb}
+.rgf-table tr.nivel-1{font-weight:500;color:#444}
+.rgf-table tr.nivel-2{color:#666;font-size:.78rem}
+.rgf-table tr.nivel-0.total{background:#dbe7fb}
+.rgf-table td.conta-nome{white-space:normal}
+.indent-1{padding-left:1.1rem !important}
+.indent-2{padding-left:2.1rem !important}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+
+/* ---------- Área de impressão / PDF ---------- */
+#printArea{display:none}
+
+@media print{
+  @page{ size: A4 landscape; margin: 8mm; }
+
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{
+    display:block !important;
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    background:#fff;
+    color:#000;
+    font-family:Arial,Helvetica,sans-serif;
+  }
+
+  #printArea .print-header{ text-align:center; margin-bottom:4px; line-height:1.15; }
+  #printArea .print-header h1{ font-size:12pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:8pt; margin:0; }
+  #printArea .print-title{ font-size:10pt; font-weight:700; margin:1px 0; }
+  #printArea .print-anexo-linha{ font-size:7.5pt; font-weight:600; margin:5px 0 4px; border-bottom:1px solid #000; padding-bottom:2px; }
+  #printArea .print-secao{ font-size:8pt; font-weight:700; text-align:center; margin:8px 0 3px; }
+
+  #printArea table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:7.6pt;
+    line-height:1.15;
+    margin-bottom:8px;
+    table-layout:fixed;
+  }
+  #printArea th, #printArea td{
+    border:1px solid #000;
+    padding:2px 4px;
+    overflow:hidden;
+  }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{
+    background:#e3e3e3 !important;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    font-weight:700;
+    text-align:center;
+    font-size:7.4pt;
+    line-height:1.1;
+  }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.conta-nome{ text-align:left; white-space:normal; }
+  #printArea tr.nivel-0{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-1{ font-weight:400; }
+  #printArea tr.nivel-2{ font-weight:400; }
+  #printArea .indent-1{ padding-left:.6rem !important; }
+  #printArea .indent-2{ padding-left:1.1rem !important; }
+
+  #printArea .print-footer{ font-size:6.8pt; color:#333; margin-top:4px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-bank"></i> Contabilidade Pública
+</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RGF - ANEXO 4 (LRF, Art. 55, inciso I, alínea "d" e inciso III, alínea "c")</span>
+<h1 class="display-6 fw-bold">Demonstrativo das Operações de Crédito</h1>
+<p class="lead mb-0">
+Relatório de Gestão Fiscal consultado diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+
+<div class="row g-3">
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Período (quadrimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Quadrimestre (Jan-Abr)</option>
+<option value="2">2º Quadrimestre (Mai-Ago)</option>
+<option value="3">3º Quadrimestre (Set-Dez)</option>
+</select>
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<!-- Parâmetros fixos do RGF - Anexo 4 (Poder Executivo / Esfera Municipal / Periodicidade Quadrimestral)
+     não ficam editáveis nem visíveis na tela -->
+<input type="hidden" id="filtroAnexo" value="RGF-Anexo 04">
+<input type="hidden" id="filtroTipo" value="RGF">
+<input type="hidden" id="filtroPeriodicidade" value="Q">
+<input type="hidden" id="filtroEsfera" value="M">
+<input type="hidden" id="filtroPoder" value="E">
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar">
+<i class="bi bi-search"></i>
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm">
+<i class="bi bi-printer"></i> Imprimir / Gerar PDF
+</button>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabelas</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">
+API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rgf</code>
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Total de Operações de Crédito (III)</div>
+<div id="kpiTotalOperacoes" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="md-6 col-xl-3 col-md-6">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Total Considerado p/ Apuração do Limite (VIII)</div>
+<div id="kpiTotalConsiderado" class="valor">R$ 0,00</div>
+<div id="kpiTotalConsideradoPerc" class="small-muted"></div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100" id="kpiSituacaoCard">
+<div class="card-body">
+<div class="text-muted small">Situação em relação ao Limite (Op. Crédito/RCL)</div>
+<div id="kpiSituacao" class="valor">-</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Limite Geral (16%) / Alerta (14,4%)</div>
+<div id="kpiLimites" class="valor" style="font-size:.95rem">- / -</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">RCL Ajustada (Endividamento)</div>
+<div id="kpiRcl" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Limite para Antecipação de Receita (ARO) - 7%</div>
+<div id="kpiLimiteAro" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Operações de Crédito por ARO Realizadas</div>
+<div id="kpiOperacoesAro" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Ente / Poder / Período</div>
+<div id="kpiEnte" class="valor" style="font-size:.95rem">-</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<!-- ===================== VISÃO EM TABELAS ===================== -->
+<div id="viewTabelas">
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Operações de Crédito</h5>
+<span class="small-muted">RGF - Anexo 4 (LRF, art. 55, inciso I, alínea "d" e inciso III, alínea "c")</span>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rgf-table">
+<thead class="table-dark">
+<tr>
+<th rowspan="2" style="min-width:380px">Operações de Crédito</th>
+<th colspan="2">Valor Realizado</th>
+</tr>
+<tr>
+<th class="valor">No <span class="ord-quad">1</span>º Quadrimestre</th>
+<th class="valor">Até <span class="ord-quad">1</span>º Quadrimestre (a)</th>
+</tr>
+</thead>
+<tbody id="tbodyOperacoes"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Apuração do Cumprimento dos Limites</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rgf-table">
+<thead class="table-dark">
+<tr>
+<th style="min-width:420px">Apuração do Cumprimento dos Limites</th>
+<th class="valor">Valor</th>
+<th class="valor">% sobre a RCL Ajustada</th>
+</tr>
+</thead>
+<tbody id="tbodyLimites"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Outras Operações que Integram a Dívida Consolidada</h5>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rgf-table">
+<thead class="table-dark">
+<tr>
+<th rowspan="2" style="min-width:380px">Outras Operações que Integram a Dívida Consolidada</th>
+<th colspan="2">Valor Realizado</th>
+</tr>
+<tr>
+<th class="valor">No <span class="ord-quad">1</span>º Quadrimestre</th>
+<th class="valor">Até <span class="ord-quad">1</span>º Quadrimestre (a)</th>
+</tr>
+</thead>
+<tbody id="tbodyOutrasOperacoes"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+</div>
+
+<!-- ===================== VISÃO EM GRÁFICOS ===================== -->
+<div id="viewGraficos" class="d-none">
+
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">1. Trajetória das Operações de Crédito em Relação aos Limites da LRF</h5>
+<div class="chart-card-desc mb-2" id="descTrajetoriaOperacoes">Total considerado para apuração do limite frente ao Limite de Alerta e ao Limite Geral do Senado.</div>
+<div class="chart-box"><canvas id="graficoTrajetoriaOperacoes"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">2. Composição das Operações de Crédito Contratuais</h5>
+<div class="chart-card-desc mb-2">Interna x Externa (até o quadrimestre de referência).</div>
+<div class="chart-box"><canvas id="graficoComposicaoContratual"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-4">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">3. Detalhamento da Dívida Contratual Interna</h5>
+<div class="chart-card-desc mb-2">Empréstimos, aquisição financiada, antecipação de receita e assunção de dívidas.</div>
+<div class="chart-box chart-box-sm"><canvas id="graficoDetalheContratualInterna"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-4">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">4. Antecipação de Receita Orçamentária (ARO)</h5>
+<div class="chart-card-desc mb-2">Operações realizadas x limite definido pelo Senado Federal (7% da RCL ajustada).</div>
+<div class="chart-box chart-box-sm"><canvas id="graficoAro"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-4">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">5. Outras Operações que Integram a Dívida Consolidada</h5>
+<div class="chart-card-desc mb-2" id="descOutrasOperacoes">Parcelamento de dívidas e reestruturação do principal.</div>
+<div class="chart-box chart-box-sm"><canvas id="graficoOutrasOperacoes"></canvas></div>
+</div>
+</div>
+</div>
+
+</section>
+
+</div>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar um arquivo previamente baixado (mesma estrutura retornada pela API: objeto com a chave <code>items</code>).
+</div>
+
+</main>
+
+<!-- =====================================================================
+     ÁREA DE IMPRESSÃO / PDF — as três tabelas do RGF Anexo 4 cabem juntas
+     em uma única página A4 paisagem, como no demonstrativo oficial.
+     ===================================================================== -->
+<div id="printArea">
+
+<div class="print-page">
+
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Relatório de Gestão Fiscal</div>
+<div class="print-title">DEMONSTRATIVO DAS OPERAÇÕES DE CRÉDITO</div>
+<div class="print-sub">Orçamentos Fiscal e da Seguridade Social</div>
+<div class="print-sub" id="printEntidade">Entidade: -</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+
+<div class="print-anexo-linha">
+RGF - Anexo 4 (LRF, art. 55, inciso I, alínea "d" e inciso III, alínea "c")
+<span class="float-end">R$ 1,00</span>
+</div>
+
+<table>
+<thead>
+<tr>
+<th rowspan="2" style="min-width:260px;text-align:left">Operações de Crédito</th>
+<th colspan="2">Valor Realizado</th>
+</tr>
+<tr>
+<th>No <span class="ord-quad">1</span>º Quad.</th>
+<th>Até <span class="ord-quad">1</span>º Quad. (a)</th>
+</tr>
+</thead>
+<tbody id="printTbodyOperacoes"></tbody>
+</table>
+
+<div class="print-secao">APURAÇÃO DO CUMPRIMENTO DOS LIMITES</div>
+
+<table>
+<thead>
+<tr>
+<th style="min-width:420px;text-align:left">Apuração do Cumprimento dos Limites</th>
+<th>Valor</th>
+<th>% sobre a RCL Ajustada</th>
+</tr>
+</thead>
+<tbody id="printTbodyLimites"></tbody>
+</table>
+
+<div class="print-secao">OUTRAS OPERAÇÕES QUE INTEGRAM A DÍVIDA CONSOLIDADA</div>
+
+<table>
+<thead>
+<tr>
+<th rowspan="2" style="min-width:260px;text-align:left">Outras Operações que Integram a Dívida Consolidada</th>
+<th colspan="2">Valor Realizado</th>
+</tr>
+<tr>
+<th>No <span class="ord-quad">1</span>º Quad.</th>
+<th>Até <span class="ord-quad">1</span>º Quad. (a)</th>
+</tr>
+</thead>
+<tbody id="printTbodyOutrasOperacoes"></tbody>
+</table>
+
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>. Os valores refletem a última consulta realizada na tela "Ver Tabelas".
+</div>
+
+</div>
+
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Demonstrativo das Operações de Crédito (RGF - Anexo 4) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rgf";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c","#adb5bd"];
+
+const $ = id => document.getElementById(id);
+
+// -------------------- Estrutura fixa do Anexo 4 (RGF) --------------------
+// Assim como no Anexo 3, todas as linhas são sempre exibidas (mesmo quando
+// a conta não vem na resposta da API), porque a API só retorna contas com
+// algum valor diferente de zero — e este ente não tem, por exemplo,
+// operações de crédito externas nem parcelamentos de dívida no período.
+// Cada linha traz um rótulo de referência (texto oficial do Anexo 4) usado
+// quando a conta não é encontrada.
+
+const ESTRUTURA_OPERACOES = [
+  {cod:"OperacoesDeCreditoMobiliaria", nivel:0, label:"Mobiliária"},
+  {cod:"OperacoesDeCreditoMobiliariaInterna", nivel:1, label:"Interna"},
+  {cod:"OperacoesDeCreditoMobiliariaExterna", nivel:1, label:"Externa"},
+  {cod:"OperacoesDeCreditoContratual", nivel:0, label:"Contratual"},
+  {cod:"OperacoesDeCreditoContratualInterna", nivel:1, label:"Interna"},
+  {cod:"RGF4OperacoesDeCreditoContratualInternaEmprestimos", nivel:2, label:"Empréstimos"},
+  {cod:"RGF4OperacoesDeCreditoContratualInternaAquisicaoFinanciada", nivel:2, label:"Aquisição Financiada de Bens e Arrendamento Mercantil Financeiro"},
+  {cod:"RGF4OperacoesDeCreditoContratualInternaAntecipacaoDeReceita", nivel:2, label:"Antecipação de Receita pela Venda a Termo de Bens e Serviços"},
+  {cod:"RGF4OperacoesDeCreditoContratualInternaAssuncaoDeDividas", nivel:2, label:"Assunção, Reconhecimento e Confissão de Dívidas (LRF, art. 29, §1º)"},
+  {cod:"RGF4OperacoesDeCreditoContratualInternaNaoSujeitasAoLimite", nivel:2, label:"Operações de crédito não sujeitas ao limite para fins de contratação¹ (I)"},
+  {cod:"OperacoesDeCreditoContratualExterna", nivel:1, label:"Externa"},
+  {cod:"RGF4OperacoesDeCreditoContratualExternaEmprestimos", nivel:2, label:"Empréstimos"},
+  {cod:"RGF4OperacoesDeCreditoContratualExternaAquisicaoFinanciada", nivel:2, label:"Aquisição Financiada de Bens e Arrendamento Mercantil Financeiro"},
+  {cod:"RGF4OperacoesDeCreditoContratualExternaAntecipacaoDeReceita", nivel:2, label:"Antecipações de Receitas pela Venda a Termo de Bens e Serviços"},
+  {cod:"RGF4OperacoesDeCreditoContratualExternaAssuncaoDeDividas", nivel:2, label:"Assunção, Reconhecimento e Confissão de Dívidas (LRF, art. 29, §1º)"},
+  {cod:"RGF4OperacoesDeCreditoContratualExternaNaoSujeitasAoLimite", nivel:2, label:"Operações de crédito não sujeitas ao limite para fins de contratação¹ (II)"},
+  {cod:"RGF4OperacoesDeCreditoTotal", nivel:0, label:"TOTAL (III)", total:true},
+];
+
+const ESTRUTURA_LIMITES = [
+  {cod:"RGF4ReceitaCorrenteLiquida", label:"RECEITA CORRENTE LÍQUIDA - RCL (IV)", semPercentual:true},
+  {cod:"TransferenciasObrigatoriasDaUniaoRelativasAsEmendasIndividuais", label:"(-) Transferências Obrigatórias da União Relativas às Emendas Individuais (art. 166-A, §1º, da CF) (V)", semPercentual:true},
+  {cod:"ReceitaCorrenteLiquidaAjustadaParaCalculoDosLimitesDeEndividamento", label:"RECEITA CORRENTE LÍQUIDA AJUSTADA PARA CÁLCULO DOS LIMITES DE ENDIVIDAMENTO (VI) = (IV - V)", semPercentual:true},
+  {cod:"OperacoesVedadasOperacoesCredito", label:"OPERAÇÕES VEDADAS (VII)"},
+  {cod:"TotalConsideradoParaFinsDaApuracaoDoCumprimentoDoLimiteOperacoesDeCredito", label:"TOTAL CONSIDERADO PARA FINS DA APURAÇÃO DO CUMPRIMENTO DO LIMITE (VIII) = (IIIa + VII - Ia - IIa)", total:true},
+  {cod:"LimiteGeralDefinidoPorResolucaoDoSenadoFederalParaAsOperacoesDeCreditoInternasEExternas", label:"LIMITE GERAL DEFINIDO POR RESOLUÇÃO DO SENADO FEDERAL PARA AS OPERAÇÕES DE CRÉDITO INTERNAS E EXTERNAS"},
+  {cod:"LimiteDeAlertaOperacoesCredito", label:"LIMITE DE ALERTA (inciso III do §1º do art. 59 da LRF) - (90% dos 16%)"},
+  {cod:"OperacoesDeCreditoPorAntecipacaoDaReceitaOrcamentaria", label:"OPERAÇÕES DE CRÉDITO POR ANTECIPAÇÃO DA RECEITA ORÇAMENTÁRIA"},
+  {cod:"LimiteDefinidoPorResolucaoDoSenadoFederalParaAsOperacoesDeCreditoPorAntecipacaoDaReceitaOrcamentaria", label:"LIMITE DEFINIDO POR RESOLUÇÃO DO SENADO FEDERAL PARA AS OPERAÇÕES DE CRÉDITO POR ANTECIPAÇÃO DA RECEITA ORÇAMENTÁRIA"},
+];
+
+const ESTRUTURA_OUTRAS_OPERACOES = [
+  {cod:"RGF4ParcelamentoDeDividas", nivel:0, label:"Parcelamento de Dívidas"},
+  {cod:"RGF4ParcelamentoDeDividasTributos", nivel:1, label:"Tributos"},
+  {cod:"RGF4ParcelamentoDeDividasContribuicoesPrevidenciarias", nivel:1, label:"Contribuições Previdenciárias"},
+  {cod:"RGF4ParcelamentoDeDividasDoFgts", nivel:1, label:"Do FGTS"},
+  {cod:"RGF4ParcelamentoDeDividasDemaisContribuicoesSociais", nivel:1, label:"Demais Contribuições Sociais"},
+  {cod:"RGF4OperacoesDeReestruturacaoERecomposicaoDoPrincipalDeDividas", nivel:0, label:"Operações de reestruturação e recomposição do principal de dívidas"},
+];
+
+const COL_NO = "No Quadrimestre de Referência";
+const COL_ATE = "Até o Quadrimestre de Referência (a)";
+const COL_VALOR = "VALOR";
+const COL_PERC = "% SOBRE A RCL AJUSTADA";
+
+let dadosPorConta = {};
+let metaConsulta = {};
+let graficos = {};
+
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0);
+}
+function moedaCompacta(valor){
+  const v = Number(valor)||0;
+  const abs = Math.abs(v);
+  const sinal = v < 0 ? "-" : "";
+  if(abs >= 1e9) return sinal + (abs/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return sinal + (abs/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return sinal + (abs/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function moedaContabil(valor){
+  const v = Number(valor)||0;
+  const f = moeda(Math.abs(v));
+  return v < 0 ? `(${f})` : f;
+}
+function percent(valor){
+  return (Number(valor)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%";
+}
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+function mostrarStatus(texto,tipo="info"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none",!sim);
+}
+
+function getValor(cod, coluna){
+  const item = dadosPorConta[cod];
+  if(!item) return 0;
+  const v = item.valores[coluna];
+  return typeof v === "number" ? v : 0;
+}
+function getConta(cod, fallback){
+  const item = dadosPorConta[cod];
+  return item ? item.conta : (fallback || cod);
+}
+function existeConta(cod){
+  return !!dadosPorConta[cod];
+}
+
+function montarUrl(){
+  const exercicio = $("filtroExercicio").value.trim();
+  const periodo = $("filtroPeriodo").value.trim();
+  const periodicidade = $("filtroPeriodicidade").value.trim();
+  const tipo = $("filtroTipo").value.trim();
+  const anexo = $("filtroAnexo").value.trim();
+  const esfera = $("filtroEsfera").value.trim();
+  const poder = $("filtroPoder").value.trim();
+  const ente = $("filtroEnte").value.trim();
+
+  const params = new URLSearchParams({
+    an_exercicio: exercicio,
+    in_periodicidade: periodicidade,
+    nr_periodo: periodo,
+    co_tipo_demonstrativo: tipo,
+    no_anexo: anexo,
+    co_esfera: esfera,
+    co_poder: poder,
+    id_ente: ente
+  });
+  return `${API_BASE}?${params.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+
+  try {
+    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const json = await response.json();
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function processarDados(lista){
+  dadosPorConta = {};
+  metaConsulta = {};
+
+  lista.forEach(item=>{
+    if(!item || !item.cod_conta) return;
+    if(!dadosPorConta[item.cod_conta]){
+      dadosPorConta[item.cod_conta] = { conta: item.conta, valores: {} };
+    }
+    dadosPorConta[item.cod_conta].valores[item.coluna] = Number(item.valor) || 0;
+
+    if(!metaConsulta.instituicao){
+      metaConsulta = {
+        instituicao: item.instituicao,
+        populacao: item.populacao,
+        exercicio: item.exercicio,
+        periodo: item.periodo,
+        uf: item.uf,
+        cod_ibge: item.cod_ibge,
+        co_poder: item.co_poder,
+      };
+    }
+  });
+
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTabelas();
+  renderizarGraficos();
+}
+
+const NOME_PODER = { E:"Executivo", L:"Legislativo", J:"Judiciário", M:"Ministério Público", D:"Defensoria Pública" };
+const NOME_QUADRIMESTRE = {
+  1:{ordinal:"1º", meses:"Janeiro-Abril", inicio:"Janeiro", fim:"Abril"},
+  2:{ordinal:"2º", meses:"Maio-Agosto", inicio:"Maio", fim:"Agosto"},
+  3:{ordinal:"3º", meses:"Setembro-Dezembro", inicio:"Setembro", fim:"Dezembro"},
+};
+
+function atualizarRotulosQuadrimestre(periodo){
+  const n = Number(periodo) || 1;
+  document.querySelectorAll(".ord-quad").forEach(el => { el.textContent = n; });
+}
+
+function atualizarCabecalho(){
+  if(!metaConsulta.instituicao) return;
+
+  const quad = NOME_QUADRIMESTRE[metaConsulta.periodo] || NOME_QUADRIMESTRE[1];
+  const poder = NOME_PODER[metaConsulta.co_poder] || metaConsulta.co_poder || "-";
+
+  atualizarRotulosQuadrimestre(metaConsulta.periodo);
+
+  $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+  $("kpiEnte").textContent = `${metaConsulta.instituicao} — Poder ${poder} — ${quad.ordinal} Quadrimestre/${metaConsulta.exercicio}`;
+
+  $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
+  $("printEntidade").textContent = `Entidade: ${metaConsulta.instituicao} — Código IBGE: ${metaConsulta.cod_ibge || "-"}`;
+  $("printPeriodo").textContent = `Período de Referência: ${quad.inicio} a ${quad.fim} de ${metaConsulta.exercicio} / Quadrimestre ${quad.meses}`;
+}
+
+function situacaoOperacoes(perc, alertaPerc, maximoPerc){
+  if(maximoPerc && perc >= maximoPerc) return {texto:"Acima do Limite Geral", classe:"vermelho"};
+  if(alertaPerc && perc >= alertaPerc) return {texto:"Acima do Limite de Alerta", classe:"amarelo"};
+  return {texto:"Dentro do Limite da LRF", classe:"verde"};
+}
+
+function atualizarKPIs(){
+  const totalOperacoes = getValor("RGF4OperacoesDeCreditoTotal", COL_ATE);
+  const totalConsiderado = getValor("TotalConsideradoParaFinsDaApuracaoDoCumprimentoDoLimiteOperacoesDeCredito", COL_VALOR);
+  const totalConsideradoPerc = getValor("TotalConsideradoParaFinsDaApuracaoDoCumprimentoDoLimiteOperacoesDeCredito", COL_PERC);
+  const rclAjustada = getValor("ReceitaCorrenteLiquidaAjustadaParaCalculoDosLimitesDeEndividamento", COL_VALOR);
+  const limiteGeral = getValor("LimiteGeralDefinidoPorResolucaoDoSenadoFederalParaAsOperacoesDeCreditoInternasEExternas", COL_VALOR);
+  const limiteGeralPerc = getValor("LimiteGeralDefinidoPorResolucaoDoSenadoFederalParaAsOperacoesDeCreditoInternasEExternas", COL_PERC);
+  const limiteAlerta = getValor("LimiteDeAlertaOperacoesCredito", COL_VALOR);
+  const limiteAlertaPerc = getValor("LimiteDeAlertaOperacoesCredito", COL_PERC);
+  const limiteAro = getValor("LimiteDefinidoPorResolucaoDoSenadoFederalParaAsOperacoesDeCreditoPorAntecipacaoDaReceitaOrcamentaria", COL_VALOR);
+  const operacoesAro = getValor("OperacoesDeCreditoPorAntecipacaoDaReceitaOrcamentaria", COL_VALOR);
+
+  $("kpiTotalOperacoes").textContent = moedaContabil(totalOperacoes);
+  $("kpiTotalConsiderado").textContent = moedaContabil(totalConsiderado);
+  $("kpiTotalConsideradoPerc").textContent = `${percent(totalConsideradoPerc)} da RCL ajustada`;
+  $("kpiLimites").textContent = `${percent(limiteGeralPerc)} / ${percent(limiteAlertaPerc)}`;
+  $("kpiRcl").textContent = moeda(rclAjustada);
+  $("kpiLimiteAro").textContent = moeda(limiteAro);
+  $("kpiOperacoesAro").textContent = moeda(operacoesAro);
+
+  const situacao = situacaoOperacoes(totalConsideradoPerc, limiteAlertaPerc, limiteGeralPerc);
+  const elSituacao = $("kpiSituacao");
+  const cardSituacao = $("kpiSituacaoCard");
+  elSituacao.textContent = situacao.texto;
+  elSituacao.className = "valor cor-" + situacao.classe;
+  cardSituacao.className = "card kpi h-100 kpi-" + situacao.classe;
+}
+
+// -------------------- Tabelas --------------------
+// Todas as linhas das estruturas são sempre renderizadas (ver comentário
+// acima da definição das ESTRUTURA_*), usando o rótulo oficial como
+// referência quando a conta não vier na resposta da API.
+
+function linhaOperacao(entry){
+  const nome = getConta(entry.cod, entry.label);
+  const indentClass = entry.nivel > 0 ? `indent-${entry.nivel}` : "";
+  return `
+    <tr class="nivel-${entry.nivel}${entry.total ? " total" : ""}">
+      <td class="conta-nome ${indentClass}">${escapeHtml(nome)}</td>
+      <td class="valor">${moedaContabil(getValor(entry.cod, COL_NO))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.cod, COL_ATE))}</td>
+    </tr>`;
+}
+
+function linhaLimite(entry){
+  const nome = getConta(entry.cod, entry.label);
+  const percTexto = entry.semPercentual ? "-" : percent(getValor(entry.cod, COL_PERC));
+  return `
+    <tr class="nivel-0${entry.total ? " total" : ""}">
+      <td class="conta-nome">${escapeHtml(nome)}</td>
+      <td class="valor">${moedaContabil(getValor(entry.cod, COL_VALOR))}</td>
+      <td class="valor">${percTexto}</td>
+    </tr>`;
+}
+
+function renderizarTabelas(){
+  const htmlOperacoes = ESTRUTURA_OPERACOES.map(linhaOperacao).join("");
+  const htmlLimites = ESTRUTURA_LIMITES.map(linhaLimite).join("");
+  const htmlOutras = ESTRUTURA_OUTRAS_OPERACOES.map(linhaOperacao).join("");
+
+  $("tbodyOperacoes").innerHTML = htmlOperacoes;
+  $("tbodyLimites").innerHTML = htmlLimites;
+  $("tbodyOutrasOperacoes").innerHTML = htmlOutras;
+
+  $("printTbodyOperacoes").innerHTML = htmlOperacoes;
+  $("printTbodyLimites").innerHTML = htmlLimites;
+  $("printTbodyOutrasOperacoes").innerHTML = htmlOutras;
+}
+
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(id){
+  if(graficos[id]){ graficos[id].destroy(); delete graficos[id]; }
+}
+
+function renderizarGraficos(){
+  graficoTrajetoriaOperacoes();
+  graficoComposicaoContratual();
+  graficoDetalheContratualInterna();
+  graficoAro();
+  graficoOutrasOperacoes();
+}
+
+// 1. Trajetória das operações de crédito em relação aos limites da LRF
+function graficoTrajetoriaOperacoes(){
+  const totalConsiderado = getValor("TotalConsideradoParaFinsDaApuracaoDoCumprimentoDoLimiteOperacoesDeCredito", COL_VALOR);
+  const totalConsideradoPerc = getValor("TotalConsideradoParaFinsDaApuracaoDoCumprimentoDoLimiteOperacoesDeCredito", COL_PERC);
+  const limiteAlerta = getValor("LimiteDeAlertaOperacoesCredito", COL_VALOR);
+  const limiteAlertaPerc = getValor("LimiteDeAlertaOperacoesCredito", COL_PERC);
+  const limiteGeral = getValor("LimiteGeralDefinidoPorResolucaoDoSenadoFederalParaAsOperacoesDeCreditoInternasEExternas", COL_VALOR);
+  const limiteGeralPerc = getValor("LimiteGeralDefinidoPorResolucaoDoSenadoFederalParaAsOperacoesDeCreditoInternasEExternas", COL_PERC);
+
+  const situacao = situacaoOperacoes(totalConsideradoPerc, limiteAlertaPerc, limiteGeralPerc);
+  const cor = { verde:CORES[4], amarelo:"#c9a300", vermelho:CORES[3] }[situacao.classe] || CORES[0];
+
+  $("descTrajetoriaOperacoes").textContent = `Total considerado em ${percent(totalConsideradoPerc)} da RCL ajustada — ${situacao.texto}.`;
+
+  const labels = ["Total Considerado (VIII)", "Limite de Alerta (14,4%)", "Limite Geral (16%)"];
+  const valores = [totalConsiderado, limiteAlerta, limiteGeral];
+  const percs = [totalConsideradoPerc, limiteAlertaPerc, limiteGeralPerc];
+  const cores = [cor, "#c9a300", CORES[3]];
+
+  destruirGrafico("trajetoriaOperacoes");
+  graficos.trajetoriaOperacoes = new Chart($("graficoTrajetoriaOperacoes"), {
+    type: "bar",
+    data: { labels, datasets: [{ data: valores, backgroundColor: cores }] },
+    options: {
+      indexAxis: "y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{ callbacks:{ label: ctx => `${moedaContabil(ctx.raw)} (${percent(percs[ctx.dataIndex])} da RCL ajustada)` } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 2. Composição das operações de crédito contratuais
+function graficoComposicaoContratual(){
+  const interna = getValor("OperacoesDeCreditoContratualInterna", COL_ATE);
+  const externa = getValor("OperacoesDeCreditoContratualExterna", COL_ATE);
+  const mobiliaria = getValor("OperacoesDeCreditoMobiliaria", COL_ATE);
+
+  destruirGrafico("composicaoContratual");
+  graficos.composicaoContratual = new Chart($("graficoComposicaoContratual"), {
+    type: "bar",
+    data: {
+      labels: ["Dívida Mobiliária", "Contratual Interna", "Contratual Externa"],
+      datasets: [{ data: [mobiliaria, interna, externa], backgroundColor: [CORES[10], CORES[0], CORES[6]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 3. Detalhamento da dívida contratual interna
+function graficoDetalheContratualInterna(){
+  const emprestimos = getValor("RGF4OperacoesDeCreditoContratualInternaEmprestimos", COL_ATE);
+  const aquisicao = getValor("RGF4OperacoesDeCreditoContratualInternaAquisicaoFinanciada", COL_ATE);
+  const antecipacao = getValor("RGF4OperacoesDeCreditoContratualInternaAntecipacaoDeReceita", COL_ATE);
+  const assuncao = getValor("RGF4OperacoesDeCreditoContratualInternaAssuncaoDeDividas", COL_ATE);
+  const naoSujeitas = getValor("RGF4OperacoesDeCreditoContratualInternaNaoSujeitasAoLimite", COL_ATE);
+
+  destruirGrafico("detalheContratualInterna");
+  graficos.detalheContratualInterna = new Chart($("graficoDetalheContratualInterna"), {
+    type: "doughnut",
+    data: {
+      labels: ["Empréstimos", "Aquisição Financiada", "Antecipação de Receita", "Assunção de Dívidas", "Não Sujeitas ao Limite"],
+      datasets: [{ data: [emprestimos, aquisicao, antecipacao, assuncao, naoSujeitas], backgroundColor: [CORES[0],CORES[2],CORES[6],CORES[3],CORES[10]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:9} } },
+        tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moedaContabil(ctx.raw)}` } } }
+    }
+  });
+}
+
+// 4. Antecipação de Receita Orçamentária (ARO)
+function graficoAro(){
+  const realizado = getValor("OperacoesDeCreditoPorAntecipacaoDaReceitaOrcamentaria", COL_VALOR);
+  const limite = getValor("LimiteDefinidoPorResolucaoDoSenadoFederalParaAsOperacoesDeCreditoPorAntecipacaoDaReceitaOrcamentaria", COL_VALOR);
+
+  destruirGrafico("aro");
+  graficos.aro = new Chart($("graficoAro"), {
+    type: "bar",
+    data: {
+      labels: ["Realizado", "Limite (7% da RCL Ajustada)"],
+      datasets: [{ data: [realizado, limite], backgroundColor: [CORES[0], CORES[3]] }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 5. Outras operações que integram a dívida consolidada
+function graficoOutrasOperacoes(){
+  const tributos = getValor("RGF4ParcelamentoDeDividasTributos", COL_ATE);
+  const previdenciarias = getValor("RGF4ParcelamentoDeDividasContribuicoesPrevidenciarias", COL_ATE);
+  const fgts = getValor("RGF4ParcelamentoDeDividasDoFgts", COL_ATE);
+  const demaisSociais = getValor("RGF4ParcelamentoDeDividasDemaisContribuicoesSociais", COL_ATE);
+  const reestruturacao = getValor("RGF4OperacoesDeReestruturacaoERecomposicaoDoPrincipalDeDividas", COL_ATE);
+
+  const total = tributos + previdenciarias + fgts + demaisSociais + reestruturacao;
+  $("descOutrasOperacoes").textContent = `Total: ${moedaContabil(total)}.`;
+
+  destruirGrafico("outrasOperacoes");
+  graficos.outrasOperacoes = new Chart($("graficoOutrasOperacoes"), {
+    type: "bar",
+    data: {
+      labels: ["Tributos", "Contrib. Previdenciárias", "FGTS", "Demais Contrib. Sociais", "Reestruturação de Dívidas"],
+      datasets: [{ data: [tributos, previdenciarias, fgts, demaisSociais, reestruturacao], backgroundColor: CORES[6] }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  const linhasOperacoes = ESTRUTURA_OPERACOES.map(e=>[
+    "Operações de Crédito", e.nivel, getConta(e.cod, e.label), getValor(e.cod, COL_NO), getValor(e.cod, COL_ATE)
+  ]);
+  const linhasLimites = ESTRUTURA_LIMITES.map(e=>[
+    "Apuração do Limite", 0, getConta(e.cod, e.label), getValor(e.cod, COL_VALOR), e.semPercentual ? "" : getValor(e.cod, COL_PERC)
+  ]);
+  const linhasOutras = ESTRUTURA_OUTRAS_OPERACOES.map(e=>[
+    "Outras Operações", e.nivel, getConta(e.cod, e.label), getValor(e.cod, COL_NO), getValor(e.cod, COL_ATE)
+  ]);
+
+  const cabecalho = ["Tipo","Nível","Conta","Coluna 1 (No/Valor)","Coluna 2 (Até/%)"];
+  const linhas = [...linhasOperacoes, ...linhasLimites, ...linhasOutras];
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "rgf_anexo4_campo_largo.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// -------------------- Alternância Tabelas / Gráficos --------------------
+
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+// -------------------- Leitor de JSON local --------------------
+
+$("inputJson").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.items;
+      if(!Array.isArray(lista)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+// -------------------- Impressão / PDF --------------------
+
+function prepararEImprimir(){
+  if(!Object.keys(dadosPorConta).length){
+    alert("Não há dados carregados para imprimir. Faça uma consulta primeiro.");
+    return;
+  }
+
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+
+  atualizarRotulosQuadrimestre($("filtroPeriodo").value);
+
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+// Inicia consulta ao carregar a página
+consultarAPI();
+</script>
+
+</body>
+</html>
