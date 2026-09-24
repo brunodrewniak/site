@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RGF - Anexo 5 | Disponibilidade de Caixa e Restos a Pagar | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --amarelo:#c9a300;
+  --laranja:#fd7e14;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.15rem;font-weight:700;color:var(--azul-escuro)}
+.kpi .valor.cor-verde{color:var(--verde)}
+.kpi .valor.cor-vermelho{color:var(--vermelho)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-sm{height:260px;}
+.chart-box.chart-box-lg{height:420px;}
+.table-responsive{max-height:640px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.72rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rgf-table{font-size:.76rem}
+.rgf-table td.valor, .rgf-table th.valor{text-align:right;white-space:nowrap}
+.rgf-table tr.nivel-0{font-weight:700;background:#eef3fb}
+.rgf-table tr.nivel-1{font-weight:500}
+.rgf-table tr.nivel-2{color:#555;font-size:.72rem}
+.rgf-table td.conta-nome{white-space:nowrap}
+.indent-1{padding-left:1rem !important}
+.indent-2{padding-left:1.9rem !important}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+
+/* ---------- Área de impressão / PDF ---------- */
+#printArea{display:none}
+
+@media print{
+  @page{ size: A4 landscape; margin: 7mm; }
+
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{
+    display:block !important;
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    background:#fff;
+    color:#000;
+    font-family:Arial,Helvetica,sans-serif;
+  }
+
+  #printArea .print-header{ text-align:center; margin-bottom:4px; line-height:1.15; }
+  #printArea .print-header h1{ font-size:12pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:8pt; margin:0; }
+  #printArea .print-title{ font-size:10pt; font-weight:700; margin:1px 0; }
+  #printArea .print-anexo-linha{ font-size:7.5pt; font-weight:600; margin:5px 0 4px; border-bottom:1px solid #000; padding-bottom:2px; }
+
+  #printArea table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:6.2pt;
+    line-height:1.1;
+    margin-bottom:6px;
+    table-layout:fixed;
+  }
+  #printArea th, #printArea td{
+    border:1px solid #000;
+    padding:1px 2px;
+    overflow:hidden;
+  }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{
+    background:#e3e3e3 !important;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    font-weight:700;
+    text-align:center;
+    font-size:6pt;
+    line-height:1.05;
+  }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.conta-nome{ text-align:left; white-space:nowrap; }
+  #printArea tr.nivel-0{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-1{ font-weight:500; }
+  #printArea tr.nivel-2{ font-weight:400; }
+  #printArea .indent-1{ padding-left:.4rem !important; }
+  #printArea .indent-2{ padding-left:.8rem !important; }
+
+  #printArea .print-footer{ font-size:6.4pt; color:#333; margin-top:4px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-bank"></i> Contabilidade Pública
+</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RGF - ANEXO 5 (LRF, Art. 55, inciso III, alínea "a")</span>
+<h1 class="display-6 fw-bold">Demonstrativo da Disponibilidade de Caixa e dos Restos a Pagar</h1>
+<p class="lead mb-0">
+Relatório de Gestão Fiscal consultado diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+
+<div class="row g-3">
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2025" min="2000" max="2100">
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Período (quadrimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Quadrimestre (Jan-Abr)</option>
+<option value="2">2º Quadrimestre (Mai-Ago)</option>
+<option value="3" selected>3º Quadrimestre (Set-Dez)</option>
+</select>
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<!-- Parâmetros fixos do RGF - Anexo 5 (Poder Executivo / Esfera Municipal / Periodicidade Quadrimestral)
+     não ficam editáveis nem visíveis na tela -->
+<input type="hidden" id="filtroAnexo" value="RGF-Anexo 05">
+<input type="hidden" id="filtroTipo" value="RGF">
+<input type="hidden" id="filtroPeriodicidade" value="Q">
+<input type="hidden" id="filtroEsfera" value="M">
+<input type="hidden" id="filtroPoder" value="E">
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar">
+<i class="bi bi-search"></i>
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm">
+<i class="bi bi-printer"></i> Imprimir / Gerar PDF
+</button>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabela</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">
+API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rgf</code>
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Disponibilidade de Caixa Bruta (Total)</div>
+<div id="kpiCaixaBruta" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Restos a Pagar Empenhados e Não Liquidados (Total)</div>
+<div id="kpiRestosAPagar" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100" id="kpiSituacaoCard">
+<div class="card-body">
+<div class="text-muted small">Disponibilidade de Caixa Líquida (Após RP)</div>
+<div id="kpiCaixaLiquida" class="valor">R$ 0,00</div>
+<div id="kpiSituacao" class="small-muted"></div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Ente / Poder / Período</div>
+<div id="kpiEnte" class="valor" style="font-size:.9rem">-</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-4 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Recursos Não Vinculados — Líquida Após RP</div>
+<div id="kpiNaoVinculados" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-4 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Recursos Vinculados (exceto RPPS) — Líquida Após RP</div>
+<div id="kpiVinculados" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-4 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Recursos Vinculados ao RPPS — Líquida Após RP</div>
+<div id="kpiRpps" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Fontes com Insuficiência Financeira</div>
+<div id="kpiFontesNegativas" class="valor">0</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<!-- ===================== VISÃO EM TABELA ===================== -->
+<div id="viewTabelas">
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Identificação dos Recursos</h5>
+<span class="small-muted">RGF - Anexo 5 (LRF, art. 55, inciso III, alínea "a")</span>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rgf-table">
+<thead class="table-dark">
+<tr>
+<th rowspan="2" style="min-width:280px">Identificação dos Recursos</th>
+<th rowspan="2" class="valor">Disponibilidade de Caixa Bruta (a)</th>
+<th colspan="4">Obrigações Financeiras</th>
+<th rowspan="2" class="valor">Disponibilidade de Caixa Líquida — antes dos RP (g)</th>
+<th rowspan="2" class="valor">Restos a Pagar Empenhados e Não Liquidados do Exercício (h)</th>
+<th rowspan="2" class="valor">Empenhos Cancelados (Insuf. Financeira)</th>
+<th rowspan="2" class="valor">Disponibilidade de Caixa Líquida — após os RP (i)</th>
+</tr>
+<tr>
+<th class="valor">RP Liquidados — Exercícios Anteriores (b)</th>
+<th class="valor">RP Liquidados — Exercício (c)</th>
+<th class="valor">RP Empenhados Não Liquidados — Exercícios Anteriores (d)</th>
+<th class="valor">Demais Obrigações Financeiras (e)</th>
+</tr>
+</thead>
+<tbody id="tbodyRecursos"></tbody>
+</table>
+</div>
+<div class="small-muted mt-2">
+¹ A coluna "Disponibilidade de Caixa Líquida — após os RP (i)" pode apresentar valor negativo, indicando insuficiência de caixa após a inscrição em restos a pagar não processados do exercício.
+</div>
+</div>
+</section>
+
+</div>
+
+<!-- ===================== VISÃO EM GRÁFICOS ===================== -->
+<div id="viewGraficos" class="d-none">
+
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">1. Disponibilidade de Caixa: Bruta → Líquida (Antes e Após os RP)</h5>
+<div class="chart-card-desc mb-2">Total (IV): efeito das obrigações financeiras e dos restos a pagar sobre o caixa.</div>
+<div class="chart-box"><canvas id="graficoFunilCaixa"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">2. Composição da Disponibilidade de Caixa Bruta</h5>
+<div class="chart-card-desc mb-2">Não vinculados, vinculados (exceto RPPS) e vinculados ao RPPS.</div>
+<div class="chart-box"><canvas id="graficoComposicaoBruta"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-12">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">3. Situação de Liquidez por Fonte de Recursos</h5>
+<div class="chart-card-desc mb-2" id="descSituacaoLiquidez">Disponibilidade de caixa líquida após a inscrição em restos a pagar, por fonte. Barras negativas indicam insuficiência financeira.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoSituacaoLiquidez"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">4. Restos a Pagar por Tipo</h5>
+<div class="chart-card-desc mb-2">Total (IV): liquidados x empenhados não liquidados, por período de origem.</div>
+<div class="chart-box"><canvas id="graficoRestosPorTipo"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">5. Disponibilidade Bruta x Restos a Pagar por Fonte</h5>
+<div class="chart-card-desc mb-2">Comparação entre o caixa bruto e o total de restos a pagar empenhados e não liquidados, por fonte.</div>
+<div class="chart-box"><canvas id="graficoBrutaXRestos"></canvas></div>
+</div>
+</div>
+</div>
+
+</section>
+
+</div>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar um arquivo previamente baixado (mesma estrutura retornada pela API: objeto com a chave <code>items</code>).
+</div>
+
+</main>
+
+<!-- =====================================================================
+     ÁREA DE IMPRESSÃO / PDF
+     ===================================================================== -->
+<div id="printArea">
+
+<div class="print-page">
+
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Relatório de Gestão Fiscal</div>
+<div class="print-title">DEMONSTRATIVO DA DISPONIBILIDADE DE CAIXA E DOS RESTOS A PAGAR</div>
+<div class="print-sub">Orçamentos Fiscal e da Seguridade Social</div>
+<div class="print-sub" id="printEntidade">Entidade: -</div>
+<div class="print-sub" id="printPoder">Poder: Executivo</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+
+<div class="print-anexo-linha">
+RGF - Anexo 5 (LRF, art. 55, inciso III, alínea "a")
+<span class="float-end">R$ 1,00</span>
+</div>
+
+<table>
+<thead>
+<tr>
+<th rowspan="2" style="min-width:170px;text-align:left">Identificação dos Recursos</th>
+<th rowspan="2">Disp. de Caixa<br>Bruta (a)</th>
+<th colspan="4">Obrigações Financeiras</th>
+<th rowspan="2">Disp. Caixa<br>Líquida antes<br>dos RP (g)</th>
+<th rowspan="2">RP Empenhados<br>Não Liquidados<br>do Exercício (h)</th>
+<th rowspan="2">Empenhos<br>Cancelados</th>
+<th rowspan="2">Disp. Caixa<br>Líquida após<br>os RP (i)</th>
+</tr>
+<tr>
+<th>RP Liquidados<br>Ex. Anteriores (b)</th>
+<th>RP Liquidados<br>Exercício (c)</th>
+<th>RP Empenhados<br>Ex. Anteriores (d)</th>
+<th>Demais Obrig.<br>Financeiras (e)</th>
+</tr>
+</thead>
+<tbody id="printTbodyRecursos"></tbody>
+</table>
+
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>. Os valores refletem a última consulta realizada na tela "Ver Tabela".
+</div>
+
+</div>
+
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Demonstrativo da Disponibilidade de Caixa e dos Restos a Pagar (RGF - Anexo 5) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rgf";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c","#adb5bd"];
+
+const $ = id => document.getElementById(id);
+
+// -------------------- Estrutura fixa do Anexo 5 (RGF) --------------------
+// IMPORTANTE: ao contrário dos demais anexos do RGF, aqui o campo
+// "cod_conta" identifica a COLUNA (conceito financeiro a-i) e o campo
+// "conta" identifica a LINHA (fonte de recurso). Por isso os dados são
+// indexados por linha (texto da fonte de recurso) e, dentro de cada linha,
+// por cod_conta (coluna). Linhas totalmente zeradas (ex.: "Outras
+// Vinculações") também são sempre exibidas, seguindo o mesmo princípio dos
+// anexos 3, 4 e 6.
+
+const ESTRUTURA_LINHAS = [
+  {label:"TOTAL DOS RECURSOS NÃO VINCULADOS (I)", nivel:0, total:true},
+  {label:"Recursos Não Vinculados de Impostos", nivel:1},
+  {label:"Outros Recursos não Vinculados", nivel:1},
+  {label:"TOTAL DOS RECURSOS VINCULADOS (EXCETO AO RPPS) (II)", nivel:0, total:true},
+  {label:"Recursos Vinculados à Educação", nivel:1},
+  {label:"Transferências do FUNDEB", nivel:2},
+  {label:"Outros Recursos Vinculados à Educação", nivel:2},
+  {label:"Recursos Vinculados à Saúde", nivel:1},
+  {label:"Transferências Fundo a Fundo de Recursos do SUS", nivel:2},
+  {label:"Outros Recursos Vinculados à Saúde", nivel:2},
+  {label:"Recursos Vinculados à Assistência Social", nivel:1},
+  {label:"Recursos Vinculados à Previdência Social (Exceto ao RPPS)", nivel:1},
+  {label:"Demais Vinculações Decorrentes de Transferências", nivel:1},
+  {label:"Transferências de Convênios e Instrumentos Congêneres (exceto Educação, Saúde e Assistência)", nivel:2},
+  {label:"Outras Vinculações Decorrentes de Transferências", nivel:2},
+  {label:"Demais Vinculações Legais", nivel:1},
+  {label:"Recursos de Operações de Crédito (exceto vinculados à Educação e à Saúde)", nivel:2},
+  {label:"Recursos de Alienação de Bens/Ativos", nivel:2},
+  {label:"Recursos Vinculados a Fundos (exceto Educação, Saúde, Assistência e Previdência)", nivel:2},
+  {label:"Outras Vinculações Legais", nivel:2},
+  {label:"Recursos Extraorçamentários", nivel:1},
+  {label:"Outras Vinculações", nivel:1},
+  {label:"TOTAL DOS RECURSOS VINCULADOS AO RPPS (III)", nivel:0, total:true},
+  {label:"Recursos Vinculados ao RPPS - Fundo em Capitalização (Plano Previdenciário)", nivel:1},
+  {label:"Recursos Vinculados ao RPPS - Fundo em Repartição (Plano Financeiro)", nivel:1},
+  {label:"Recursos Vinculados ao RPPS - Taxa de Administração", nivel:1},
+  {label:"TOTAL (IV) = (I + II + III)", nivel:0, total:true},
+];
+
+// Colunas (conceitos financeiros a-i); cod_conta é a chave real usada pela API.
+const COL_A = "DisponibilidadeDeCaixaBruta";
+const COL_B = "RestosAPagarLiquidadosENaoPagosDeExerciciosAnteriores";
+const COL_C = "RestosAPagarLiquidadosENaoPagosDoExercicio";
+const COL_D = "RestosAPagarEmpenhadosENaoLiquidadosDeExerciciosAnteriores";
+const COL_E = "DemaisObrigacoesFinanceiras";
+const COL_F = "InsuficienciaFinanceiraConsorcioPublico";
+const COL_G = "DisponibilidadeDeCaixaLiquida";
+const COL_H = "RestosAPagarEmpenhadosENaoLiquidadosDoExercicio";
+const COL_EMPENHOS_CANCELADOS = "EmpenhosNaoLiquidadosCanceladosPorInsuficienciaFinanceira";
+const COL_I = "DisponibilidadeDeCaixaLiquidaAposRP";
+
+let dadosPorLinha = {};   // { "TOTAL DOS RECURSOS NÃO VINCULADOS (I)": { DisponibilidadeDeCaixaBruta: 123, ... } }
+let metaConsulta = {};
+let graficos = {};
+
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0);
+}
+function moedaCompacta(valor){
+  const v = Number(valor)||0;
+  const abs = Math.abs(v);
+  const sinal = v < 0 ? "-" : "";
+  if(abs >= 1e9) return sinal + (abs/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return sinal + (abs/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return sinal + (abs/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function moedaContabil(valor){
+  const v = Number(valor)||0;
+  const f = moeda(Math.abs(v));
+  return v < 0 ? `(${f})` : f;
+}
+function escapeHtml(valor){
+  return String(valor ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+function mostrarStatus(texto,tipo="info"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none",!sim);
+}
+
+function getValor(linha, colCod){
+  const item = dadosPorLinha[linha];
+  if(!item) return 0;
+  const v = item[colCod];
+  return typeof v === "number" ? v : 0;
+}
+function existeLinha(linha){
+  return !!dadosPorLinha[linha];
+}
+
+function montarUrl(){
+  const exercicio = $("filtroExercicio").value.trim();
+  const periodo = $("filtroPeriodo").value.trim();
+  const periodicidade = $("filtroPeriodicidade").value.trim();
+  const tipo = $("filtroTipo").value.trim();
+  const anexo = $("filtroAnexo").value.trim();
+  const esfera = $("filtroEsfera").value.trim();
+  const poder = $("filtroPoder").value.trim();
+  const ente = $("filtroEnte").value.trim();
+
+  const params = new URLSearchParams({
+    an_exercicio: exercicio,
+    in_periodicidade: periodicidade,
+    nr_periodo: periodo,
+    co_tipo_demonstrativo: tipo,
+    no_anexo: anexo,
+    co_esfera: esfera,
+    co_poder: poder,
+    id_ente: ente
+  });
+  return `${API_BASE}?${params.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+
+  try {
+    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const json = await response.json();
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function processarDados(lista){
+  dadosPorLinha = {};
+  metaConsulta = {};
+
+  lista.forEach(item=>{
+    if(!item || !item.conta || !item.cod_conta) return;
+    if(!dadosPorLinha[item.conta]){
+      dadosPorLinha[item.conta] = {};
+    }
+    dadosPorLinha[item.conta][item.cod_conta] = Number(item.valor) || 0;
+
+    if(!metaConsulta.instituicao){
+      metaConsulta = {
+        instituicao: item.instituicao,
+        populacao: item.populacao,
+        exercicio: item.exercicio,
+        periodo: item.periodo,
+        uf: item.uf,
+        cod_ibge: item.cod_ibge,
+        co_poder: item.co_poder,
+      };
+    }
+  });
+
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTabela();
+  renderizarGraficos();
+}
+
+const NOME_PODER = { E:"Executivo", L:"Legislativo", J:"Judiciário", M:"Ministério Público", D:"Defensoria Pública", C:"Consolidado" };
+const NOME_QUADRIMESTRE = {
+  1:{ordinal:"1º", meses:"Janeiro-Abril", fim:"Abril"},
+  2:{ordinal:"2º", meses:"Maio-Agosto", fim:"Agosto"},
+  3:{ordinal:"3º", meses:"Setembro-Dezembro", fim:"Dezembro"},
+};
+
+function atualizarCabecalho(){
+  if(!metaConsulta.instituicao) return;
+
+  const quad = NOME_QUADRIMESTRE[metaConsulta.periodo] || NOME_QUADRIMESTRE[1];
+  const poder = NOME_PODER[metaConsulta.co_poder] || metaConsulta.co_poder || "-";
+
+  $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+  $("kpiEnte").textContent = `${metaConsulta.instituicao} — Poder ${poder} — ${quad.ordinal} Quadrimestre/${metaConsulta.exercicio}`;
+
+  $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
+  $("printEntidade").textContent = `Entidade: ${metaConsulta.instituicao} — Código IBGE: ${metaConsulta.cod_ibge || "-"}`;
+  $("printPoder").textContent = `Poder: ${poder}`;
+  // Este demonstrativo acumula o exercício inteiro até o fim do quadrimestre selecionado
+  $("printPeriodo").textContent = `Período de Referência: Janeiro a ${quad.fim} de ${metaConsulta.exercicio} / Quadrimestre ${quad.meses}`;
+}
+
+function atualizarKPIs(){
+  const caixaBrutaTotal = getValor("TOTAL (IV) = (I + II + III)", COL_A);
+  const restosAPagarTotal = getValor("TOTAL (IV) = (I + II + III)", COL_H);
+  const caixaLiquidaTotal = getValor("TOTAL (IV) = (I + II + III)", COL_I);
+
+  const naoVinculados = getValor("TOTAL DOS RECURSOS NÃO VINCULADOS (I)", COL_I);
+  const vinculados = getValor("TOTAL DOS RECURSOS VINCULADOS (EXCETO AO RPPS) (II)", COL_I);
+  const rpps = getValor("TOTAL DOS RECURSOS VINCULADOS AO RPPS (III)", COL_I);
+
+  const fontesNegativas = ESTRUTURA_LINHAS.filter(e => !e.total && getValor(e.label, COL_I) < 0).length;
+
+  $("kpiCaixaBruta").textContent = moedaContabil(caixaBrutaTotal);
+  $("kpiRestosAPagar").textContent = moedaContabil(restosAPagarTotal);
+  $("kpiCaixaLiquida").textContent = moedaContabil(caixaLiquidaTotal);
+  $("kpiNaoVinculados").textContent = moedaContabil(naoVinculados);
+  $("kpiVinculados").textContent = moedaContabil(vinculados);
+  $("kpiRpps").textContent = moedaContabil(rpps);
+  $("kpiFontesNegativas").textContent = fontesNegativas;
+
+  const elSituacao = $("kpiSituacao");
+  const elValor = $("kpiCaixaLiquida");
+  const cardSituacao = $("kpiSituacaoCard");
+  if(caixaLiquidaTotal >= 0){
+    elSituacao.textContent = "Superávit financeiro";
+    elValor.className = "valor cor-verde";
+    cardSituacao.className = "card kpi h-100 kpi-verde";
+  } else {
+    elSituacao.textContent = "Insuficiência financeira";
+    elValor.className = "valor cor-vermelho";
+    cardSituacao.className = "card kpi h-100 kpi-vermelho";
+  }
+}
+
+// -------------------- Tabela --------------------
+
+function linhaRecurso(entry){
+  const indentClass = entry.nivel > 0 ? `indent-${entry.nivel}` : "";
+  return `
+    <tr class="nivel-${entry.nivel}">
+      <td class="conta-nome ${indentClass}">${escapeHtml(entry.label)}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_A))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_B))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_C))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_D))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_E))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_G))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_H))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_EMPENHOS_CANCELADOS))}</td>
+      <td class="valor">${moedaContabil(getValor(entry.label, COL_I))}</td>
+    </tr>`;
+}
+
+function renderizarTabela(){
+  const html = ESTRUTURA_LINHAS.map(linhaRecurso).join("");
+  $("tbodyRecursos").innerHTML = html;
+  $("printTbodyRecursos").innerHTML = html;
+}
+
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(id){
+  if(graficos[id]){ graficos[id].destroy(); delete graficos[id]; }
+}
+
+function renderizarGraficos(){
+  graficoFunilCaixa();
+  graficoComposicaoBruta();
+  graficoSituacaoLiquidez();
+  graficoRestosPorTipo();
+  graficoBrutaXRestos();
+}
+
+// 1. Funil da disponibilidade de caixa (bruta -> líquida antes RP -> líquida após RP)
+function graficoFunilCaixa(){
+  const bruta = getValor("TOTAL (IV) = (I + II + III)", COL_A);
+  const liquidaAntes = getValor("TOTAL (IV) = (I + II + III)", COL_G);
+  const liquidaApos = getValor("TOTAL (IV) = (I + II + III)", COL_I);
+
+  destruirGrafico("funilCaixa");
+  graficos.funilCaixa = new Chart($("graficoFunilCaixa"), {
+    type: "bar",
+    data: {
+      labels: ["Disponibilidade Bruta (a)", "Líquida antes dos RP (g)", "Líquida após os RP (i)"],
+      datasets: [{ data: [bruta, liquidaAntes, liquidaApos], backgroundColor: [CORES[0], CORES[1], liquidaApos>=0?CORES[4]:CORES[3]] }]
+    },
+    options: {
+      indexAxis:"y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 2. Composição da disponibilidade de caixa bruta
+function graficoComposicaoBruta(){
+  const naoVinc = getValor("TOTAL DOS RECURSOS NÃO VINCULADOS (I)", COL_A);
+  const vinc = getValor("TOTAL DOS RECURSOS VINCULADOS (EXCETO AO RPPS) (II)", COL_A);
+  const rpps = getValor("TOTAL DOS RECURSOS VINCULADOS AO RPPS (III)", COL_A);
+
+  destruirGrafico("composicaoBruta");
+  graficos.composicaoBruta = new Chart($("graficoComposicaoBruta"), {
+    type: "doughnut",
+    data: {
+      labels: ["Não Vinculados (I)", "Vinculados exceto RPPS (II)", "Vinculados ao RPPS (III)"],
+      datasets: [{ data: [naoVinc, vinc, rpps], backgroundColor: [CORES[0],CORES[2],CORES[6]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:10} } },
+        tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moedaContabil(ctx.raw)}` } } }
+    }
+  });
+}
+
+// 3. Situação de liquidez por fonte (linhas de nível 1, todas as principais categorias)
+function graficoSituacaoLiquidez(){
+  const linhas = ESTRUTURA_LINHAS.filter(e => e.nivel === 1);
+  const dados = linhas.map(e => ({ label: e.label, valor: getValor(e.label, COL_I) }))
+    .sort((a,b) => a.valor - b.valor);
+
+  const negativas = dados.filter(d => d.valor < 0).length;
+  $("descSituacaoLiquidez").textContent = negativas > 0
+    ? `${negativas} fonte(s) com insuficiência financeira (barras em vermelho).`
+    : "Nenhuma fonte com insuficiência financeira no período.";
+
+  destruirGrafico("situacaoLiquidez");
+  graficos.situacaoLiquidez = new Chart($("graficoSituacaoLiquidez"), {
+    type: "bar",
+    data: {
+      labels: dados.map(d=>d.label),
+      datasets: [{ data: dados.map(d=>d.valor), backgroundColor: dados.map(d=> d.valor < 0 ? CORES[3] : CORES[4]) }]
+    },
+    options: {
+      indexAxis:"y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 4. Restos a pagar por tipo (total geral)
+function graficoRestosPorTipo(){
+  const liquidadosAnteriores = getValor("TOTAL (IV) = (I + II + III)", COL_B);
+  const liquidadosExercicio = getValor("TOTAL (IV) = (I + II + III)", COL_C);
+  const empenhadosAnteriores = getValor("TOTAL (IV) = (I + II + III)", COL_D);
+  const empenhadosExercicio = getValor("TOTAL (IV) = (I + II + III)", COL_H);
+
+  destruirGrafico("restosPorTipo");
+  graficos.restosPorTipo = new Chart($("graficoRestosPorTipo"), {
+    type: "bar",
+    data: {
+      labels: ["Liquidados\n(Ex. Anteriores)", "Liquidados\n(Exercício)", "Empenhados Não Liq.\n(Ex. Anteriores)", "Empenhados Não Liq.\n(Exercício)"],
+      datasets: [{ data: [liquidadosAnteriores, liquidadosExercicio, empenhadosAnteriores, empenhadosExercicio], backgroundColor: [CORES[1],CORES[0],CORES[6],CORES[3]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 5. Disponibilidade bruta x restos a pagar, por fonte principal
+function graficoBrutaXRestos(){
+  const fontes = [
+    ["TOTAL DOS RECURSOS NÃO VINCULADOS (I)", "Não Vinculados"],
+    ["TOTAL DOS RECURSOS VINCULADOS (EXCETO AO RPPS) (II)", "Vinculados (exceto RPPS)"],
+    ["TOTAL DOS RECURSOS VINCULADOS AO RPPS (III)", "Vinculados ao RPPS"],
+  ];
+
+  destruirGrafico("brutaXRestos");
+  graficos.brutaXRestos = new Chart($("graficoBrutaXRestos"), {
+    type: "bar",
+    data: {
+      labels: fontes.map(([,l])=>l),
+      datasets: [
+        { label:"Disponibilidade Bruta", data: fontes.map(([label])=>getValor(label, COL_A)), backgroundColor: CORES[0] },
+        { label:"Restos a Pagar Empenhados", data: fontes.map(([label])=>getValor(label, COL_H)), backgroundColor: CORES[3] },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moedaContabil(ctx.raw)}` } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  const colunas = [
+    ["Disponibilidade de Caixa Bruta (a)", COL_A],
+    ["RP Liquidados - Exercícios Anteriores (b)", COL_B],
+    ["RP Liquidados - Exercício (c)", COL_C],
+    ["RP Empenhados Não Liquidados - Exercícios Anteriores (d)", COL_D],
+    ["Demais Obrigações Financeiras (e)", COL_E],
+    ["Disponibilidade de Caixa Líquida antes dos RP (g)", COL_G],
+    ["RP Empenhados e Não Liquidados do Exercício (h)", COL_H],
+    ["Empenhos Cancelados por Insuficiência Financeira", COL_EMPENHOS_CANCELADOS],
+    ["Disponibilidade de Caixa Líquida após os RP (i)", COL_I],
+  ];
+
+  const cabecalho = ["Identificação dos Recursos", ...colunas.map(([nome])=>nome)];
+  const linhas = ESTRUTURA_LINHAS.map(e => [e.label, ...colunas.map(([,cod])=>getValor(e.label, cod))]);
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "rgf_anexo5_campo_largo.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// -------------------- Alternância Tabela / Gráficos --------------------
+
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+// -------------------- Leitor de JSON local --------------------
+
+$("inputJson").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.items;
+      if(!Array.isArray(lista)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+// -------------------- Impressão / PDF --------------------
+
+function prepararEImprimir(){
+  if(!Object.keys(dadosPorLinha).length){
+    alert("Não há dados carregados para imprimir. Faça uma consulta primeiro.");
+    return;
+  }
+
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+// Inicia consulta ao carregar a página
+consultarAPI();
+</script>
+
+</body>
+</html>
