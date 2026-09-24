@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RREO - Anexo 11 | Alienação de Ativos | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.15rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-lg{height:400px;}
+.table-responsive{max-height:420px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.74rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rreo-table{font-size:.8rem}
+.rreo-table td.valor, .rreo-table th.valor{text-align:right;white-space:nowrap}
+.rreo-table tr.nivel-0{font-weight:700;background:#eef3fb}
+.rreo-table tr.nivel-1{font-weight:600;background:#f9fafc}
+.rreo-table tr.nivel-2{font-weight:400;color:#333}
+.rreo-table td.conta-nome{white-space:nowrap}
+.indent-1{padding-left:1rem !important}
+.indent-2{padding-left:2rem !important}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+.bucket-vazio{font-size:.85rem;color:#6c757d;padding:.75rem}
+
+#printArea{display:none}
+
+@media print{
+  @page{ size: A4 landscape; margin: 10mm; }
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{
+    display:block !important; position:absolute; left:0; top:0; width:100%;
+    background:#fff; color:#000; font-family:Arial,Helvetica,sans-serif;
+  }
+  #printArea .print-header{ text-align:center; margin-bottom:5px; line-height:1.2; }
+  #printArea .print-header h1{ font-size:12pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:8pt; margin:0; }
+  #printArea .print-title{ font-size:10pt; font-weight:700; margin:2px 0; }
+  #printArea .print-anexo-linha{ font-size:8pt; font-weight:600; margin:5px 0 4px; border-bottom:1px solid #000; padding-bottom:2px; }
+  #printArea .print-bloco-titulo{ font-size:8.5pt; font-weight:700; background:#dfe7f2 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; padding:3px 5px; margin-top:7px; border:1px solid #000; }
+  #printArea table{ width:100%; border-collapse:collapse; font-size:7.4pt; line-height:1.15; margin-bottom:8px; }
+  #printArea th, #printArea td{ border:1px solid #000; padding:2px 4px; }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{ background:#e3e3e3 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; text-align:center; }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.conta-nome{ text-align:left; white-space:nowrap; }
+  #printArea tr.nivel-0{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-1{ font-weight:600; background:#f6f6f6 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea .indent-1{ padding-left:.6rem !important; }
+  #printArea .indent-2{ padding-left:1.1rem !important; }
+  #printArea .print-footer{ font-size:7pt; color:#333; margin-top:5px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#"><i class="bi bi-bank"></i> Contabilidade Pública</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RREO - ANEXO 11 (LRF, art. 53, § 1º, inciso III)</span>
+<h1 class="display-6 fw-bold">Receita de Alienação de Ativos e Aplicação dos Recursos</h1>
+<p class="lead mb-0">
+Dados consultados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">Aguardando consulta...</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+
+<div class="row g-3">
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2025" min="2000" max="2100">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Período (bimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Bimestre (Jan-Fev)</option>
+<option value="2">2º Bimestre (Mar-Abr)</option>
+<option value="3">3º Bimestre (Mai-Jun)</option>
+<option value="4">4º Bimestre (Jul-Ago)</option>
+<option value="5">5º Bimestre (Set-Out)</option>
+<option value="6" selected>6º Bimestre (Nov-Dez)</option>
+</select>
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Esfera</label>
+<select id="filtroEsfera" class="form-select">
+<option value="M" selected>Municipal</option>
+<option value="E">Estadual</option>
+<option value="U">União</option>
+</select>
+</div>
+
+<input type="hidden" id="filtroAnexo" value="RREO-Anexo 11">
+<input type="hidden" id="filtroTipo" value="RREO">
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar"><i class="bi bi-search"></i></button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm"><i class="bi bi-printer"></i> Imprimir / Gerar PDF</button>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabelas</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code></div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Receita de Alienação de Ativos Realizada (b)</div>
+<div id="kpiReceitaRealizada" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Aplicação dos Recursos Empenhada (e)</div>
+<div id="kpiDespesaEmpenhada" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100"><div class="card-body">
+<div class="text-muted small">Saldo da Aplicação dos Recursos (h) = (d-e)</div>
+<div id="kpiSaldoAplicacao" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100"><div class="card-body">
+<div class="text-muted small">Saldo Financeiro Atual a Aplicar (k)</div>
+<div id="kpiSaldoAtual" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+</section>
+
+<div id="viewTabelas">
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Receitas de Alienação de Ativos</h5>
+<span class="small-muted">RREO - Anexo 11</span>
+</div>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-receitas"></tr></thead>
+<tbody id="tbody-receitas"></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Aplicação dos Recursos da Alienação de Ativos</h5>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-despesas"></tr></thead>
+<tbody id="tbody-despesas"></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Saldo Financeiro a Aplicar</h5>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-saldoFinanceiro"></tr></thead>
+<tbody id="tbody-saldoFinanceiro"></tbody>
+</table></div>
+</div>
+</section>
+
+</div>
+
+<div id="viewGraficos" class="d-none">
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">1. Receita de Alienação de Ativos</h5>
+<div class="chart-card-desc mb-2">Previsão x Realizado x Saldo.</div>
+<div class="chart-box"><canvas id="graficoReceita"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">2. Aplicação dos Recursos</h5>
+<div class="chart-card-desc mb-2">Dotação x Empenhado x Liquidado x Pago.</div>
+<div class="chart-box"><canvas id="graficoDespesa"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">3. Composição da Receita de Alienação</h5>
+<div class="chart-card-desc mb-2">Categorias realizadas.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoComposicaoReceita"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">4. Restos a Pagar da Aplicação dos Recursos</h5>
+<div class="chart-card-desc mb-2">Inscritos em restos a pagar não processados x pagamentos.</div>
+<div class="chart-box"><canvas id="graficoRestosPagar"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">5. Saldo Financeiro a Aplicar</h5>
+<div class="chart-card-desc mb-2">2024 x 2025 x Saldo Atual.</div>
+<div class="chart-box"><canvas id="graficoSaldoFinanceiro"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">6. Investimentos: Execução da Despesa</h5>
+<div class="chart-card-desc mb-2">Dotação → Empenhado → Liquidado → Pago.</div>
+<div class="chart-box"><canvas id="graficoInvestimentos"></canvas></div>
+</div></div>
+</div>
+
+</section>
+</div>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar um arquivo previamente baixado (mesma estrutura retornada pela API: objeto com a chave <code>items</code>). Linhas cujo valor é zero em todas as colunas são omitidas pela API.
+</div>
+
+</main>
+
+<div id="printArea">
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Relatório Resumido da Execução Orçamentária</div>
+<div class="print-title">DEMONSTRATIVO DA RECEITA DE ALIENAÇÃO DE ATIVOS E APLICAÇÃO DOS RECURSOS</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+<div class="print-anexo-linha">RREO – Anexo 11 (LRF, art. 53, § 1º, inciso III)<span class="float-end">Em Reais</span></div>
+
+<div class="print-bloco-titulo">RECEITAS</div>
+<table><thead><tr id="print-thead-receitas"></tr></thead><tbody id="print-tbody-receitas"></tbody></table>
+<div class="print-bloco-titulo">DESPESAS</div>
+<table><thead><tr id="print-thead-despesas"></tr></thead><tbody id="print-tbody-despesas"></tbody></table>
+<div class="print-bloco-titulo">SALDO FINANCEIRO A APLICAR</div>
+<table><thead><tr id="print-thead-saldoFinanceiro"></tr></thead><tbody id="print-tbody-saldoFinanceiro"></tbody></table>
+
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>.
+</div>
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Receita de Alienação de Ativos e Aplicação dos Recursos (RREO - Anexo 11) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1"];
+const $ = id => document.getElementById(id);
+
+const BIMESTRE_INFO = {
+  1:{meses:"Janeiro a Fevereiro"}, 2:{meses:"Março a Abril"},
+  3:{meses:"Maio a Junho"}, 4:{meses:"Julho a Agosto"},
+  5:{meses:"Setembro a Outubro"}, 6:{meses:"Novembro a Dezembro"},
+};
+
+const NIVEL1_RECEITAS = new Set([
+  "Receita de Alienação de Bens Móveis","Receita de Alienação de Bens Imóveis",
+  "Receita de Alienação de Bens Intangíveis","Receita de Rendimentos de Aplicações Financeiras"
+]);
+const NIVEL1_DESPESAS = new Set(["DESPESAS DE CAPITAL","Despesas Correntes dos Regimes de Previdência"]);
+const NIVEL2_DESPESAS = new Set([
+  "Investimentos","Inversões Financeiras","Amortização da Dívida","Regime Próprio dos Servidores Públicos"
+]);
+
+const BUCKETS = ["receitas","despesas","saldoFinanceiro"];
+let dadosPorBucket = {};
+let ordemPorBucket = {};
+let colunasPorBucket = {};
+let metaConsulta = {};
+let graficos = {};
+
+function moeda(valor){ return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0); }
+function moedaCompacta(valor){
+  const v = Number(valor)||0, abs = Math.abs(v);
+  if(abs >= 1e9) return (v/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return (v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return (v/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function mostrarStatus(t,tipo="info"){ const el=$("status"); el.className="alert alert-"+tipo+" status"; el.textContent=t; }
+function mostrarLoading(s){ $("loading").classList.toggle("d-none",!s); }
+
+function montarUrl(){
+  const params = new URLSearchParams({
+    an_exercicio: $("filtroExercicio").value.trim(),
+    nr_periodo: $("filtroPeriodo").value.trim(),
+    co_tipo_demonstrativo: $("filtroTipo").value.trim(),
+    no_anexo: $("filtroAnexo").value.trim(),
+    co_esfera: $("filtroEsfera").value.trim(),
+    id_ente: $("filtroEnte").value.trim()
+  });
+  return `${API_BASE}?${params.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+  try {
+    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function bucketDoItem(item){
+  const coluna = item.coluna, conta = item.conta;
+  if(/^PREVIS[ÃA]O ATUALIZADA/i.test(coluna) || /^RECEITAS REALIZADAS/i.test(coluna) || /^SALDO \(c\)/i.test(coluna)) return "receitas";
+  if(/^DOTA[ÇC][ÃA]O ATUALIZADA/i.test(coluna) || /^DESPESAS (EMPENHADAS|LIQUIDADAS|PAGAS|INSCRITAS)/i.test(coluna) || /^PAGAMENTO DE RESTOS A PAGAR/i.test(coluna) || /^SALDO \(h\)/i.test(coluna)) return "despesas";
+  if(/^VALOR \(III\)/i.test(conta)) return "saldoFinanceiro";
+  return null;
+}
+
+function processarDados(lista){
+  dadosPorBucket = {}; ordemPorBucket = {}; colunasPorBucket = {};
+  BUCKETS.forEach(b=>{ dadosPorBucket[b] = {}; ordemPorBucket[b] = []; colunasPorBucket[b] = []; });
+  metaConsulta = {};
+
+  lista.forEach(item=>{
+    if(!item || !item.cod_conta || !item.coluna || !item.conta) return;
+    if(!metaConsulta.instituicao){
+      metaConsulta = { instituicao:item.instituicao, exercicio:item.exercicio, periodo:item.periodo, cod_ibge:item.cod_ibge };
+    }
+    const bucket = bucketDoItem(item);
+    if(!bucket) return;
+
+    const key = item.cod_conta;
+    if(!dadosPorBucket[bucket][key]){
+      let nivel = 0;
+      if(bucket === "receitas" && NIVEL1_RECEITAS.has(item.conta)) nivel = 1;
+      if(bucket === "despesas"){
+        if(NIVEL1_DESPESAS.has(item.conta)) nivel = 1;
+        else if(NIVEL2_DESPESAS.has(item.conta)) nivel = 2;
+      }
+      dadosPorBucket[bucket][key] = { conta:item.conta, nivel, valores:{} };
+      ordemPorBucket[bucket].push(key);
+    }
+    dadosPorBucket[bucket][key].valores[item.coluna] = Number(item.valor) || 0;
+    if(!colunasPorBucket[bucket].includes(item.coluna)) colunasPorBucket[bucket].push(item.coluna);
+  });
+
+  if(!BUCKETS.some(b=>ordemPorBucket[b].length)){ mostrarStatus("A consulta não retornou registros para os parâmetros informados.","warning"); return; }
+
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTodasTabelas();
+  renderizarGraficos();
+}
+
+function atualizarCabecalho(){
+  const info = BIMESTRE_INFO[metaConsulta.periodo] || BIMESTRE_INFO[6];
+  $("navInstituicao").textContent = metaConsulta.instituicao || "-";
+  $("printInstituicao").textContent = (metaConsulta.instituicao || "MUNICÍPIO DE CAMPO LARGO").toUpperCase();
+  $("printPeriodo").textContent = `Período de Referência: Janeiro a Dezembro de ${metaConsulta.exercicio || "-"} / Bimestre ${info.meses}`;
+}
+
+function valorPorChave(bucket, key, coluna){
+  const item = dadosPorBucket[bucket][key];
+  if(!item || !coluna) return 0;
+  return item.valores[coluna] || 0;
+}
+function valorConta(bucket, conta, coluna){
+  const key = Object.keys(dadosPorBucket[bucket]).find(k=>dadosPorBucket[bucket][k].conta === conta);
+  return valorPorChave(bucket, key, coluna);
+}
+function acharColuna(bucket, regex){ return (colunasPorBucket[bucket]||[]).find(c=>regex.test(c)) || null; }
+
+const ROW_RECEITA = "RECEITAS DE ALIENAÇÃO DE ATIVOS (I)";
+const ROW_DESPESA_TOTAL = "APLICAÇÃO DOS RECURSOS DA ALIENAÇÃO DE ATIVOS (II)";
+const ROW_INVESTIMENTOS = "Investimentos";
+const ROW_SALDO_FIN = "VALOR (III)";
+
+function atualizarKPIs(){
+  const colB = acharColuna("receitas", /^RECEITAS REALIZADAS/i);
+  const colE = acharColuna("despesas", /^DESPESAS EMPENHADAS/i);
+  const colH = acharColuna("despesas", /^SALDO \(h\)/i);
+  const colK = acharColuna("saldoFinanceiro", /^SALDO ATUAL/i);
+
+  $("kpiReceitaRealizada").textContent = moeda(valorConta("receitas", ROW_RECEITA, colB));
+  $("kpiDespesaEmpenhada").textContent = moeda(valorConta("despesas", ROW_DESPESA_TOTAL, colE));
+  $("kpiSaldoAplicacao").textContent = moeda(valorConta("despesas", ROW_DESPESA_TOTAL, colH));
+  $("kpiSaldoAtual").textContent = moeda(valorConta("saldoFinanceiro", ROW_SALDO_FIN, colK));
+}
+
+// -------------------- Tabelas --------------------
+
+function renderizarCabecalhoBucket(bucket, theadId){
+  const tr = $(theadId);
+  if(!tr) return;
+  let html = `<th style="min-width:240px">Especificação</th>`;
+  colunasPorBucket[bucket].forEach(c=>{ html += `<th class="valor">${escapeHtml(c)}</th>`; });
+  tr.innerHTML = html;
+}
+
+function linhaHtmlBucket(bucket, key){
+  const item = dadosPorBucket[bucket][key];
+  if(!item) return "";
+  const indentClass = item.nivel === 2 ? "indent-2" : (item.nivel === 1 ? "indent-1" : "");
+  let html = `<tr class="nivel-${item.nivel}"><td class="conta-nome ${indentClass}">${escapeHtml(item.conta)}</td>`;
+  colunasPorBucket[bucket].forEach(c=>{
+    html += `<td class="valor">${moeda(item.valores[c] || 0)}</td>`;
+  });
+  html += `</tr>`;
+  return html;
+}
+
+function renderizarTabelaBucket(bucket){
+  renderizarCabecalhoBucket(bucket, `thead-${bucket}`);
+  renderizarCabecalhoBucket(bucket, `print-thead-${bucket}`);
+  const linhas = ordemPorBucket[bucket];
+  const html = linhas.length
+    ? linhas.map(k=>linhaHtmlBucket(bucket, k)).join("")
+    : `<tr><td colspan="${(colunasPorBucket[bucket].length||1)+1}" class="bucket-vazio">Nenhum valor informado para este bloco no período selecionado.</td></tr>`;
+  const tbody = $(`tbody-${bucket}`); if(tbody) tbody.innerHTML = html;
+  const printTbody = $(`print-tbody-${bucket}`); if(printTbody) printTbody.innerHTML = html;
+}
+
+function renderizarTodasTabelas(){ BUCKETS.forEach(renderizarTabelaBucket); }
+
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(nome){ if(graficos[nome]){ graficos[nome].destroy(); delete graficos[nome]; } }
+
+function graficoReceita(){
+  const colA = acharColuna("receitas", /^PREVIS[ÃA]O ATUALIZADA/i);
+  const colB = acharColuna("receitas", /^RECEITAS REALIZADAS/i);
+  const colC = acharColuna("receitas", /^SALDO \(c\)/i);
+  const dados = [
+    { label:"Previsão Atualizada", valor: valorConta("receitas", ROW_RECEITA, colA) },
+    { label:"Realizado", valor: valorConta("receitas", ROW_RECEITA, colB) },
+    { label:"Saldo", valor: valorConta("receitas", ROW_RECEITA, colC) },
+  ];
+  destruirGrafico("receita");
+  graficos.receita = new Chart($("graficoReceita"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor:[CORES[0],CORES[4],CORES[2]] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoDespesa(){
+  const colD = acharColuna("despesas", /^DOTA[ÇC][ÃA]O ATUALIZADA/i);
+  const colE = acharColuna("despesas", /^DESPESAS EMPENHADAS/i);
+  const colF = acharColuna("despesas", /^DESPESAS LIQUIDADAS/i);
+  const colG = acharColuna("despesas", /^DESPESAS PAGAS/i);
+  const dados = [
+    { label:"Dotação Atualizada", valor: valorConta("despesas", ROW_DESPESA_TOTAL, colD) },
+    { label:"Empenhado", valor: valorConta("despesas", ROW_DESPESA_TOTAL, colE) },
+    { label:"Liquidado", valor: valorConta("despesas", ROW_DESPESA_TOTAL, colF) },
+    { label:"Pago", valor: valorConta("despesas", ROW_DESPESA_TOTAL, colG) },
+  ];
+  destruirGrafico("despesa");
+  graficos.despesa = new Chart($("graficoDespesa"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor: CORES[3] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function itensNivel1Receitas(){
+  return ordemPorBucket.receitas.map(k=>dadosPorBucket.receitas[k]).filter(item=>item && item.nivel === 1);
+}
+
+function graficoComposicaoReceita(){
+  const colB = acharColuna("receitas", /^RECEITAS REALIZADAS/i);
+  const colA = acharColuna("receitas", /^PREVIS[ÃA]O ATUALIZADA/i);
+  const itens = itensNivel1Receitas()
+    .map(f=>({ nome:f.conta, valor: (f.valores[colB]||0) > 0 ? (f.valores[colB]||0) : (f.valores[colA]||0) }))
+    .filter(f=>f.valor > 0)
+    .sort((a,b)=>b.valor - a.valor);
+  destruirGrafico("composicaoReceita");
+  graficos.composicaoReceita = new Chart($("graficoComposicaoReceita"), {
+    type:"doughnut",
+    data:{ labels: itens.map(i=>i.nome), datasets:[{ data: itens.map(i=>i.valor), backgroundColor: CORES }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:10} } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } } } }
+  });
+}
+
+function graficoRestosPagar(){
+  const colInscritas = acharColuna("despesas", /^DESPESAS INSCRITAS/i);
+  const colPagamento = acharColuna("despesas", /^PAGAMENTO DE RESTOS A PAGAR/i);
+  const dados = [
+    { label:"Inscritas em Restos a Pagar Não Processados", valor: valorConta("despesas", ROW_DESPESA_TOTAL, colInscritas) },
+    { label:"Pagamento de Restos a Pagar", valor: valorConta("despesas", ROW_DESPESA_TOTAL, colPagamento) },
+  ];
+  destruirGrafico("restosPagar");
+  graficos.restosPagar = new Chart($("graficoRestosPagar"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor:[CORES[2],CORES[4]] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoSaldoFinanceiro(){
+  const colI = acharColuna("saldoFinanceiro", /^2024/i);
+  const colJ = acharColuna("saldoFinanceiro", /^2025/i);
+  const colK = acharColuna("saldoFinanceiro", /^SALDO ATUAL/i);
+  const dados = [
+    { label:"2024", valor: valorConta("saldoFinanceiro", ROW_SALDO_FIN, colI) },
+    { label:"2025", valor: valorConta("saldoFinanceiro", ROW_SALDO_FIN, colJ) },
+    { label:"Saldo Atual", valor: valorConta("saldoFinanceiro", ROW_SALDO_FIN, colK) },
+  ];
+  destruirGrafico("saldoFinanceiro");
+  graficos.saldoFinanceiro = new Chart($("graficoSaldoFinanceiro"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor: dados.map(d=>d.valor<0?CORES[3]:CORES[4]) }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoInvestimentos(){
+  const colD = acharColuna("despesas", /^DOTA[ÇC][ÃA]O ATUALIZADA/i);
+  const colE = acharColuna("despesas", /^DESPESAS EMPENHADAS/i);
+  const colF = acharColuna("despesas", /^DESPESAS LIQUIDADAS/i);
+  const colG = acharColuna("despesas", /^DESPESAS PAGAS/i);
+  const dados = [
+    { label:"Dotação", valor: valorConta("despesas", ROW_INVESTIMENTOS, colD) },
+    { label:"Empenhado", valor: valorConta("despesas", ROW_INVESTIMENTOS, colE) },
+    { label:"Liquidado", valor: valorConta("despesas", ROW_INVESTIMENTOS, colF) },
+    { label:"Pago", valor: valorConta("despesas", ROW_INVESTIMENTOS, colG) },
+  ];
+  destruirGrafico("investimentos");
+  graficos.investimentos = new Chart($("graficoInvestimentos"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor: CORES[0] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function renderizarGraficos(){
+  graficoReceita();
+  graficoDespesa();
+  graficoComposicaoReceita();
+  graficoRestosPagar();
+  graficoSaldoFinanceiro();
+  graficoInvestimentos();
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  const todasChaves = BUCKETS.flatMap(b => ordemPorBucket[b].map(k=>({bucket:b, key:k})));
+  if(!todasChaves.length){ alert("Não existem dados para exportar."); return; }
+
+  const linhas = [["Bloco","Nível","Especificação","Coluna","Valor"]];
+  todasChaves.forEach(({bucket,key})=>{
+    const item = dadosPorBucket[bucket][key];
+    colunasPorBucket[bucket].forEach(c=>{
+      linhas.push([bucket, item.nivel, item.conta, c, item.valores[c] ?? ""]);
+    });
+  });
+
+  const csv = linhas.map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "rreo_anexo11_campo_largo.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// -------------------- Alternância Tabelas / Gráficos --------------------
+
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+// -------------------- Leitor de JSON local --------------------
+
+$("inputJson").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.items;
+      if(!Array.isArray(lista)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+function prepararEImprimir(){
+  if(!BUCKETS.some(b=>ordemPorBucket[b] && ordemPorBucket[b].length)){ alert("Não há dados carregados para imprimir. Faça uma consulta primeiro."); return; }
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+  renderizarTodasTabelas();
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+consultarAPI();
+</script>
+
+</body>
+</html>
