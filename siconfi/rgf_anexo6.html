@@ -689,7 +689,7 @@ function atualizarCabecalho(){
 
   atualizarRotulosQuadrimestre(metaConsulta.periodo);
 
-  $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+  $("navInstituicao").textContent = `${metaConsulta.instituicao}`;
   $("kpiEnte").textContent = `${metaConsulta.instituicao} — Poder ${poder} — ${quad.ordinal} Quadrimestre/${metaConsulta.exercicio}`;
 
   $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
