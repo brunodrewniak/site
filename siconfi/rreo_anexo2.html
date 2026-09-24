@@ -444,16 +444,7 @@ function processarDados(lista){
     }
   });
 
- if(!colunasEncontradas.length){ 
-  metaConsulta = {
-    ente: document.getElementById('enteSelect').selectedOptions[0]?.text || '',
-    exercicio: document.getElementById('exercicioSelect').value,
-    periodo: document.getElementById('periodoSelect').selectedOptions[0]?.text || '',
-    esfera: document.getElementById('esferaSelect').value || 'Todas'
-  };
-  mostrarStatus("A consulta não retornou registros para os parâmetros selecionados.", "warning");
-  // O 'return' foi removido para permitir que a renderização continue
-}
+  if(!colunasEncontradas.length){ mostrarStatus("A consulta não retornou registros para os parâmetros informados.","warning"); return; }
 
   // Monta a ordem oficial (função/subfunção, com seção e nível) a partir da 1ª coluna encontrada.
   const primeira = porColuna[colunasEncontradas[0]];
@@ -705,17 +696,6 @@ function graficoSaldoFuncao(){
 }
 
 function renderizarGraficos(){
-  const ctx = document.getElementById('graficoEvolucao').getContext('2d');
-
-  // SE NÃO HOUVER DADOS, LIMPA O GRÁFICO EXISTENTE E SAI
-  if (!ordemPrincipal.length) {
-    if (graficoAtual) {
-      graficoAtual.destroy();
-      graficoAtual = null;
-    }
-    return;
-  }
-}
   graficoDotacaoFuncao();
   graficoEmpenhadoLiquidado();
   graficoPercExecucao();
