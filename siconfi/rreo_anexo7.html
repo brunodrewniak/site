@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RREO - Anexo 7 | Restos a Pagar por Poder e Órgão | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.15rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-lg{height:400px;}
+.table-responsive{max-height:520px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.74rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rreo-table{font-size:.8rem}
+.rreo-table td.valor, .rreo-table th.valor{text-align:right;white-space:nowrap}
+.rreo-table tr.nivel-0{font-weight:700;background:#eef3fb}
+.rreo-table tr.nivel-1{font-weight:600;background:#f9fafc}
+.rreo-table tr.nivel-2{font-weight:400;color:#333}
+.rreo-table td.conta-nome{white-space:nowrap}
+.indent-2{padding-left:1.5rem !important}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+.bucket-vazio{font-size:.85rem;color:#6c757d;padding:.75rem}
+
+#printArea{display:none}
+
+@media print{
+  @page{ size: A4 landscape; margin: 7mm; }
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{
+    display:block !important; position:absolute; left:0; top:0; width:100%;
+    background:#fff; color:#000; font-family:Arial,Helvetica,sans-serif;
+  }
+  #printArea .print-header{ text-align:center; margin-bottom:4px; line-height:1.15; }
+  #printArea .print-header h1{ font-size:11pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:7.5pt; margin:0; }
+  #printArea .print-title{ font-size:9pt; font-weight:700; margin:1px 0; }
+  #printArea .print-anexo-linha{ font-size:7pt; font-weight:600; margin:4px 0 3px; border-bottom:1px solid #000; padding-bottom:1px; }
+  #printArea .print-bloco-titulo{ font-size:7.5pt; font-weight:700; background:#dfe7f2 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; padding:2px 4px; margin-top:5px; border:1px solid #000; }
+  #printArea table{ width:100%; border-collapse:collapse; font-size:6.4pt; line-height:1.05; margin-bottom:6px; table-layout:fixed; }
+  #printArea th, #printArea td{ border:1px solid #000; padding:1px 2px; overflow:hidden; }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{ background:#e3e3e3 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; text-align:center; font-size:6.2pt; line-height:1.1; }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.conta-nome{ text-align:left; white-space:nowrap; }
+  #printArea tr.nivel-0{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-1{ font-weight:600; background:#f6f6f6 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea tr.nivel-2{ font-weight:400; }
+  #printArea .indent-2{ padding-left:.9rem !important; }
+  #printArea .print-footer{ font-size:6.6pt; color:#333; margin-top:3px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#"><i class="bi bi-bank"></i> Contabilidade Pública</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RREO - ANEXO 7 (LRF, art. 53, inciso V)</span>
+<h1 class="display-6 fw-bold">Restos a Pagar por Poder e Órgão</h1>
+<p class="lead mb-0">
+Dados consultados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">Aguardando consulta...</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+
+<div class="row g-3">
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Período (bimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Bimestre (Jan-Fev)</option>
+<option value="2">2º Bimestre (Mar-Abr)</option>
+<option value="3" selected>3º Bimestre (Mai-Jun)</option>
+<option value="4">4º Bimestre (Jul-Ago)</option>
+<option value="5">5º Bimestre (Set-Out)</option>
+<option value="6">6º Bimestre (Nov-Dez)</option>
+</select>
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Esfera</label>
+<select id="filtroEsfera" class="form-select">
+<option value="M" selected>Municipal</option>
+<option value="E">Estadual</option>
+<option value="U">União</option>
+</select>
+</div>
+
+<input type="hidden" id="filtroAnexo" value="RREO-Anexo 07">
+<input type="hidden" id="filtroTipo" value="RREO">
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar"><i class="bi bi-search"></i></button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm"><i class="bi bi-printer"></i> Imprimir / Gerar PDF</button>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabelas</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code></div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Saldo Total de Restos a Pagar (III)</div>
+<div id="kpiSaldoTotal" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Saldo — Restos a Pagar Processados (I)</div>
+<div id="kpiSaldoProcessados" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Saldo — Restos a Pagar Não Processados (I)</div>
+<div id="kpiSaldoNaoProcessados" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100"><div class="card-body">
+<div class="text-muted small">Total Cancelado no Período (I)</div>
+<div id="kpiTotalCancelado" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+</section>
+
+<div id="viewTabelas">
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Restos a Pagar (Exceto Intra-Orçamentários) — por Poder</h5>
+<span class="small-muted">RREO - Anexo 7</span>
+</div>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-principal"></tr></thead>
+<tbody id="tbody-principal"></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Restos a Pagar (Intra-Orçamentários) — por Poder</h5>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-intra"></tr></thead>
+<tbody id="tbody-intra"></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="card mb-4">
+<div class="card-body">
+<h5 class="mb-3">Total Geral (I + II)</h5>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-total"></tr></thead>
+<tbody id="tbody-total"></tbody>
+</table></div>
+</div>
+</section>
+
+</div>
+
+<div id="viewGraficos" class="d-none">
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">1. Restos a Pagar Processados (I)</h5>
+<div class="chart-card-desc mb-2">Inscritos, pagos e saldo — exceto intra-orçamentários.</div>
+<div class="chart-box"><canvas id="graficoProcessados"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">2. Restos a Pagar Não Processados (I)</h5>
+<div class="chart-card-desc mb-2">Inscritos, liquidados, pagos, cancelados e saldo.</div>
+<div class="chart-box"><canvas id="graficoNaoProcessados"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">3. Saldo Total por Poder</h5>
+<div class="chart-card-desc mb-2">Executivo x Legislativo.</div>
+<div class="chart-box"><canvas id="graficoSaldoPoder"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">4. Processados x Não Processados (I)</h5>
+<div class="chart-card-desc mb-2">Comparação do saldo a pagar.</div>
+<div class="chart-box"><canvas id="graficoComparativoSaldo"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">5. Composição do Total (III)</h5>
+<div class="chart-card-desc mb-2">Exceto Intra (I) x Intra-Orçamentários (II).</div>
+<div class="chart-box"><canvas id="graficoComposicaoTotal"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">6. Cancelamentos: Processados x Não Processados (I)</h5>
+<div class="chart-card-desc mb-2">Valores cancelados no período.</div>
+<div class="chart-box"><canvas id="graficoCancelamentos"></canvas></div>
+</div></div>
+</div>
+
+</section>
+</div>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar um arquivo previamente baixado (mesma estrutura retornada pela API: objeto com a chave <code>items</code>). Observação: para este demonstrativo a API devolve os valores consolidados por <strong>Poder</strong> (Executivo/Legislativo), sem o detalhamento por Secretaria/Órgão que aparece no PDF oficial.
+</div>
+
+</main>
+
+<div id="printArea">
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Relatório Resumido da Execução Orçamentária</div>
+<div class="print-title">DEMONSTRATIVO DOS RESTOS A PAGAR POR PODER E ÓRGÃO</div>
+<div class="print-sub" id="printEntidade">Entidade: -</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+<div class="print-anexo-linha">RREO - Anexo 7 (LRF, art. 53, inciso V)<span class="float-end">Em Reais</span></div>
+
+<div class="print-bloco-titulo">RESTOS A PAGAR (EXCETO INTRA-ORÇAMENTÁRIOS) — POR PODER</div>
+<table><thead><tr id="print-thead-principal"></tr></thead><tbody id="print-tbody-principal"></tbody></table>
+<div class="print-bloco-titulo">RESTOS A PAGAR (INTRA-ORÇAMENTÁRIOS) — POR PODER</div>
+<table><thead><tr id="print-thead-intra"></tr></thead><tbody id="print-tbody-intra"></tbody></table>
+<div class="print-bloco-titulo">TOTAL GERAL (I + II)</div>
+<table><thead><tr id="print-thead-total"></tr></thead><tbody id="print-tbody-total"></tbody></table>
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>.
+</div>
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Restos a Pagar por Poder e Órgão (RREO - Anexo 7) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c"];
+const $ = id => document.getElementById(id);
+
+const BIMESTRE_INFO = {
+  1:{meses:"Janeiro a Fevereiro"}, 2:{meses:"Março a Abril"},
+  3:{meses:"Maio a Junho"}, 4:{meses:"Julho a Agosto"},
+  5:{meses:"Setembro a Outubro"}, 6:{meses:"Novembro a Dezembro"},
+};
+
+const BUCKETS = ["principal","intra","total"];
+let dadosPorBucket = {};     // { bucket: { key: {conta, nivel, valores:{coluna:valor}} } }
+let ordemPorBucket = {};     // { bucket: [key,...] }
+let colunasPorBucket = {};   // { bucket: [coluna,...] }
+let metaConsulta = {};
+let graficos = {};
+
+function moeda(valor){ return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0); }
+function moedaCompacta(valor){
+  const v = Number(valor)||0, abs = Math.abs(v);
+  if(abs >= 1e9) return (v/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return (v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return (v/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function mostrarStatus(t,tipo="info"){ const el=$("status"); el.className="alert alert-"+tipo+" status"; el.textContent=t; }
+function mostrarLoading(s){ $("loading").classList.toggle("d-none",!s); }
+
+function montarUrl(){
+  const params = new URLSearchParams({
+    an_exercicio: $("filtroExercicio").value.trim(),
+    nr_periodo: $("filtroPeriodo").value.trim(),
+    co_tipo_demonstrativo: $("filtroTipo").value.trim(),
+    no_anexo: $("filtroAnexo").value.trim(),
+    co_esfera: $("filtroEsfera").value.trim(),
+    id_ente: $("filtroEnte").value.trim()
+  });
+  return `${API_BASE}?${params.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+  try {
+    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+// Extrai a letra de ordenação de cada coluna (a, b, c, e, f, g, h, i, j, k, l)
+// a partir do próprio rótulo devolvido pela API (ex.: "Em Exercícios Anteriores (a)",
+// "Saldo e = (a+ b) - (c + d)", "Saldo Total L = (e + k)").
+function letraColuna(coluna){
+  let m = /\(([a-l])\)\s*$/i.exec(coluna);
+  if(m) return m[1].toLowerCase();
+  m = /^Saldo Total\s+([A-Za-z])\s*=/i.exec(coluna);
+  if(m) return m[1].toLowerCase();
+  m = /^Saldo\s+([a-z])\s*=/i.exec(coluna);
+  if(m) return m[1].toLowerCase();
+  return "z";
+}
+
+function processarDados(lista){
+  dadosPorBucket = {}; ordemPorBucket = {}; colunasPorBucket = {};
+  BUCKETS.forEach(b=>{ dadosPorBucket[b] = {}; ordemPorBucket[b] = []; colunasPorBucket[b] = []; });
+  metaConsulta = {};
+
+  lista.forEach(item=>{
+    if(!item || !item.cod_conta || !item.coluna || !item.conta) return;
+    if(!metaConsulta.instituicao){
+      metaConsulta = { instituicao:item.instituicao, exercicio:item.exercicio, periodo:item.periodo, cod_ibge:item.cod_ibge };
+    }
+
+    const ehIntra = /Intra$/.test(item.cod_conta);
+    let bucket;
+    if(ehIntra) bucket = "intra";
+    else if(/^TOTAL \(III\)/i.test(item.conta)) bucket = "total";
+    else if(/^RESTOS A PAGAR \(INTRA-OR[ÇC]AMENT[ÁA]RIOS\) \(II\)/i.test(item.conta)) return; // já coberto pelo bucket "intra"
+    else bucket = "principal";
+
+    const key = item.conta;
+    if(!dadosPorBucket[bucket][key]){
+      let nivel;
+      if(/^(RESTOS A PAGAR|TOTAL)/i.test(key)) nivel = 0;
+      else if(key === "Câmara Municipal") nivel = 2;
+      else nivel = 1;
+      dadosPorBucket[bucket][key] = { conta:item.conta, nivel, valores:{} };
+      ordemPorBucket[bucket].push(key);
+    }
+    dadosPorBucket[bucket][key].valores[item.coluna] = Number(item.valor) || 0;
+    if(!colunasPorBucket[bucket].includes(item.coluna)) colunasPorBucket[bucket].push(item.coluna);
+  });
+
+  BUCKETS.forEach(b=>{ colunasPorBucket[b].sort((x,y)=> letraColuna(x).localeCompare(letraColuna(y))); });
+
+  if(!BUCKETS.some(b=>ordemPorBucket[b].length)){ mostrarStatus("A consulta não retornou registros para os parâmetros informados.","warning"); return; }
+
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTodasTabelas();
+  renderizarGraficos();
+}
+
+function atualizarCabecalho(){
+  const info = BIMESTRE_INFO[metaConsulta.periodo] || BIMESTRE_INFO[3];
+  $("navInstituicao").textContent = metaConsulta.instituicao || "-";
+  $("printInstituicao").textContent = (metaConsulta.instituicao || "MUNICÍPIO DE CAMPO LARGO").toUpperCase();
+  $("printEntidade").textContent = `Entidade: ${metaConsulta.cod_ibge || "-"}`;
+  $("printPeriodo").textContent = `Período de Referência: Janeiro a ${info.meses.split(" a ")[1]} de ${metaConsulta.exercicio || "-"} / Bimestre ${info.meses}`;
+}
+
+function valorConta(bucket, conta, coluna){
+  const item = dadosPorBucket[bucket][conta];
+  if(!item || !coluna) return 0;
+  return item.valores[coluna] || 0;
+}
+function acharColuna(bucket, regex){ return (colunasPorBucket[bucket]||[]).find(c=>regex.test(c)) || null; }
+
+function atualizarKPIs(){
+  const colE = acharColuna("principal", /^Saldo\s+e\s*=/i);
+  const colK = acharColuna("principal", /^Saldo\s+k\s*=/i);
+  const colJ = acharColuna("principal", /^Cancelados/i);
+  const colL = acharColuna("total", /^Saldo Total/i);
+
+  $("kpiSaldoTotal").textContent = moeda(valorConta("total", "TOTAL (III) = (I + II)", colL));
+  $("kpiSaldoProcessados").textContent = moeda(valorConta("principal", "RESTOS A PAGAR (EXCETO INTRA-ORÇAMENTÁRIOS) (I)", colE));
+  $("kpiSaldoNaoProcessados").textContent = moeda(valorConta("principal", "RESTOS A PAGAR (EXCETO INTRA-ORÇAMENTÁRIOS) (I)", colK));
+  $("kpiTotalCancelado").textContent = moeda(valorConta("principal", "RESTOS A PAGAR (EXCETO INTRA-ORÇAMENTÁRIOS) (I)", colJ));
+}
+
+// -------------------- Tabelas --------------------
+
+function renderizarCabecalhoBucket(bucket, theadId){
+  const tr = $(theadId);
+  if(!tr) return;
+  let html = `<th style="min-width:230px">Poder/Órgão</th>`;
+  colunasPorBucket[bucket].forEach(c=>{ html += `<th class="valor">${escapeHtml(c)}</th>`; });
+  tr.innerHTML = html;
+}
+
+function linhaHtmlBucket(bucket, conta){
+  const item = dadosPorBucket[bucket][conta];
+  if(!item) return "";
+  const indentClass = item.nivel === 2 ? "indent-2" : "";
+  let html = `<tr class="nivel-${item.nivel}"><td class="conta-nome ${indentClass}">${escapeHtml(item.conta)}</td>`;
+  colunasPorBucket[bucket].forEach(c=>{
+    html += `<td class="valor">${moeda(item.valores[c] || 0)}</td>`;
+  });
+  html += `</tr>`;
+  return html;
+}
+
+function renderizarTabelaBucket(bucket){
+  renderizarCabecalhoBucket(bucket, `thead-${bucket}`);
+  renderizarCabecalhoBucket(bucket, `print-thead-${bucket}`);
+  const linhas = ordemPorBucket[bucket];
+  const html = linhas.length
+    ? linhas.map(k=>linhaHtmlBucket(bucket, k)).join("")
+    : `<tr><td colspan="${(colunasPorBucket[bucket].length||1)+1}" class="bucket-vazio">Nenhum valor informado para este bloco no período selecionado.</td></tr>`;
+  const tbody = $(`tbody-${bucket}`); if(tbody) tbody.innerHTML = html;
+  const printTbody = $(`print-tbody-${bucket}`); if(printTbody) printTbody.innerHTML = html;
+}
+
+function renderizarTodasTabelas(){ BUCKETS.forEach(renderizarTabelaBucket); }
+
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(nome){ if(graficos[nome]){ graficos[nome].destroy(); delete graficos[nome]; } }
+const ROW_I = "RESTOS A PAGAR (EXCETO INTRA-ORÇAMENTÁRIOS) (I)";
+const ROW_II = "RESTOS A PAGAR (INTRA-ORÇAMENTÁRIOS) (II)";
+const ROW_III = "TOTAL (III) = (I + II)";
+
+function graficoProcessados(){
+  const colA = acharColuna("principal", /^Em Exerc[íi]cios Anteriores \(a\)/i);
+  const colB = acharColuna("principal", /^Em 31 de dezembro.*\(b\)/i);
+  const colC = acharColuna("principal", /^Pagos \(c\)/i);
+  const colE = acharColuna("principal", /^Saldo\s+e\s*=/i);
+  const dados = [
+    { label:"Inscritos (exercícios anteriores)", valor: valorConta("principal", ROW_I, colA) },
+    { label:"Inscritos (31/dez/2025)", valor: valorConta("principal", ROW_I, colB) },
+    { label:"Pagos", valor: valorConta("principal", ROW_I, colC) },
+    { label:"Saldo", valor: valorConta("principal", ROW_I, colE) },
+  ];
+  destruirGrafico("processados");
+  graficos.processados = new Chart($("graficoProcessados"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor:[CORES[0],CORES[1],CORES[4],CORES[3]] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoNaoProcessados(){
+  const colF = acharColuna("principal", /^Em Exerc[íi]cios Anteriores \(f\)/i);
+  const colG = acharColuna("principal", /^Em 31 de dezembro.*\(g\)/i);
+  const colH = acharColuna("principal", /^Liquidados/i);
+  const colI = acharColuna("principal", /^Pagos \(i\)/i);
+  const colJ = acharColuna("principal", /^Cancelados/i);
+  const colK = acharColuna("principal", /^Saldo\s+k\s*=/i);
+  const dados = [
+    { label:"Inscritos (exerc. anteriores)", valor: valorConta("principal", ROW_I, colF) },
+    { label:"Inscritos (31/dez/2025)", valor: valorConta("principal", ROW_I, colG) },
+    { label:"Liquidados", valor: valorConta("principal", ROW_I, colH) },
+    { label:"Pagos", valor: valorConta("principal", ROW_I, colI) },
+    { label:"Cancelados", valor: valorConta("principal", ROW_I, colJ) },
+    { label:"Saldo", valor: valorConta("principal", ROW_I, colK) },
+  ];
+  destruirGrafico("naoProcessados");
+  graficos.naoProcessados = new Chart($("graficoNaoProcessados"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor: CORES[1] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ x:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoSaldoPoder(){
+  const colL = acharColuna("principal", /^Saldo Total/i);
+  const dados = [
+    { label:"Poder Executivo", valor: valorConta("principal", "PODER EXECUTIVO", colL) },
+    { label:"Poder Legislativo", valor: valorConta("principal", "PODER LEGISLATIVO", colL) },
+  ];
+  destruirGrafico("saldoPoder");
+  graficos.saldoPoder = new Chart($("graficoSaldoPoder"), {
+    type:"doughnut",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor:[CORES[0],CORES[2]] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } } } }
+  });
+}
+
+function graficoComparativoSaldo(){
+  const colE = acharColuna("principal", /^Saldo\s+e\s*=/i);
+  const colK = acharColuna("principal", /^Saldo\s+k\s*=/i);
+  const dados = [
+    { label:"Processados", valor: valorConta("principal", ROW_I, colE) },
+    { label:"Não Processados", valor: valorConta("principal", ROW_I, colK) },
+  ];
+  destruirGrafico("comparativoSaldo");
+  graficos.comparativoSaldo = new Chart($("graficoComparativoSaldo"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor:[CORES[0],CORES[4]] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoComposicaoTotal(){
+  const colL = acharColuna("principal", /^Saldo Total/i);
+  const colLIntra = acharColuna("intra", /^Saldo Total/i);
+  const dados = [
+    { label:"Exceto Intra (I)", valor: valorConta("principal", ROW_I, colL) },
+    { label:"Intra-Orçamentários (II)", valor: valorConta("intra", ROW_II, colLIntra) },
+  ];
+  destruirGrafico("composicaoTotal");
+  graficos.composicaoTotal = new Chart($("graficoComposicaoTotal"), {
+    type:"doughnut",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor:[CORES[0],CORES[3]] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } } } }
+  });
+}
+
+function graficoCancelamentos(){
+  const colD = acharColuna("principal", /^Cancelados \(d\)/i);
+  const colJ = acharColuna("principal", /^Cancelados/i);
+  const dados = [
+    { label:"Processados (d)", valor: valorConta("principal", ROW_I, colD) },
+    { label:"Não Processados (j)", valor: valorConta("principal", ROW_I, colJ) },
+  ];
+  destruirGrafico("cancelamentos");
+  graficos.cancelamentos = new Chart($("graficoCancelamentos"), {
+    type:"bar",
+    data:{ labels: dados.map(d=>d.label), datasets:[{ data: dados.map(d=>d.valor), backgroundColor: CORES[3] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function renderizarGraficos(){
+  graficoProcessados();
+  graficoNaoProcessados();
+  graficoSaldoPoder();
+  graficoComparativoSaldo();
+  graficoComposicaoTotal();
+  graficoCancelamentos();
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  const todasChaves = BUCKETS.flatMap(b => ordemPorBucket[b].map(k=>({bucket:b, key:k})));
+  if(!todasChaves.length){ alert("Não existem dados para exportar."); return; }
+
+  const linhas = [["Bloco","Nível","Poder/Órgão","Coluna","Valor"]];
+  todasChaves.forEach(({bucket,key})=>{
+    const item = dadosPorBucket[bucket][key];
+    colunasPorBucket[bucket].forEach(c=>{
+      linhas.push([bucket, item.nivel, item.conta, c, item.valores[c] ?? ""]);
+    });
+  });
+
+  const csv = linhas.map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "rreo_anexo7_campo_largo.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// -------------------- Alternância Tabelas / Gráficos --------------------
+
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+// -------------------- Leitor de JSON local --------------------
+
+$("inputJson").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.items;
+      if(!Array.isArray(lista)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+function prepararEImprimir(){
+  if(!BUCKETS.some(b=>ordemPorBucket[b] && ordemPorBucket[b].length)){ alert("Não há dados carregados para imprimir. Faça uma consulta primeiro."); return; }
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+  renderizarTodasTabelas();
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+consultarAPI();
+</script>
+
+</body>
+</html>
