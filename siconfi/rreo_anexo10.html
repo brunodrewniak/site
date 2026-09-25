@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RREO - Anexo 10 | Projeção Atuarial do RPPS | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.15rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-lg{height:400px;}
+.table-responsive{max-height:520px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.78rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rreo-table{font-size:.85rem}
+.rreo-table td.valor, .rreo-table th.valor{text-align:right;white-space:nowrap}
+.rreo-table td.exercicio{font-weight:700;background:#f7f9fc}
+.rreo-table tr.linha-referencia{background:#eef3fb}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+.bucket-vazio{font-size:.85rem;color:#6c757d;padding:.75rem}
+
+#printArea{display:none}
+
+@media print{
+  @page{ size: A4 portrait; margin: 12mm; }
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{
+    display:block !important; position:absolute; left:0; top:0; width:100%;
+    background:#fff; color:#000; font-family:Arial,Helvetica,sans-serif;
+  }
+  #printArea .print-header{ text-align:center; margin-bottom:6px; line-height:1.2; }
+  #printArea .print-header h1{ font-size:13pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:9pt; margin:0; }
+  #printArea .print-title{ font-size:11pt; font-weight:700; margin:2px 0; }
+  #printArea .print-anexo-linha{ font-size:8.5pt; font-weight:600; margin:6px 0 4px; border-bottom:1px solid #000; padding-bottom:2px; }
+  #printArea table{ width:100%; border-collapse:collapse; font-size:9pt; line-height:1.25; margin-bottom:10px; }
+  #printArea th, #printArea td{ border:1px solid #000; padding:3px 6px; }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{ background:#e3e3e3 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; text-align:center; }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.exercicio{ text-align:center; font-weight:700; }
+  #printArea .print-footer{ font-size:8pt; color:#333; margin-top:6px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#"><i class="bi bi-bank"></i> Contabilidade Pública</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RREO - ANEXO 10 (LRF, art. 53, § 1º, inciso II)</span>
+<h1 class="display-6 fw-bold">Projeção Atuarial do RPPS</h1>
+<p class="lead mb-0">
+Plano Previdenciário — dados consultados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">Aguardando consulta...</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+
+<div class="row g-3">
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2025" min="2000" max="2100">
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Período (bimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Bimestre (Jan-Fev)</option>
+<option value="2">2º Bimestre (Mar-Abr)</option>
+<option value="3">3º Bimestre (Mai-Jun)</option>
+<option value="4">4º Bimestre (Jul-Ago)</option>
+<option value="5">5º Bimestre (Set-Out)</option>
+<option value="6" selected>6º Bimestre (Nov-Dez)</option>
+</select>
+</div>
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<div class="col-md-2">
+<label class="form-label fw-semibold">Esfera</label>
+<select id="filtroEsfera" class="form-select">
+<option value="M" selected>Municipal</option>
+<option value="E">Estadual</option>
+<option value="U">União</option>
+</select>
+</div>
+
+<input type="hidden" id="filtroAnexo" value="RREO-Anexo 10 - RPPS">
+<input type="hidden" id="filtroTipo" value="RREO">
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar"><i class="bi bi-search"></i></button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm"><i class="bi bi-printer"></i> Imprimir / Gerar PDF</button>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabela</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code></div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Receitas Previdenciárias — Exercício de Referência</div>
+<div id="kpiReceitas" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">Despesas Previdenciárias — Exercício de Referência</div>
+<div id="kpiDespesas" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100"><div class="card-body">
+<div class="text-muted small">Resultado Previdenciário — Exercício de Referência</div>
+<div id="kpiResultado" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100"><div class="card-body">
+<div class="text-muted small">Saldo Financeiro do Exercício</div>
+<div id="kpiSaldo" class="valor">R$ 0,00</div>
+</div></div>
+</div>
+
+</section>
+
+<div id="viewTabelas">
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Projeção Atuarial — Plano Previdenciário</h5>
+<span class="small-muted">RREO - Anexo 10</span>
+</div>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-projecao"></tr></thead>
+<tbody id="tbody-projecao"></tbody>
+</table></div>
+</div>
+</section>
+
+</div>
+
+<div id="viewGraficos" class="d-none">
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">1. Evolução: Receitas x Despesas Previdenciárias</h5>
+<div class="chart-card-desc mb-2">Projeção por exercício.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoEvolucao"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">2. Resultado Previdenciário por Exercício</h5>
+<div class="chart-card-desc mb-2">Receitas − Despesas Previdenciárias.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoResultado"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">3. Saldo Financeiro do Exercício</h5>
+<div class="chart-card-desc mb-2">Evolução projetada.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoSaldo"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">4. Receitas x Despesas por Exercício</h5>
+<div class="chart-card-desc mb-2">Comparação lado a lado.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoComparativo"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">5. Cobertura das Despesas (Receitas ÷ Despesas)</h5>
+<div class="chart-card-desc mb-2">Percentual das despesas cobertas pelas receitas previdenciárias.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoCobertura"></canvas></div>
+</div></div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">6. Resultado Previdenciário Acumulado</h5>
+<div class="chart-card-desc mb-2">Soma progressiva do resultado ao longo dos exercícios projetados.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoAcumulado"></canvas></div>
+</div></div>
+</div>
+
+</section>
+</div>
+
+<div class="alert alert-warning small">
+<strong>Atenção — janela de projeção:</strong> por lei (LRF, art. 53, §1º, II), este demonstrativo deve apresentar uma projeção de pelo menos 75 anos (o PDF oficial mostra 2024 a 2099). Porém, para esta consulta, <strong>a API do Tesouro Nacional devolveu apenas 3 exercícios</strong> (o exercício de referência e os dois seguintes) — não a série completa de 75 anos publicada no relatório oficial do município. O dashboard abaixo reflete exatamente o que a API retornou.
+</div>
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O sistema busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Caso o navegador bloqueie a requisição (CORS), utilize o botão <strong>"Carregar JSON Local"</strong> para importar um arquivo previamente baixado (mesma estrutura retornada pela API: objeto com a chave <code>items</code>).
+</div>
+
+</main>
+
+<div id="printArea">
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Relatório Resumido da Execução Orçamentária</div>
+<div class="print-title">DEMONSTRATIVO DA PROJEÇÃO ATUARIAL DO REGIME PRÓPRIO DE PREVIDÊNCIA DOS SERVIDORES</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+<div class="print-anexo-linha">RREO – Anexo 10 (LRF, art. 53, § 1º, inciso II) — Plano Previdenciário<span class="float-end">Em Reais</span></div>
+
+<table><thead><tr id="print-thead-projecao"></tr></thead><tbody id="print-tbody-projecao"></tbody></table>
+
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>.
+</div>
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Projeção Atuarial do RPPS (RREO - Anexo 10) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1"];
+const $ = id => document.getElementById(id);
+
+const BIMESTRE_INFO = {
+  1:{meses:"Janeiro a Fevereiro"}, 2:{meses:"Março a Abril"},
+  3:{meses:"Maio a Junho"}, 4:{meses:"Julho a Agosto"},
+  5:{meses:"Setembro a Outubro"}, 6:{meses:"Novembro a Dezembro"},
+};
+
+let dadosPorExercicio = {}; // { ano: { receitas, despesas, resultado, saldo } }
+let colunas = {};           // { receitas: coluna, despesas: coluna, resultado: coluna, saldo: coluna }
+let anosOrdenados = [];
+let metaConsulta = {};
+let graficos = {};
+
+function moeda(valor){ return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0); }
+function moedaCompacta(valor){
+  const v = Number(valor)||0, abs = Math.abs(v);
+  if(abs >= 1e9) return (v/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return (v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return (v/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function mostrarStatus(t,tipo="info"){ const el=$("status"); el.className="alert alert-"+tipo+" status"; el.textContent=t; }
+function mostrarLoading(s){ $("loading").classList.toggle("d-none",!s); }
+
+function montarUrl(){
+  const params = new URLSearchParams({
+    an_exercicio: $("filtroExercicio").value.trim(),
+    nr_periodo: $("filtroPeriodo").value.trim(),
+    co_tipo_demonstrativo: $("filtroTipo").value.trim(),
+    no_anexo: $("filtroAnexo").value.trim(),
+    co_esfera: $("filtroEsfera").value.trim(),
+    id_ente: $("filtroEnte").value.trim()
+  });
+  return `${API_BASE}?${params.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+  try {
+    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function processarDados(lista){
+  dadosPorExercicio = {}; colunas = {}; anosOrdenados = []; metaConsulta = {};
+
+  lista.forEach(item=>{
+    if(!item || !item.coluna || item.conta === undefined || item.conta === null) return;
+    if(!metaConsulta.instituicao){
+      metaConsulta = { instituicao:item.instituicao, exercicio:item.exercicio, periodo:item.periodo, cod_ibge:item.cod_ibge };
+    }
+    const ano = parseInt(item.conta, 10);
+    if(Number.isNaN(ano)) return;
+
+    if(/^RECEITAS PREVIDENCI[ÁA]RIAS/i.test(item.coluna)) { colunas.receitas = colunas.receitas || item.coluna; }
+    else if(/^DESPESAS PREVIDENCI[ÁA]RIAS/i.test(item.coluna)) { colunas.despesas = colunas.despesas || item.coluna; }
+    else if(/^RESULTADO PREVIDENCI[ÁA]RIO/i.test(item.coluna)) { colunas.resultado = colunas.resultado || item.coluna; }
+    else if(/^SALDO FINANCEIRO/i.test(item.coluna)) { colunas.saldo = colunas.saldo || item.coluna; }
+    else return;
+
+    if(!dadosPorExercicio[ano]){ dadosPorExercicio[ano] = {}; anosOrdenados.push(ano); }
+
+    if(item.coluna === colunas.receitas) dadosPorExercicio[ano].receitas = Number(item.valor) || 0;
+    else if(item.coluna === colunas.despesas) dadosPorExercicio[ano].despesas = Number(item.valor) || 0;
+    else if(item.coluna === colunas.resultado) dadosPorExercicio[ano].resultado = Number(item.valor) || 0;
+    else if(item.coluna === colunas.saldo) dadosPorExercicio[ano].saldo = Number(item.valor) || 0;
+  });
+
+  anosOrdenados.sort((a,b)=>a-b);
+
+  if(!anosOrdenados.length){ mostrarStatus("A consulta não retornou registros para os parâmetros informados.","warning"); return; }
+
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTabela();
+  renderizarGraficos();
+}
+
+function atualizarCabecalho(){
+  const info = BIMESTRE_INFO[metaConsulta.periodo] || BIMESTRE_INFO[6];
+  $("navInstituicao").textContent = metaConsulta.instituicao || "-";
+  $("printInstituicao").textContent = (metaConsulta.instituicao || "MUNICÍPIO DE CAMPO LARGO").toUpperCase();
+  $("printPeriodo").textContent = `Período de Referência: Janeiro a Dezembro de ${metaConsulta.exercicio || "-"} / Bimestre ${info.meses}`;
+}
+
+function atualizarKPIs(){
+  const anoRef = metaConsulta.exercicio || anosOrdenados[0];
+  const linha = dadosPorExercicio[anoRef] || dadosPorExercicio[anosOrdenados[0]] || {};
+  $("kpiReceitas").textContent = moeda(linha.receitas);
+  $("kpiDespesas").textContent = moeda(linha.despesas);
+  $("kpiResultado").textContent = moeda(linha.resultado);
+  $("kpiSaldo").textContent = moeda(linha.saldo);
+}
+
+// -------------------- Tabela --------------------
+
+function renderizarCabecalhoTabela(theadId){
+  const tr = $(theadId);
+  if(!tr) return;
+  tr.innerHTML = `
+    <th style="min-width:100px">Exercício</th>
+    <th class="valor">${escapeHtml(colunas.receitas || "Receitas Previdenciárias")}</th>
+    <th class="valor">${escapeHtml(colunas.despesas || "Despesas Previdenciárias")}</th>
+    <th class="valor">${escapeHtml(colunas.resultado || "Resultado Previdenciário")}</th>
+    <th class="valor">${escapeHtml(colunas.saldo || "Saldo Financeiro do Exercício")}</th>
+  `;
+}
+
+function linhaHtmlTabela(ano){
+  const l = dadosPorExercicio[ano] || {};
+  const destaque = (metaConsulta.exercicio && ano === metaConsulta.exercicio) ? " linha-referencia" : "";
+  return `<tr class="${destaque}">
+    <td class="exercicio">${ano}</td>
+    <td class="valor">${moeda(l.receitas)}</td>
+    <td class="valor">${moeda(l.despesas)}</td>
+    <td class="valor">${moeda(l.resultado)}</td>
+    <td class="valor">${moeda(l.saldo)}</td>
+  </tr>`;
+}
+
+function renderizarTabela(){
+  renderizarCabecalhoTabela("thead-projecao");
+  renderizarCabecalhoTabela("print-thead-projecao");
+  const html = anosOrdenados.length
+    ? anosOrdenados.map(linhaHtmlTabela).join("")
+    : `<tr><td colspan="5" class="bucket-vazio">Nenhum valor informado para o período selecionado.</td></tr>`;
+  $("tbody-projecao").innerHTML = html;
+  $("print-tbody-projecao").innerHTML = html;
+}
+
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(nome){ if(graficos[nome]){ graficos[nome].destroy(); delete graficos[nome]; } }
+
+function graficoEvolucao(){
+  destruirGrafico("evolucao");
+  graficos.evolucao = new Chart($("graficoEvolucao"), {
+    type:"line",
+    data:{ labels: anosOrdenados, datasets:[
+      { label:"Receitas Previdenciárias", data: anosOrdenados.map(a=>dadosPorExercicio[a].receitas||0), borderColor: CORES[0], backgroundColor: CORES[0]+"33", tension:.3, fill:true },
+      { label:"Despesas Previdenciárias", data: anosOrdenados.map(a=>dadosPorExercicio[a].despesas||0), borderColor: CORES[3], backgroundColor: CORES[3]+"33", tension:.3, fill:true },
+    ] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moeda(ctx.raw)}` } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoResultado(){
+  destruirGrafico("resultado");
+  graficos.resultado = new Chart($("graficoResultado"), {
+    type:"bar",
+    data:{ labels: anosOrdenados, datasets:[{ label:"Resultado Previdenciário", data: anosOrdenados.map(a=>dadosPorExercicio[a].resultado||0), backgroundColor: anosOrdenados.map(a=>(dadosPorExercicio[a].resultado||0) < 0 ? CORES[3] : CORES[4]) }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoSaldo(){
+  destruirGrafico("saldo");
+  graficos.saldo = new Chart($("graficoSaldo"), {
+    type:"line",
+    data:{ labels: anosOrdenados, datasets:[{ label:"Saldo Financeiro do Exercício", data: anosOrdenados.map(a=>dadosPorExercicio[a].saldo||0), borderColor: CORES[1], backgroundColor: CORES[1]+"33", tension:.3, fill:true }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoComparativo(){
+  destruirGrafico("comparativo");
+  graficos.comparativo = new Chart($("graficoComparativo"), {
+    type:"bar",
+    data:{ labels: anosOrdenados, datasets:[
+      { label:"Receitas Previdenciárias", data: anosOrdenados.map(a=>dadosPorExercicio[a].receitas||0), backgroundColor: CORES[0] },
+      { label:"Despesas Previdenciárias", data: anosOrdenados.map(a=>dadosPorExercicio[a].despesas||0), backgroundColor: CORES[3] },
+    ] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moeda(ctx.raw)}` } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function graficoCobertura(){
+  const percentuais = anosOrdenados.map(a=>{
+    const l = dadosPorExercicio[a];
+    return (l.despesas ? (l.receitas||0)/l.despesas*100 : 0);
+  });
+  destruirGrafico("cobertura");
+  graficos.cobertura = new Chart($("graficoCobertura"), {
+    type:"bar",
+    data:{ labels: anosOrdenados, datasets:[{ label:"% Receitas / Despesas", data: percentuais.map(p=>p.toFixed(1)), backgroundColor: CORES[4] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ctx.raw + "%" } } },
+      scales:{ y:{ ticks:{ callback: v => v + "%" } } } }
+  });
+}
+
+function graficoAcumulado(){
+  let acumulado = 0;
+  const dados = anosOrdenados.map(a=>{ acumulado += (dadosPorExercicio[a].resultado||0); return acumulado; });
+  destruirGrafico("acumulado");
+  graficos.acumulado = new Chart($("graficoAcumulado"), {
+    type:"line",
+    data:{ labels: anosOrdenados, datasets:[{ label:"Resultado Previdenciário Acumulado", data: dados, borderColor: CORES[5], backgroundColor: CORES[5]+"33", tension:.3, fill:true }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } }
+  });
+}
+
+function renderizarGraficos(){
+  graficoEvolucao();
+  graficoResultado();
+  graficoSaldo();
+  graficoComparativo();
+  graficoCobertura();
+  graficoAcumulado();
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  if(!anosOrdenados.length){ alert("Não existem dados para exportar."); return; }
+
+  const linhas = [["Exercício", colunas.receitas||"Receitas Previdenciárias", colunas.despesas||"Despesas Previdenciárias", colunas.resultado||"Resultado Previdenciário", colunas.saldo||"Saldo Financeiro do Exercício"]];
+  anosOrdenados.forEach(a=>{
+    const l = dadosPorExercicio[a];
+    linhas.push([a, l.receitas ?? "", l.despesas ?? "", l.resultado ?? "", l.saldo ?? ""]);
+  });
+
+  const csv = linhas.map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "rreo_anexo10_campo_largo.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// -------------------- Alternância Tabela / Gráficos --------------------
+
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+// -------------------- Leitor de JSON local --------------------
+
+$("inputJson").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try {
+      const resultado = JSON.parse(evt.target.result);
+      const lista = Array.isArray(resultado) ? resultado : resultado.items;
+      if(!Array.isArray(lista)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) {
+      mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger");
+    }
+  };
+  reader.readAsText(file);
+});
+
+function prepararEImprimir(){
+  if(!anosOrdenados.length){ alert("Não há dados carregados para imprimir. Faça uma consulta primeiro."); return; }
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+  renderizarTabela();
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+consultarAPI();
+</script>
+
+</body>
+</html>
