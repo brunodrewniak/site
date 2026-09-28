@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RREO - Anexo 13 | Parcerias Público-Privadas | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{ --azul:#0d6efd; --azul-escuro:#073b6f; --verde:#198754; --vermelho:#dc3545; --fundo:#f4f7fb; }
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi .valor{font-size:1.15rem;font-weight:700;color:var(--azul-escuro)}
+.chart-box{height:320px;position:relative;}
+.table-responsive{max-height:460px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.74rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rreo-table{font-size:.8rem}
+.rreo-table td.valor, .rreo-table th.valor{text-align:right;white-space:nowrap}
+.rreo-table tr.nivel-0{font-weight:700;background:#eef3fb}
+.rreo-table tr.nivel-1{font-weight:400}
+.rreo-table td.conta-nome{white-space:nowrap}
+.indent-1{padding-left:1.5rem !important}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+.bucket-vazio{font-size:.85rem;color:#6c757d;padding:.75rem}
+
+#printArea{display:none}
+@media print{
+  @page{ size: A4 landscape; margin: 8mm; }
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{ display:block !important; position:absolute; left:0; top:0; width:100%; background:#fff; color:#000; font-family:Arial,Helvetica,sans-serif; }
+  #printArea .print-header{ text-align:center; margin-bottom:5px; line-height:1.2; }
+  #printArea .print-header h1{ font-size:12pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:8pt; margin:0; }
+  #printArea .print-title{ font-size:10pt; font-weight:700; margin:2px 0; }
+  #printArea .print-anexo-linha{ font-size:8pt; font-weight:600; margin:5px 0 4px; border-bottom:1px solid #000; padding-bottom:2px; }
+  #printArea .print-bloco-titulo{ font-size:8.5pt; font-weight:700; background:#dfe7f2 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; padding:3px 5px; margin-top:7px; border:1px solid #000; }
+  #printArea table{ width:100%; border-collapse:collapse; font-size:6.8pt; line-height:1.15; margin-bottom:8px; }
+  #printArea th, #printArea td{ border:1px solid #000; padding:2px 3px; }
+  #printArea thead{ display:table-header-group; }
+  #printArea tr{ page-break-inside:avoid; }
+  #printArea th{ background:#e3e3e3 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; text-align:center; }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea td.conta-nome{ text-align:left; }
+  #printArea tr.nivel-0{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea .indent-1{ padding-left:.9rem !important; }
+  #printArea .print-footer{ font-size:7pt; color:#333; margin-top:5px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#"><i class="bi bi-bank"></i> Contabilidade Pública</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<span class="badge bg-light text-primary mb-3">RREO - ANEXO 13 (Lei nº 11.079/2004, arts. 22, 25 e 28)</span>
+<h1 class="display-6 fw-bold">Parcerias Público-Privadas (PPP)</h1>
+<p class="lead mb-0">Dados consultados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi).</p>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">Aguardando consulta...</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+<div class="row g-3">
+<div class="col-md-2">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2025" min="2000" max="2100">
+</div>
+<div class="col-md-3">
+<label class="form-label fw-semibold">Período (bimestre)</label>
+<select id="filtroPeriodo" class="form-select">
+<option value="1">1º Bimestre (Jan-Fev)</option>
+<option value="2">2º Bimestre (Mar-Abr)</option>
+<option value="3">3º Bimestre (Mai-Jun)</option>
+<option value="4">4º Bimestre (Jul-Ago)</option>
+<option value="5">5º Bimestre (Set-Out)</option>
+<option value="6" selected>6º Bimestre (Nov-Dez)</option>
+</select>
+</div>
+<div class="col-md-3">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+<div class="col-md-2">
+<label class="form-label fw-semibold">Esfera</label>
+<select id="filtroEsfera" class="form-select">
+<option value="M" selected>Municipal</option>
+<option value="E">Estadual</option>
+<option value="U">União</option>
+</select>
+</div>
+<input type="hidden" id="filtroAnexo" value="RREO-Anexo 13">
+<input type="hidden" id="filtroTipo" value="RREO">
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar"><i class="bi bi-search"></i></button>
+</div>
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+<label class="btn btn-outline-primary btn-sm mb-0">
+<i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display: none;">
+</label>
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm"><i class="bi bi-printer"></i> Imprimir / Gerar PDF</button>
+<div class="btn-group view-toggle ms-auto" role="group">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabelas</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+<div class="small-muted mt-3">API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code></div>
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4">
+<div class="col-md-6 col-xl-3"><div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">RCL — Exercício Corrente</div>
+<div id="kpiRclCorrente" class="valor">R$ 0,00</div>
+</div></div></div>
+<div class="col-md-6 col-xl-3"><div class="card kpi h-100"><div class="card-body">
+<div class="text-muted small">RCL — Exercício Anterior</div>
+<div id="kpiRclAnterior" class="valor">R$ 0,00</div>
+<div id="kpiRclVariacao" class="small-muted"></div>
+</div></div></div>
+<div class="col-md-6 col-xl-3"><div class="card h-100"><div class="card-body">
+<div class="text-muted small">Despesas de PPP (III) — Exercício Corrente</div>
+<div id="kpiPpp" class="valor">R$ 0,00</div>
+<div id="kpiPppPerc" class="small-muted"></div>
+</div></div></div>
+<div class="col-md-6 col-xl-3"><div class="card h-100"><div class="card-body">
+<div class="text-muted small">Limite Legal (5% da RCL) — Exercício Corrente</div>
+<div id="kpiLimite" class="valor">R$ 0,00</div>
+</div></div></div>
+</section>
+
+<div id="viewTabelas">
+<section class="card mb-4"><div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Impactos das Contratações de PPP</h5>
+<span class="small-muted">RREO - Anexo 13</span>
+</div>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-impactos"></tr></thead>
+<tbody id="tbody-impactos"></tbody>
+</table></div>
+</div></section>
+
+<section class="card mb-4"><div class="card-body">
+<h5 class="mb-3">Despesas de PPP e Limite sobre a RCL</h5>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-despesas"></tr></thead>
+<tbody id="tbody-despesas"></tbody>
+</table></div>
+</div></section>
+</div>
+
+<div id="viewGraficos" class="d-none">
+<section class="row g-4 mb-4">
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">1. Receita Corrente Líquida por Exercício</h5>
+<div class="chart-card-desc mb-2">Base de cálculo do limite de PPP.</div>
+<div class="chart-box"><canvas id="graficoRcl"></canvas></div>
+</div></div></div>
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">2. Despesas de PPP por Exercício</h5>
+<div class="chart-card-desc mb-2">Total das despesas de PPP (III), quando informado.</div>
+<div class="chart-box"><canvas id="graficoPpp"></canvas></div>
+</div></div></div>
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">3. Limite de 5% da RCL x Despesas de PPP</h5>
+<div class="chart-card-desc mb-2">Exercício corrente.</div>
+<div class="chart-box"><canvas id="graficoLimite"></canvas></div>
+</div></div></div>
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">4. Limite Anual Disponível (5% da RCL)</h5>
+<div class="chart-card-desc mb-2">Margem máxima de despesas de PPP em cada exercício.</div>
+<div class="chart-box"><canvas id="graficoMargem"></canvas></div>
+</div></div></div>
+</section>
+</div>
+
+<div class="alert alert-warning small">
+<strong>Sobre os dados:</strong> a API omite linhas cujo valor é zero em todas as colunas. Como o município não possui despesas nem passivos de PPP, apenas a linha da <strong>Receita Corrente Líquida (IV)</strong> é retornada — os demais blocos aparecem vazios (no PDF oficial constam como 0,00). Além disso, a API não devolveu a coluna do exercício EC+5, que é exibida como "—".
+</div>
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> caso o navegador bloqueie a requisição (CORS), use <strong>"Carregar JSON Local"</strong> com um arquivo baixado previamente (objeto com a chave <code>items</code>).
+</div>
+
+</main>
+
+<div id="printArea">
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Relatório Resumido da Execução Orçamentária</div>
+<div class="print-title">DEMONSTRATIVO DAS PARCERIAS PÚBLICO-PRIVADAS</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+<div class="print-anexo-linha">RREO - Anexo 13 (Lei nº 11.079, de 30.12.2004, arts. 22, 25 e 28)<span class="float-end">Em Reais</span></div>
+<div class="print-bloco-titulo">IMPACTOS DAS CONTRATAÇÕES DE PPP</div>
+<table><thead><tr id="print-thead-impactos"></tr></thead><tbody id="print-tbody-impactos"></tbody></table>
+<div class="print-bloco-titulo">DESPESAS DE PPP</div>
+<table><thead><tr id="print-thead-despesas"></tr></thead><tbody id="print-tbody-despesas"></tbody></table>
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — <span id="printUrl"></span><br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>.
+</div>
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Parcerias Público-Privadas (RREO - Anexo 13) — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1"];
+const LIMITE_PPP = 0.05; // Lei 11.079/2004, art. 28: 5% da RCL
+const $ = id => document.getElementById(id);
+
+const BIMESTRE_INFO = {
+  1:{meses:"Janeiro a Fevereiro"}, 2:{meses:"Março a Abril"}, 3:{meses:"Maio a Junho"},
+  4:{meses:"Julho a Agosto"}, 5:{meses:"Setembro a Outubro"}, 6:{meses:"Novembro a Dezembro"},
+};
+const NIVEL1 = new Set([
+  "Ativos Constituídos pela SPE","Obrigações decorrentes de Ativos Constituídos pela SPE","Provisões de PPP","Outros Passivos",
+  "Obrigações contratuais","Riscos não Provisionados","Garantias concedidas","Outros Passivos Contingentes"
+]);
+function nivelDaConta(label){
+  if(NIVEL1.has(label) || /^(Contratadas|A contratar)\b/i.test(label)) return 1;
+  return 0;
+}
+
+const BUCKETS = ["impactos","despesas"];
+let dados = {};       // { bucket: { rotulo: { label, nivel, valores:{colKey:valor} } } }
+let ordem = {};       // { bucket: [rotulo...] }
+let colunas = {};     // { impactos: [coluna...] } (rótulos originais, na ordem da API)
+let colsDespesas = []; // [colKey...]: "ANT", 0, 1, 2...
+let metaConsulta = {};
+let graficos = {};
+
+function moeda(v){ return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(v)||0); }
+function moedaCompacta(v){
+  v = Number(v)||0; const a = Math.abs(v);
+  if(a >= 1e9) return (v/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(a >= 1e6) return (v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(a >= 1e3) return (v/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function percent(v){ return (Number(v)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%"; }
+function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function mostrarStatus(t,tipo="info"){ const el=$("status"); el.className="alert alert-"+tipo+" status"; el.textContent=t; }
+function mostrarLoading(s){ $("loading").classList.toggle("d-none",!s); }
+
+function montarUrl(){
+  const p = new URLSearchParams({
+    an_exercicio: $("filtroExercicio").value.trim(),
+    nr_periodo: $("filtroPeriodo").value.trim(),
+    co_tipo_demonstrativo: $("filtroTipo").value.trim(),
+    no_anexo: $("filtroAnexo").value.trim(),
+    co_esfera: $("filtroEsfera").value.trim(),
+    id_ente: $("filtroEnte").value.trim()
+  });
+  return `${API_BASE}?${p.toString()}`;
+}
+
+async function consultarAPI(){
+  const url = montarUrl();
+  $("urlApiTexto").textContent = url;
+  mostrarLoading(true);
+  mostrarStatus(`Buscando URL: ${url}`);
+  try {
+    const r = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const json = await r.json();
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+    processarDados(lista);
+    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
+  } finally { mostrarLoading(false); }
+}
+
+// Mapeia a coluna de projeção para uma chave: "ANT" (exercício anterior), 0 (corrente), n (EC+n)
+function chaveColunaDespesa(coluna){
+  if(/^EXERC[ÍI]CIO ANTERIOR/i.test(coluna)) return "ANT";
+  if(/^EXERC[ÍI]CIO CORRENTE/i.test(coluna)) return 0;
+  const m = /^<EC\s*\+\s*(\d+)>$/i.exec(coluna);
+  return m ? parseInt(m[1],10) : null;
+}
+function rotuloDaLinha(item){
+  // Neste anexo o nome da linha vem em "rotulo" e "conta" traz "Padrão"; se vier o inverso, trata também.
+  if(item.conta && !/^Padr[ãa]o$/i.test(item.conta)) return item.conta;
+  return item.rotulo;
+}
+
+function processarDados(lista){
+  dados = {}; ordem = {}; colunas = {}; colsDespesas = []; metaConsulta = {};
+  BUCKETS.forEach(b=>{ dados[b] = {}; ordem[b] = []; colunas[b] = []; });
+  const chavesDesp = new Set();
+
+  lista.forEach(item=>{
+    if(!item || !item.coluna) return;
+    const label = rotuloDaLinha(item);
+    if(!label) return;
+    if(!metaConsulta.instituicao){
+      metaConsulta = { instituicao:item.instituicao, exercicio:item.exercicio, periodo:item.periodo, cod_ibge:item.cod_ibge };
+    }
+    const chaveDesp = chaveColunaDespesa(item.coluna);
+    const bucket = chaveDesp !== null ? "despesas" : "impactos";
+    const colKey = chaveDesp !== null ? chaveDesp : item.coluna;
+
+    if(!dados[bucket][label]){
+      dados[bucket][label] = { label, nivel:nivelDaConta(label), valores:{} };
+      ordem[bucket].push(label);
+    }
+    dados[bucket][label].valores[colKey] = Number(item.valor) || 0;
+    if(bucket === "despesas") chavesDesp.add(chaveDesp);
+    else if(!colunas.impactos.includes(item.coluna)) colunas.impactos.push(item.coluna);
+  });
+
+  if(!BUCKETS.some(b=>ordem[b].length)){ mostrarStatus("A consulta não retornou registros para os parâmetros informados.","warning"); return; }
+
+  // Sequência completa de colunas: ANT, 0, 1..max (lacunas aparecem como "—")
+  const maxN = chavesDesp.size ? Math.max(...[...chavesDesp].filter(k=>k!=="ANT")) : 0;
+  colsDespesas = ["ANT"]; for(let n=0;n<=maxN;n++) colsDespesas.push(n);
+
+  atualizarCabecalho();
+  atualizarKPIs();
+  renderizarTabelas();
+  renderizarGraficos();
+}
+
+function exercicioRef(){ return metaConsulta.exercicio || parseInt($("filtroExercicio").value,10); }
+function rotuloColDespesa(k){
+  const ano = exercicioRef();
+  if(k === "ANT") return `Exercício Anterior (${ano-1})`;
+  if(k === 0) return `Exercício Corrente (${ano})`;
+  return `${ano + k} <span class="small-muted">(EC+${k})</span>`;
+}
+
+function atualizarCabecalho(){
+  const info = BIMESTRE_INFO[metaConsulta.periodo] || BIMESTRE_INFO[6];
+  $("navInstituicao").textContent = metaConsulta.instituicao || "-";
+  $("printInstituicao").textContent = (metaConsulta.instituicao || "MUNICÍPIO DE CAMPO LARGO").toUpperCase();
+  $("printPeriodo").textContent = `Período de Referência: Janeiro a Dezembro de ${metaConsulta.exercicio || "-"} / Bimestre ${info.meses}`;
+}
+
+function linhaPorRegex(bucket, regex){
+  const k = ordem[bucket].find(l=>regex.test(l));
+  return k ? dados[bucket][k] : null;
+}
+function valorLinha(linha, colKey){ return linha && linha.valores[colKey] !== undefined ? linha.valores[colKey] : 0; }
+
+function atualizarKPIs(){
+  const rcl = linhaPorRegex("despesas", /^RECEITA CORRENTE L[ÍI]QUIDA/i);
+  const ppp = linhaPorRegex("despesas", /^TOTAL DAS DESPESAS DE PPP/i);
+  const rclEC = valorLinha(rcl, 0), rclAnt = valorLinha(rcl, "ANT"), pppEC = valorLinha(ppp, 0);
+
+  $("kpiRclCorrente").textContent = moeda(rclEC);
+  $("kpiRclAnterior").textContent = moeda(rclAnt);
+  $("kpiRclVariacao").textContent = rclAnt ? `Variação: ${percent((rclEC/rclAnt-1)*100)}` : "";
+  $("kpiPpp").textContent = moeda(pppEC);
+  $("kpiPppPerc").textContent = rclEC ? `${percent(pppEC/rclEC*100)} da RCL` : "";
+  $("kpiLimite").textContent = moeda(rclEC * LIMITE_PPP);
+}
+
+// -------------------- Tabelas --------------------
+
+function cabecalhoImpactos(){
+  return `<th style="min-width:260px">Impactos das Contratações de PPP</th>` +
+    colunas.impactos.map(c=>`<th class="valor">${escapeHtml(c)}</th>`).join("");
+}
+function cabecalhoDespesas(){
+  return `<th style="min-width:280px">Despesas de PPP</th>` +
+    colsDespesas.map(k=>`<th class="valor">${rotuloColDespesa(k)}</th>`).join("");
+}
+function linhaHtml(bucket, label, cols){
+  const item = dados[bucket][label];
+  const ind = item.nivel === 1 ? "indent-1" : "";
+  const ehPerc = /\(%\)/.test(item.label);
+  const cel = k => {
+    const v = item.valores[k];
+    if(v === undefined) return `<td class="valor">—</td>`;
+    return `<td class="valor">${ehPerc ? percent(v) : moeda(v)}</td>`;
+  };
+  return `<tr class="nivel-${item.nivel}"><td class="conta-nome ${ind}">${escapeHtml(item.label)}</td>${cols.map(cel).join("")}</tr>`;
+}
+function corpo(bucket, cols){
+  if(!ordem[bucket].length){
+    return `<tr><td colspan="${cols.length+1}" class="bucket-vazio">Nenhum valor informado para este bloco (a API omite linhas zeradas — no PDF oficial constam como 0,00).</td></tr>`;
+  }
+  return ordem[bucket].map(l=>linhaHtml(bucket, l, cols)).join("");
+}
+
+function renderizarTabelas(){
+  const th1 = cabecalhoImpactos(), th2 = cabecalhoDespesas();
+  $("thead-impactos").innerHTML = th1; $("print-thead-impactos").innerHTML = th1;
+  $("thead-despesas").innerHTML = th2; $("print-thead-despesas").innerHTML = th2;
+  const b1 = corpo("impactos", colunas.impactos), b2 = corpo("despesas", colsDespesas);
+  $("tbody-impactos").innerHTML = b1; $("print-tbody-impactos").innerHTML = b1;
+  $("tbody-despesas").innerHTML = b2; $("print-tbody-despesas").innerHTML = b2;
+}
+
+// -------------------- Gráficos --------------------
+
+function destruir(nome){ if(graficos[nome]){ graficos[nome].destroy(); delete graficos[nome]; } }
+function colunasComDados(linha){ return colsDespesas.filter(k=> linha && linha.valores[k] !== undefined); }
+function textoCol(k){
+  const ano = exercicioRef();
+  return k === "ANT" ? String(ano-1) : String(ano + k);
+}
+function opcoesBarra(){
+  return { responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+    scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } } };
+}
+
+function graficoRcl(){
+  const rcl = linhaPorRegex("despesas", /^RECEITA CORRENTE L[ÍI]QUIDA/i);
+  const ks = colunasComDados(rcl);
+  destruir("rcl");
+  graficos.rcl = new Chart($("graficoRcl"), { type:"bar",
+    data:{ labels: ks.map(textoCol), datasets:[{ data: ks.map(k=>rcl.valores[k]), backgroundColor: CORES[0] }] },
+    options: opcoesBarra() });
+}
+function graficoPpp(){
+  const ppp = linhaPorRegex("despesas", /^TOTAL DAS DESPESAS DE PPP/i);
+  const rcl = linhaPorRegex("despesas", /^RECEITA CORRENTE L[ÍI]QUIDA/i);
+  const ks = colunasComDados(rcl); // usa as mesmas colunas da RCL; PPP ausente = 0
+  destruir("ppp");
+  graficos.ppp = new Chart($("graficoPpp"), { type:"bar",
+    data:{ labels: ks.map(textoCol), datasets:[{ data: ks.map(k=>valorLinha(ppp,k)), backgroundColor: CORES[3] }] },
+    options: opcoesBarra() });
+}
+function graficoLimite(){
+  const rcl = linhaPorRegex("despesas", /^RECEITA CORRENTE L[ÍI]QUIDA/i);
+  const ppp = linhaPorRegex("despesas", /^TOTAL DAS DESPESAS DE PPP/i);
+  const dadosG = [
+    { label:"Limite (5% da RCL)", valor: valorLinha(rcl,0)*LIMITE_PPP },
+    { label:"Despesas de PPP (III)", valor: valorLinha(ppp,0) },
+  ];
+  destruir("limite");
+  graficos.limite = new Chart($("graficoLimite"), { type:"bar",
+    data:{ labels: dadosG.map(d=>d.label), datasets:[{ data: dadosG.map(d=>d.valor), backgroundColor:[CORES[2],CORES[3]] }] },
+    options: opcoesBarra() });
+}
+function graficoMargem(){
+  const rcl = linhaPorRegex("despesas", /^RECEITA CORRENTE L[ÍI]QUIDA/i);
+  const ks = colunasComDados(rcl);
+  destruir("margem");
+  graficos.margem = new Chart($("graficoMargem"), { type:"line",
+    data:{ labels: ks.map(textoCol), datasets:[{ data: ks.map(k=>rcl.valores[k]*LIMITE_PPP), borderColor: CORES[4], backgroundColor: CORES[4]+"33", tension:.3, fill:true }] },
+    options: opcoesBarra() });
+}
+function renderizarGraficos(){ graficoRcl(); graficoPpp(); graficoLimite(); graficoMargem(); }
+
+// -------------------- CSV / alternância / JSON / impressão --------------------
+
+function exportarCSV(){
+  if(!BUCKETS.some(b=>ordem[b].length)){ alert("Não existem dados para exportar."); return; }
+  const linhas = [["Bloco","Especificação","Coluna","Valor"]];
+  BUCKETS.forEach(b=>{
+    ordem[b].forEach(l=>{
+      const item = dados[b][l];
+      Object.keys(item.valores).forEach(k=>{
+        const nome = (b==="despesas") ? (k==="ANT" ? "Exercício Anterior" : k===0 ? "Exercício Corrente" : `EC+${k}`) : k;
+        linhas.push([b, item.label, nome, item.valores[k]]);
+      });
+    });
+  });
+  const csv = linhas.map(l=> l.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "rreo_anexo13_campo_largo.csv";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+$("btnVerTabelas").addEventListener("click", ()=>{
+  $("viewTabelas").classList.remove("d-none"); $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active"); $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", ()=>{
+  $("viewGraficos").classList.remove("d-none"); $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active"); $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+$("inputJson").addEventListener("change", e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try {
+      const res = JSON.parse(evt.target.result);
+      const lista = Array.isArray(res) ? res : res.items;
+      if(!Array.isArray(lista)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+      processarDados(lista);
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) { mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger"); }
+  };
+  reader.readAsText(file);
+});
+
+$("btnImprimir").addEventListener("click", ()=>{
+  if(!BUCKETS.some(b=>ordem[b] && ordem[b].length)){ alert("Não há dados carregados para imprimir. Faça uma consulta primeiro."); return; }
+  $("printUrl").textContent = $("urlApiTexto").textContent;
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+  renderizarTabelas();
+  window.print();
+});
+$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+consultarAPI();
+</script>
+
+</body>
+</html>
