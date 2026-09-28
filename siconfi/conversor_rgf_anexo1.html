@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor RGF Anexo 1 · CSV → JSON</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #1155cc;
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 24px;
+        }
+        .sub {
+            color: #666;
+            font-size: 14px;
+            margin-top: 0;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        .file-input-wrapper {
+            margin: 25px 0 15px 0;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn-upload {
+            background-color: #1155cc;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s, border-color 0.2s;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(17, 85, 204, 0.3);
+            border: 2px dashed transparent;
+        }
+        .btn-upload:hover {
+            background-color: #0b3c94;
+        }
+        .btn-upload.over {
+            background-color: #0b3c94;
+            border-color: #ffffff;
+        }
+        .btn-action {
+            background-color: #1155cc;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: background 0.2s;
+            box-shadow: 0 2px 5px rgba(17, 85, 204, 0.3);
+        }
+        .btn-action:hover {
+            background-color: #0b3c94;
+        }
+        .card {
+            background-color: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 18px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .card h2 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0 0 12px 0;
+            color: #1155cc;
+            font-weight: bold;
+        }
+        details summary {
+            cursor: pointer;
+            color: #1155cc;
+            font-weight: bold;
+            font-size: 14px;
+            user-select: none;
+        }
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        label.field-label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            font: inherit;
+            font-size: 13px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+            color: #333;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #1155cc;
+        }
+        dl {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 6px 18px;
+            margin: 0;
+            font-size: 14px;
+        }
+        dt {
+            color: #666;
+            font-weight: 600;
+        }
+        dd {
+            margin: 0;
+            color: #333;
+            word-break: break-word;
+        }
+        .box-success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .box-warn {
+            background-color: #fff3cd;
+            color: #664d03;
+            border: 1px solid #ffecb5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            text-align: left;
+        }
+        .box-warn ul {
+            margin: 5px 0 0 0;
+            padding-left: 20px;
+            font-size: 13px;
+        }
+        .box-err {
+            background-color: #f8d7da;
+            color: #842029;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: left;
+        }
+        [hidden] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Conversor RGF Anexo 1</h1>
+    <p class="sub">Demonstrativo da Despesa com Pessoal → estrutura Siconfi (JSON)<br>Selecione ou arraste o arquivo CSV original do demonstrativo.</p>
+
+    <div class="file-input-wrapper">
+        <label id="drop" for="file" class="btn-upload">
+            <strong>Selecionar e Converter CSV para JSON</strong>
+        </label>
+        <input type="file" id="file" accept=".csv,text/csv">
+    </div>
+
+    <details class="card">
+        <summary>Metadados do ente (editáveis)</summary>
+        <div class="meta" id="meta"></div>
+    </details>
+
+    <div id="result" hidden>
+        <div class="box-success">
+            <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #0f5132;">Sucesso! O arquivo JSON foi gerado e baixado.</h2>
+            <dl id="summary"></dl>
+            <button id="again" class="btn-action">Baixar JSON novamente</button>
+        </div>
+        
+        <div class="box-warn" id="warnBox" hidden>
+            <strong>Avisos durante o processamento:</strong>
+            <ul id="warns"></ul>
+        </div>
+    </div>
+
+    <div class="box-err" id="errBox" hidden>
+        <span id="errMsg"></span>
+    </div>
+</div>
+
+<script>
+/* ---------- Metadados fixos (copiados do JSON modelo) ---------- */
+const META = {
+  periodicidade:'Q', instituicao:'Prefeitura Municipal de Campo Largo - PR', cod_ibge:4104204,
+  uf:'PR', co_poder:'E', populacao:144504, anexo:'RGF-Anexo 01', esfera:'M', rotulo:'Padrão'
+};
+const BASE_URL = 'https://host-5hrds-scan.prosubnet.vcndados.oraclevcn.com/ords/cdwhprd/siconfi';
+
+/* ---------- Linhas do demonstrativo, na ordem em que aparecem no CSV ----------
+   O CSV não traz rótulos nas linhas da 1ª tabela, então o mapeamento é posicional.
+   cod = null → linha cujo código não existe no JSON modelo (só zeros no modelo; zero é omitido). */
+const T1 = [
+ ['DespesaComPessoalBruta','DESPESA BRUTA COM PESSOAL (I)'],
+ ['DespesaComPessoalAtivoBruta','Pessoal Ativo'],
+ ['VencimentosVantagensEOutrasDespesasVariaveis','Vencimentos, Vantagens e Outras Despesas Variáveis'],
+ ['ObrigacoesPatronais','Obrigações Patronais'],
+ ['DespesaComPessoalInativoEPensionistasBruta','Pessoal Inativo e Pensionistas'],
+ ['AposentadoriasReservaEReformas','Aposentadorias, Reserva e Reformas'],
+ ['DespesasPensoesInativosEPensionistas','Pensões'],
+ ['DespesaComPessoalDecorrenteDeTerceirizacaoPorSubstituicaoBruta','Outras Despesas de Pessoal decorrentes de Contratos de Terceirização ou de contratação de forma indireta (§ 1º do art. 18 da LRF)'],
+ [null,'(linha 9 do bloco — sem código no modelo)'],
+ ['DespesaComPessoalNaoComputada','DESPESAS NÃO COMPUTADAS (§ 1º do art. 19 da LRF) (II)'],
+ [null,'(linha 11 do bloco — sem código no modelo)'],
+ ['DespesaComPessoalNaoComputadaDecisaoJudicialPeriodoAnteriorAoDaApuracao','Decorrentes de Decisão Judicial de Período Anterior ao da Apuração'],
+ ['DespesaComPessoalNaoComputadaExerciciosAnterioresAoPeriodoDaApuracao','Despesas de Exercícios Anteriores de Período Anterior ao da Apuração'],
+ ['DespesaComPessoalNaoComputadaInativosEPensionistasComRecursosVinculados','Inativos e Pensionistas com Recursos Vinculados'],
+ ['AgentesComunitariosDeSaudeEDeCombateAsEndemiasComRecursosVinculados','Agentes Comunitários de Saúde e de Combate às Endemias com Recursos Vinculados (CF, art. 198, §11)'],
+ [null,'(linha 16 do bloco — sem código no modelo)'],
+ [null,'(linha 17 do bloco — sem código no modelo)'],
+ ['DespesaComPessoalLiquida','DESPESA LÍQUIDA COM PESSOAL (III) = (I - II)']
+];
+
+/* 2ª tabela: [cod, conta, temPercentual] — ordem do CSV. Os dois códigos "inferidos" seguem o padrão do modelo. */
+const T2 = [
+ ['ReceitaCorrenteLiquidaLimiteLegal','RECEITA CORRENTE LIQUIDA - RCL (IV)',false],
+ ['TransferenciasObrigatoriasDaUniaoRelativasAsEmendasIndividuais','(-) Transferências Obrigatórias da União Relativas às Emendas Individuais (art. 166-A, §1º, da CF)',false],
+ ['TransferenciasObrigatoriasDaUniaoRelativasAsEmendasDeBancada','(-) Transferências Obrigatórias da União Relativas às Emendas de Bancada (art. 166, §16, da CF)',false,true],
+ ['TransferenciasDaUniaoRelativasARemuneracaoDosAgentesComunitariosDeSaude','(-) Transferências da União relativas à remuneração dos agentes comunitários de saúde e de combate às endemias (CF, art. 198, §11)',false],
+ ['OutrasDeducoesConstitucionaisOuLegais','(-) Outras Deduções Constitucionais ou Legais',false,true],
+ ['ReceitaCorrenteLiquidaAjustada','= RECEITA CORRENTE LÍQUIDA AJUSTADA PARA CÁLCULO DOS LIMITES DA DESPESA COM PESSOAL (V)',false],
+ ['DespesaComPessoalTotal','DESPESA TOTAL COM PESSOAL - DTP (VI) = (IIIa + IIIb)',true],
+ ['LimiteMaximoDespesaComPessoalTotal','LIMITE MÁXIMO (VII) (incisos I, II e III, art. 20 da LRF)',true],
+ ['LimitePrudencialDespesaComPessoalTotal','LIMITE PRUDENCIAL (VIII) = (0,95 x VII) (parágrafo único do art. 22 da LRF)',true],
+ ['LimiteDeAlertaDespesaComPessoalTotal','LIMITE DE ALERTA (IX) = (0,90 x VII) (inciso II do §1º do art. 59 da LRF)',true]
+];
+
+const COLS = [...Array.from({length:12},(_,i)=>i===11?'<MR>':`<MR-${11-i}>`),
+  'TOTAL (ÚLTIMOS 12 MESES) (a)','INSCRITAS EM RESTOS A PAGAR NÃO PROCESSADOS (b)'];
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+/* ---------- Utilitários ---------- */
+function decode(buf){
+  try{ return new TextDecoder('utf-8',{fatal:true}).decode(buf); }
+  catch(e){ return new TextDecoder('windows-1252').decode(buf); }
+}
+function parseCSV(txt){
+  const rows=[]; let row=[],cur='',q=false;
+  txt=txt.replace(/^\uFEFF/,'');
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(q){ if(c==='"'){ if(txt[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if(c==='"') q=true;
+    else if(c===';'){ row.push(cur); cur=''; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&txt[i+1]==='\n')i++; row.push(cur); rows.push(row); row=[]; cur=''; }
+    else cur+=c;
+  }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows.map(r=>{ while(r.length&&r[r.length-1].trim()==='') r.pop(); return r; });
+}
+const NUM=/^\(?-?\d{1,3}(\.\d{3})*(,\d+)?\)?$|^\(?-?\d+(,\d+)?\)?$/;
+const isNum=s=>NUM.test((s||'').trim());
+const toNum=s=>Math.abs(parseFloat(s.trim().replace(/[()]/g,'').replace(/\./g,'').replace(',','.')));
+
+/* ---------- Conversão ---------- */
+function convert(csvText, meta){
+  const rows=parseCSV(csvText), warns=[];
+  
+  // 1) cabeçalho de meses → exercício e período
+  const hIdx=rows.findIndex(r=>r.length>=13&&/^[A-Za-zçÇ]{3}\/\d{4}$/.test(r[0].trim()));
+  if(hIdx<0) throw new Error('Não encontrei a linha de meses (ex.: "Set/2025"; ... ) no CSV.');
+  const last=rows[hIdx][11].trim().match(/^([A-Za-zçÇ]{3})\/(\d{4})$/);
+  const mes=MESES.indexOf(last[1].toLowerCase())+1;
+  if(!mes) throw new Error('Mês não reconhecido no cabeçalho: '+rows[hIdx][11]);
+  if(mes%4) warns.push(`O último mês (${rows[hIdx][11]}) não fecha um quadrimestre (Abr, Ago ou Dez); período calculado por aproximação.`);
+  const periodo=Math.ceil(mes/4), exercicio=+last[2];
+
+  // 2) 1ª tabela: linhas numéricas consecutivas após "(a)"
+  let s=hIdx+1; while(s<rows.length&&!isNum(rows[s][0])) s++;
+  const t1=[]; while(s<rows.length&&isNum(rows[s][0])) t1.push(rows[s++]);
+  if(t1.length!==T1.length) warns.push(`Esperava ${T1.length} linhas na 1ª tabela e encontrei ${t1.length}; o mapeamento posicional pode estar errado.`);
+
+  // 3) 2ª tabela: a partir de "APURAÇÃO DO CUMPRIMENTO"
+  const aIdx=rows.findIndex(r=>/APURA[ÇC]/i.test(r[0]||'')&&/LIMITE LEGAL/i.test(r[0]));
+  if(aIdx<0) throw new Error('Não encontrei o bloco "APURAÇÃO DO CUMPRIMENTO DO LIMITE LEGAL".');
+  const t2=rows.slice(aIdx+1,aIdx+1+T2.length);
+
+  const base={exercicio,periodo,periodicidade:meta.periodicidade,instituicao:meta.instituicao,cod_ibge:meta.cod_ibge,
+    uf:meta.uf,co_poder:meta.co_poder,populacao:meta.populacao,anexo:meta.anexo,esfera:meta.esfera,rotulo:meta.rotulo};
+  const items=[];
+  const push=(coluna,cod,conta,valor)=>items.push({...base,coluna,cod_conta:cod,conta,valor});
+
+  t1.slice(0,T1.length).forEach((r,ri)=>{
+    const [cod,conta]=T1[ri];
+    COLS.forEach((col,ci)=>{
+      const raw=(r[ci]||'').trim(); if(!isNum(raw)) return;
+      const v=toNum(raw); if(v===0) return;
+      if(!cod){ warns.push(`Linha ${ri+1} da 1ª tabela tem valor (${raw}) mas não há código no modelo — gravada como "LinhaSemCodigo_${ri+1}". Ajuste o mapeamento T1.`); }
+      push(col,cod||('LinhaSemCodigo_'+(ri+1)),conta,v);
+    });
+  });
+  t2.forEach((r,ri)=>{
+    const [cod,conta,pct,inferido]=T2[ri]; if(!r) return;
+    const put=(txt,col)=>{ if(!isNum(txt||'')) return; const v=toNum(txt); if(v===0) return;
+      if(inferido) warns.push(`"${conta}" tem valor, mas seu cod_conta foi inferido pelo padrão (não consta no modelo). Confira antes de enviar.`);
+      push(col,cod,conta,v); };
+    put(r[1],'Valor');
+    if(pct) put(r[2],'% sobre a RCL Ajustada');
+  });
+
+  const q=`an_exercicio=${exercicio}&in_periodicidade=${meta.periodicidade}&nr_periodo=${periodo}&co_tipo_demonstrativo=RGF&no_anexo=${encodeURIComponent(meta.anexo).replace(/%20/g,'+')}&co_esfera=${meta.esfera}&co_poder=${meta.co_poder}&id_ente=${meta.cod_ibge}`;
+  const href=`${BASE_URL}/tt/rgf?${q}`;
+  const json={items,hasMore:false,limit:5000,offset:0,count:items.length,
+    links:[{rel:'self',href},{rel:'describedby',href:`${BASE_URL}/metadata-catalog/tt/item`},{rel:'first',href}]};
+  return {json,warns,exercicio,periodo,mesFinal:rows[hIdx][11].trim()};
+}
+
+/* ---------- Interface ---------- */
+const $=id=>document.getElementById(id);
+const metaDefs=[['instituicao','Instituição','text'],['cod_ibge','Cód. IBGE','number'],['uf','UF','text'],['populacao','População','number'],['anexo','Anexo','text'],['co_poder','Poder','text'],['esfera','Esfera','text'],['periodicidade','Periodicidade','text']];
+$('meta').innerHTML=metaDefs.map(([k,l,t])=>`<div><label class="field-label">${l}</label><input type="${t}" data-k="${k}" value="${META[k]}"></div>`).join('');
+const readMeta=()=>{const m={...META}; document.querySelectorAll('[data-k]').forEach(i=>m[i.dataset.k]=i.type==='number'?+i.value:i.value); return m;};
+
+let lastBlob=null,lastName='rgf_anexo_1.json';
+function download(){ if(!lastBlob) return; const a=document.createElement('a'); a.href=URL.createObjectURL(lastBlob); a.download=lastName; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+
+async function handle(file){
+  $('errBox').hidden=true; $('result').hidden=true;
+  try{
+    const txt=decode(await file.arrayBuffer());
+    const r=convert(txt,readMeta());
+    lastBlob=new Blob([JSON.stringify(r.json)],{type:'application/json'});
+    lastName='rgf_anexo_1.json';
+    $('summary').innerHTML=`<dt>Arquivo:</dt><dd>${file.name}</dd><dt>Exercício:</dt><dd>${r.exercicio}</dd><dt>Período:</dt><dd>${r.periodo}º quadrimestre (até ${r.mesFinal})</dd><dt>Itens gerados:</dt><dd>${r.json.count}</dd>`;
+    $('warns').innerHTML=r.warns.map(w=>`<li>${w}</li>`).join(''); $('warnBox').hidden=!r.warns.length;
+    $('result').hidden=false; download();
+  }catch(e){ $('errMsg').textContent='Erro ao processar o arquivo: '+e.message; $('errBox').hidden=false; }
+}
+
+$('file').addEventListener('change',e=>{ if(e.target.files[0]) handle(e.target.files[0]); e.target.value=''; });$('again').addEventListener('click',download);
+const d=$('drop');
+['dragenter','dragover'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.remove('over');}));
+d.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) handle(e.dataTransfer.files[0]); });
+</script>
+
+</body>
+</html>
