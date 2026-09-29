@@ -421,8 +421,8 @@ API utilizada: <code id="urlApiTexto">https://apidatalake.tesouro.gov.br/ords/cd
 <div class="col-lg-6">
 <div class="card h-100">
 <div class="card-body">
-<h5 class="card-title mb-1">7. Trajetória Projetada da DTP frente aos Limites (6 meses)</h5>
-<div class="chart-card-desc mb-2" id="descEvolucaoPrevisao">Projeção da % da DTP sobre a RCL ajustada, mês a mês, comparada aos limites de Alerta, Prudencial e Máximo.</div>
+<h5 class="card-title mb-1">7. Evolução Mensal da Despesa com Pessoal — Previsão (6 meses)</h5>
+<div class="chart-card-desc mb-2" id="descEvolucaoPrevisao">Linha sólida: valores realizados. Linha tracejada: previsão considerando a tendência e o padrão sazonal de cada mês.</div>
 <div class="chart-box chart-box-lg"><canvas id="graficoEvolucaoPrevisao"></canvas></div>
 </div>
 </div>
@@ -693,35 +693,37 @@ function preverProximosValores(valores, quantidade){
   return previsoes;
 }
 
-// Calcula, para cada mês do calendário (1-12), o quanto aquele mês do
-// histórico se desvia (em valor absoluto, para mais ou para menos) da linha
-// de tendência ajustada aos 12 meses. Isso captura o efeito sazonal de cada
-// mês (ex.: o 13º salário puxando dezembro para cima) sem anular a tendência
-// de crescimento/queda — o que aconteceria se usássemos razão sobre a média,
-// já que com exatamente 12 pontos (um por mês do calendário) esse método
-// "superajusta" perfeitamente os dados e não sobra nenhuma tendência real.
-function calcularResiduosSazonais(colunasMensais, valores){
-  const { inclinacao, intercepto } = regressaoLinear(valores);
-  const residuoPorMes = {};
-  valores.forEach((v, i) => {
-    const tendenciaNoPonto = intercepto + inclinacao * i;
-    residuoPorMes[colunasMensais[i].mes] = v - tendenciaNoPonto;
+// Calcula, para cada mês do calendário (1-12), um índice sazonal a partir do
+// próprio histórico do ente: quanto aquele mês costuma se desviar da média
+// (ex.: dezembro tende a ficar bem acima da média por causa do 13º salário).
+function calcularIndicesSazonais(colunasMensais, valores){
+  const mediaGeral = valores.reduce((a,b)=>a+b,0) / (valores.length || 1);
+  const indicePorMes = {};
+  colunasMensais.forEach((c, i) => {
+    indicePorMes[c.mes] = mediaGeral ? (valores[i] / mediaGeral) : 1;
   });
-  return { residuoPorMes, inclinacao, intercepto };
+  return { indicePorMes, mediaGeral };
 }
 
-// Previsão que combina a tendência linear dos últimos 12 meses com o
-// resíduo sazonal do mesmo mês no histórico — assim, um mês futuro que caia
-// em dezembro herda o mesmo "excedente" de 13º salário observado no
-// dezembro do histórico, somado à tendência projetada para aquele ponto.
+// Previsão que combina tendência (regressão linear sobre a série
+// dessazonalizada) com o índice sazonal do mês previsto — assim, um mês
+// futuro que caia em dezembro herda o mesmo efeito de 13º salário observado
+// no dezembro do histórico, em vez de simplesmente seguir a reta da tendência.
 function preverComSazonalidade(colunasMensais, valores, mesesFuturos){
-  const { residuoPorMes, inclinacao, intercepto } = calcularResiduosSazonais(colunasMensais, valores);
+  const { indicePorMes } = calcularIndicesSazonais(colunasMensais, valores);
+
+  const desazonalizado = valores.map((v, i) => {
+    const indice = indicePorMes[colunasMensais[i].mes];
+    return indice ? v / indice : v;
+  });
+
+  const { inclinacao, intercepto } = regressaoLinear(desazonalizado);
 
   return mesesFuturos.map((m, i) => {
     const x = valores.length + i;
     const tendencia = intercepto + inclinacao * x;
-    const residuo = residuoPorMes[m.mes] !== undefined ? residuoPorMes[m.mes] : 0;
-    return Math.max(tendencia + residuo, 0);
+    const indice = indicePorMes[m.mes] !== undefined ? indicePorMes[m.mes] : 1;
+    return Math.max(tendencia * indice, 0);
   });
 }
 
@@ -1049,73 +1051,49 @@ function graficoGaugeLimites(){
 }
 
 // 7. Evolução mensal da despesa com pessoal com previsão sazonal para os próximos 6 meses
-function ordemSituacao(classe){
-  const ordem = { verde:0, amarelo:1, laranja:2, vermelho:3 };
-  return ordem[classe] !== undefined ? ordem[classe] : 0;
-}
-const CORES_SITUACAO = { verde:"#198754", amarelo:"#c9a300", laranja:"#fd7e14", vermelho:"#dc3545" };
-
-// Calcula, mês a mês, como a DTP (janela móvel de 12 meses) evoluiria nos
-// próximos 6 meses: a cada mês que passa, um mês antigo "sai" da janela de
-// 12 meses e um mês previsto (com sazonalidade) "entra" no lugar.
-function calcularTrajetoriaDtpProjetada(){
+function graficoEvolucaoPrevisao(){
+  const historicoBruta = colunasMensais.map(c => getValor("DespesaComPessoalBruta", c.coluna));
   const historicoLiquida = colunasMensais.map(c => getValor("DespesaComPessoalLiquida", c.coluna));
+  const labelsHistorico = colunasMensais.map(c => c.label);
+
   const ultimoMes = colunasMensais[colunasMensais.length - 1];
   const mesesFuturos = ultimoMes ? gerarMesesFuturos(ultimoMes.mes, ultimoMes.ano, 6) : [];
-  const previsaoLiquida = preverComSazonalidade(colunasMensais, historicoLiquida, mesesFuturos);
+  const labelsFuturos = mesesFuturos.map(m => m.label);
 
+  // Previsão sazonal: reaplica, em cada mês futuro, o índice sazonal do
+  // mesmo mês no histórico (ex.: dezembro puxado pelo 13º salário) sobre a
+  // tendência de crescimento observada nos últimos 12 meses.
+  const previsaoBrutaValores = preverComSazonalidade(colunasMensais, historicoBruta, mesesFuturos);
+  const previsaoLiquidaValores = preverComSazonalidade(colunasMensais, historicoLiquida, mesesFuturos);
+
+  const labels = [...labelsHistorico, ...labelsFuturos];
+  const nMeses = labelsHistorico.length;
+
+  // "Real" some após o último mês conhecido; "Previsão" começa exatamente no
+  // último ponto real (para a linha tracejada continuar visualmente a partir dali).
+  const brutaReal = [...historicoBruta, ...Array(6).fill(null)];
+  const brutaPrevisao = [...Array(Math.max(nMeses-1,0)).fill(null), historicoBruta[nMeses-1], ...previsaoBrutaValores];
+  const liquidaReal = [...historicoLiquida, ...Array(6).fill(null)];
+  const liquidaPrevisao = [...Array(Math.max(nMeses-1,0)).fill(null), historicoLiquida[nMeses-1], ...previsaoLiquidaValores];
+
+  // Projeção do % da DTP sobre a RCL ajustada daqui a 6 meses: parte do DTP
+  // atual (janela móvel de 12 meses) e substitui os 6 meses mais antigos que
+  // "sairiam" da janela pelos 6 meses previstos que "entrariam" nela.
   const dtpAtual = getValor("DespesaComPessoalTotal", COL_VALOR);
   const dtpAtualPerc = getValor("DespesaComPessoalTotal", COL_PERC);
   const rclAjustada = getValor("ReceitaCorrenteLiquidaAjustada", COL_VALOR) || (dtpAtualPerc ? dtpAtual/(dtpAtualPerc/100) : 0);
+  const somaMesesQueSaem = historicoLiquida.slice(0, 6).reduce((a,b)=>a+b, 0);
+  const somaMesesPrevistos = previsaoLiquidaValores.reduce((a,b)=>a+b, 0);
+  const dtpProjetado = dtpAtual - somaMesesQueSaem + somaMesesPrevistos;
+  const dtpProjetadoPerc = rclAjustada ? (dtpProjetado / rclAjustada * 100) : 0;
 
-  const pontos = [{ label:"Atual", valor: dtpAtual, perc: dtpAtualPerc }];
-  let dtpRolling = dtpAtual;
-  for(let m = 1; m <= 6; m++){
-    dtpRolling = dtpRolling - historicoLiquida[m-1] + previsaoLiquida[m-1];
-    const perc = rclAjustada ? (dtpRolling / rclAjustada * 100) : 0;
-    pontos.push({ label: mesesFuturos[m-1].label, valor: dtpRolling, perc });
-  }
-  return pontos;
-}
-
-// 7. Trajetória projetada da DTP frente aos limites da LRF (6 meses)
-function graficoEvolucaoPrevisao(){
   const alertaPerc = getValor("LimiteDeAlertaDespesaComPessoalTotal", COL_PERC);
   const prudencialPerc = getValor("LimitePrudencialDespesaComPessoalTotal", COL_PERC);
   const maximoPerc = getValor("LimiteMaximoDespesaComPessoalTotal", COL_PERC);
+  const situacaoProjetada = situacaoLimite(dtpProjetadoPerc, alertaPerc, prudencialPerc, maximoPerc);
 
-  const pontos = calcularTrajetoriaDtpProjetada();
-  const labels = pontos.map(p => p.label);
-  const valoresPerc = pontos.map(p => p.perc);
-  const coresPontos = pontos.map(p => CORES_SITUACAO[situacaoLimite(p.perc, alertaPerc, prudencialPerc, maximoPerc).classe]);
-
-  // Descrição: direção da tendência (crescente/decrescente/estável) e, se for
-  // o caso, a partir de quando a projeção passaria a violar um limite que
-  // hoje ainda está respeitado.
-  const situacaoAtual = situacaoLimite(pontos[0].perc, alertaPerc, prudencialPerc, maximoPerc);
-  const variacao = pontos[pontos.length-1].perc - pontos[0].perc;
-  const tendenciaTexto = Math.abs(variacao) < 0.05
-    ? "estável"
-    : (variacao > 0 ? `de crescimento (${variacao>0?"+":""}${percent(variacao)} em 6 meses)` : `de queda (${percent(variacao)} em 6 meses)`);
-
-  let pontoCritico = null;
-  for(const p of pontos.slice(1)){
-    const sit = situacaoLimite(p.perc, alertaPerc, prudencialPerc, maximoPerc);
-    if(ordemSituacao(sit.classe) > ordemSituacao(situacaoAtual.classe)){
-      pontoCritico = { ...p, situacao: sit };
-      break;
-    }
-  }
-
-  let mensagem = `Tendência ${tendenciaTexto} (previsão sazonal, considerando efeitos como o 13º salário em dezembro).`;
-  if(pontoCritico){
-    mensagem += ` <strong>Atenção: no ritmo atual, a projeção passa a ficar ${pontoCritico.situacao.texto.toLowerCase()} a partir de ${pontoCritico.label} (${percent(pontoCritico.perc)}).</strong>`;
-  } else {
-    mensagem += ` Nenhum limite deve ser ultrapassado nos próximos 6 meses — projeção final em ${labels[labels.length-1]}: ${percent(valoresPerc[valoresPerc.length-1])} da RCL ajustada.`;
-  }
-  $("descEvolucaoPrevisao").innerHTML = mensagem;
-
-  const n = pontos.length;
+  const ultimoRotuloFuturo = labelsFuturos[labelsFuturos.length - 1] || "";
+  $("descEvolucaoPrevisao").innerHTML = `Linha sólida: valores realizados. Linha tracejada: previsão considerando a tendência e o padrão sazonal de cada mês (ex.: 13º salário em dezembro). <strong>Projeção da DTP em ${ultimoRotuloFuturo}: ${percent(dtpProjetadoPerc)} da RCL ajustada</strong> (situação projetada: ${situacaoProjetada.texto}).`;
 
   destruirGrafico("evolucaoPrevisao");
   graficos.evolucaoPrevisao = new Chart($("graficoEvolucaoPrevisao"), {
@@ -1123,20 +1101,10 @@ function graficoEvolucaoPrevisao(){
     data: {
       labels,
       datasets: [
-        {
-          label: "DTP Projetada (% da RCL ajustada)",
-          data: valoresPerc,
-          borderColor: "#073b6f",
-          backgroundColor: "#073b6f",
-          pointBackgroundColor: coresPontos,
-          pointBorderColor: coresPontos,
-          pointRadius: 6,
-          pointHoverRadius: 8,
-          tension: .3
-        },
-        { label:"Limite de Alerta", data: Array(n).fill(alertaPerc), borderColor:"#c9a300", borderDash:[6,4], pointRadius:0, tension:0 },
-        { label:"Limite Prudencial", data: Array(n).fill(prudencialPerc), borderColor: CORES[6], borderDash:[6,4], pointRadius:0, tension:0 },
-        { label:"Limite Máximo", data: Array(n).fill(maximoPerc), borderColor: CORES[3], borderDash:[6,4], pointRadius:0, tension:0 },
+        { label:"Despesa Bruta (realizada)", data: brutaReal, borderColor: CORES[0], backgroundColor: CORES[0], tension:.25, spanGaps:false },
+        { label:"Despesa Bruta (previsão)", data: brutaPrevisao, borderColor: CORES[0], backgroundColor: CORES[0], borderDash:[6,4], pointStyle:"triangle", tension:.15, spanGaps:false },
+        { label:"Despesa Líquida (realizada)", data: liquidaReal, borderColor: CORES[4], backgroundColor: CORES[4], tension:.25, spanGaps:false },
+        { label:"Despesa Líquida (previsão)", data: liquidaPrevisao, borderColor: CORES[4], backgroundColor: CORES[4], borderDash:[6,4], pointStyle:"triangle", tension:.15, spanGaps:false },
       ]
     },
     options: {
@@ -1144,9 +1112,9 @@ function graficoEvolucaoPrevisao(){
       plugins:{
         legend:{ position:"bottom", labels:{ boxWidth:14, font:{size:10} } },
         agulhaGauge:false,
-        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${percent(ctx.raw)}${ctx.datasetIndex===0 ? " ("+moeda(pontos[ctx.dataIndex].valor)+")" : ""}` } }
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moeda(ctx.raw)}` } }
       },
-      scales:{ y:{ ticks:{ callback: v => v.toLocaleString("pt-BR")+"%" } } }
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
     }
   });
 }
