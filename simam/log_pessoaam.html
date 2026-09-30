@@ -25,7 +25,7 @@
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
             text-align: center;
         }
@@ -73,7 +73,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            font-size: 12px;
+            font-size: 11px;
             text-align: left;
         }
         .preview-table th {
@@ -108,7 +108,7 @@
 
 <div class="container">
     <h2>Relatório de Erros - PessoaAM</h2>
-    <p>Selecione o arquivo TXT de log de erros. <br> O sistema processará os registros e exportará um <strong>relatório em PDF estruturado</strong> com as inconsistências encontradas.</p>
+    <p>Selecione o arquivo TXT de log de erros.<br>O sistema organizará as inconsistências com os valores descritivos padrão.</p>
     
     <div class="file-input-wrapper">
         <label for="txtFile" class="btn-upload">Selecionar Arquivo TXT Log</label>
@@ -119,11 +119,12 @@
 
     <div id="resultArea" style="display:none;">
         <button id="btnExportPdf" class="btn-pdf">Baixar Relatório em PDF</button>
-        <div style="max-height: 300px; overflow-y: auto; margin-top: 15px; border: 1px solid #ddd;">
+        <div style="max-height: 350px; overflow-y: auto; margin-top: 15px; border: 1px solid #ddd;">
             <table class="preview-table" id="previewTable">
                 <thead>
                     <tr>
-                        <th>Reg.</th>
+                        <th>Check</th>
+                        <th>Nº</th>
                         <th>CNPJ/CPF</th>
                         <th>Nome</th>
                         <th>cdIbge</th>
@@ -155,22 +156,19 @@ document.getElementById('txtFile').addEventListener('change', function(e) {
 
     reader.onload = function(event) {
         try {
-            const conteúdo = event.target.result;
-            const linhas = conteúdo.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const conteudo = event.target.result;
+            const linhas = conteudo.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
             
-            // Objeto para agrupar as inconsistências por CNPJ/CPF
             const registrosMap = {};
 
             linhas.forEach(linha => {
                 linha = linha.trim();
                 if (!linha) return;
 
-                // Extrai o conteúdo dentro de Linha: [...]
                 const matchLinha = linha.match(/Linha:\s*\[(.*?)\]/);
                 if (matchLinha) {
                     const campos = matchLinha[1].split(',');
 
-                    const registro = (campos[0] || '').trim();
                     const doc = (campos[1] || '').trim();
                     const nome = (campos[2] || '').trim();
 
@@ -178,17 +176,16 @@ document.getElementById('txtFile').addEventListener('change', function(e) {
 
                     if (!registrosMap[doc]) {
                         registrosMap[doc] = {
-                            registro: registro,
                             cnpjCpf: doc,
                             nome: nome,
-                            cdIbge: 'Sem Valor',
-                            agUf: 'Sem Valor',
-                            dsEndereco: 'Vazio',
-                            cdCep: 'Vazio'
+                            cdIbge: '',
+                            agUf: '',
+                            dsEndereco: '',
+                            cdCep: ''
                         };
                     }
 
-                    // Identifica o campo com erro específico
+                    // Preenche com o texto descritivo original quando o erro for identificado
                     if (linha.includes('cdIbge')) registrosMap[doc].cdIbge = 'Inválido/Ausente';
                     if (linha.includes('agUf')) registrosMap[doc].agUf = 'Inválido/Ausente';
                     if (linha.includes('dsEndereco')) registrosMap[doc].dsEndereco = 'Ausente';
@@ -196,7 +193,18 @@ document.getElementById('txtFile').addEventListener('change', function(e) {
                 }
             });
 
-            dadosProcessados = Object.values(registrosMap);
+            // Converte e insere a numeração sequencial (1, 2, 3...)
+            const listaOriginal = Object.values(registrosMap);
+            dadosProcessados = listaOriginal.map((item, index) => ({
+                check: "[  ]",
+                registro: index + 1,
+                cnpjCpf: item.cnpjCpf,
+                nome: item.nome,
+                cdIbge: item.cdIbge,
+                agUf: item.agUf,
+                dsEndereco: item.dsEndereco,
+                cdCep: item.cdCep
+            }));
 
             if (dadosProcessados.length > 0) {
                 renderPreviewTable(dadosProcessados);
@@ -204,7 +212,7 @@ document.getElementById('txtFile').addEventListener('change', function(e) {
 
                 statusDiv.style.backgroundColor = "#d1e7dd";
                 statusDiv.style.color = '#0f5132';
-                statusDiv.innerHTML = `<b>Sucesso!</b> ${dadosProcessados.length} registros com pendências/erros identificados.`;
+                statusDiv.innerHTML = `<b>Sucesso!</b> ${dadosProcessados.length} registros identificados.`;
             } else {
                 statusDiv.style.backgroundColor = "#f8d7da";
                 statusDiv.style.color = '#842029';
@@ -227,39 +235,41 @@ function renderPreviewTable(dados) {
     dados.forEach(d => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${d.registro}</td>
+            <td style="text-align: center;">${d.check}</td>
+            <td style="text-align: center;">${d.registro}</td>
             <td>${d.cnpjCpf}</td>
             <td>${d.nome}</td>
-            <td>${d.cdIbge}</td>
-            <td>${d.agUf}</td>
-            <td>${d.dsEndereco}</td>
-            <td>${d.cdCep}</td>
+            <td style="text-align: center;">${d.cdIbge}</td>
+            <td style="text-align: center;">${d.agUf}</td>
+            <td style="text-align: center;">${d.dsEndereco}</td>
+            <td style="text-align: center;">${d.cdCep}</td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-// Exportação para PDF usando jsPDF + AutoTable
+// Exportação para PDF (Formato Retrato)
 document.getElementById('btnExportPdf').addEventListener('click', function() {
     if (dadosProcessados.length === 0) return;
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('landscape', 'mm', 'a4'); // Orientação paisagem para caber todas as colunas
+    const doc = new jsPDF('portrait', 'mm', 'a4');
 
-    // Cabeçalho do PDF
+    // Cabeçalho
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(17, 85, 204); // #1155cc
-    doc.text("Relatório de Erros e Inconsistências de Cadastros (PessoaAM)", 14, 15);
+    doc.setFontSize(13);
+    doc.setTextColor(17, 85, 204);
+    doc.text("Relatório de Erros - PessoaAM", 14, 15);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(8.5);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')} | Total de Inconsistências: ${dadosProcessados.length}`, 14, 22);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')} | Total de Registros: ${dadosProcessados.length}`, 14, 21);
 
-    // Mapeamento de colunas para o PDF
+    // Colunas ajustadas para o PDF em formato Retrato
     const columns = [
-        { header: "Registro", dataKey: "registro" },
+        { header: "check", dataKey: "check" },
+        { header: "Nº", dataKey: "registro" },
         { header: "CNPJ / CPF", dataKey: "cnpjCpf" },
         { header: "Nome / Razão Social", dataKey: "nome" },
         { header: "cdIbge", dataKey: "cdIbge" },
@@ -268,38 +278,38 @@ document.getElementById('btnExportPdf').addEventListener('click', function() {
         { header: "cdCep", dataKey: "cdCep" }
     ];
 
-    // Estilização da tabela
     doc.autoTable({
         columns: columns,
         body: dadosProcessados,
-        startY: 28,
+        startY: 25,
         theme: 'grid',
         headStyles: {
             fillColor: [17, 85, 204],
             textColor: [255, 255, 255],
             fontStyle: 'bold',
-            fontSize: 9
+            fontSize: 7.5,
+            halign: 'center'
         },
         bodyStyles: {
-            fontSize: 8,
-            textColor: [50, 50, 50]
+            fontSize: 6.5,
+            textColor: [40, 40, 40]
         },
         columnStyles: {
-            registro: { cellWidth: 18, halign: 'center' },
-            cnpjCpf: { cellWidth: 38 },
+            check: { cellWidth: 8, halign: 'center' },
+            registro: { cellWidth: 8, halign: 'center' },
+            cnpjCpf: { cellWidth: 28 },
             nome: { cellWidth: 'auto' },
-            cdIbge: { cellWidth: 25, halign: 'center' },
-            agUf: { cellWidth: 25, halign: 'center' },
-            dsEndereco: { cellWidth: 25, halign: 'center' },
-            cdCep: { cellWidth: 25, halign: 'center' }
+            cdIbge: { cellWidth: 24, halign: 'center' },
+            agUf: { cellWidth: 24, halign: 'center' },
+            dsEndereco: { cellWidth: 16, halign: 'center' },
+            cdCep: { cellWidth: 16, halign: 'center' }
         },
         alternateRowStyles: {
-            fillColor: [244, 246, 249]
+            fillColor: [248, 249, 250]
         }
     });
 
-    // Salva o documento
-    doc.save("Relatorio_Erros_PessoaAM.pdf");
+    doc.save("Relatorio_Erros_PessoaAM_Retrato.pdf");
 });
 </script>
 
