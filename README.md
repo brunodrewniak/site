@@ -12,29 +12,58 @@ Este projeto foi desenvolvido para transformar dados contábeis e orçamentário
 
 ## 📌 Sobre o Projeto
 
-O site reúne uma coleção de **dashboards e relatórios analíticos** estruturados com base na legislação e normas técnicas do setor público brasileiro.
+O site reúne uma coleção de **dashboards, relatórios analíticos e demonstrativos fiscais** estruturados com base na legislação e normas técnicas do setor público brasileiro (NBC TSP, MCASP, LRF e diretrizes dos Tribunais de Contas).
 
 ### 🎯 Principais Objetivos:
 * **Transparência Fiscal:** Facilitar o acesso e a interpretação de receitas e despesas públicas.
-* **Conformidade Legal:** Apresentar dados alinhados às diretrizes do **MCASP**, **NBC TSP**, **LRF** e normas dos Tribunais de Contas.
-* **Gestão de Custos:** Apuração e distribuição de custos públicos por objetos de custo.
+* **Conformidade Legal:** Apresentar dados e demonstrativos fiscais alinhados à **LRF**, **MCASP** e **SICONFI**.
+* **Gestão de Custos & Suprimentos:** Apuração de custos e acompanhamento do fluxo de estoques e contratos.
+* **Controle Social & Governança:** Permitir o acompanhamento dos limites fiscais e saúde financeira dos órgãos públicos.
 
 ---
 
 ## 📊 Painéis e Ferramentas Disponíveis
 
 ### 💰 Custos
-* 📈 **[Objetos de Custo](custos/objetos_de_custo.html)** — Apuração, classificação e distribuição de custos do setor público.
+* 📈 **[Objetos de Custo](custos/objetos_de_custo.html)** — Consulta por objeto de custos.
+* 📊 **[Dashboard de Custo](custos/dashboard.html)** — Apuração e distribuição de custos.
+* 🖥️ **[Data Studio](custos/datastudio.html)** — Visão em BI dos dados de custos.
 
 ### 📉 Dashboards Orçamentários e Financeiros
 * 💸 **[Despesas](dashboard/despesas.html)** — Acompanhamento do ciclo da despesa (Empenhado, Liquidado e Pago).
-* 📑 **[Despesas Orçadas](dashboard/despesasorcadas.html)** — Análise comparativa entre a previsão orçamentária e a execução real.
-* 💵 **[Receitas](dashboard/receitas.html)** — Monitoramento da arrecadação realizada.
-* 🏦 **[Receitas Orçadas](dashboard/receitasorcadas.html)** — Previsão x arrecadação efetiva.
-* 👥 **[Servidores](dashboard/servidores.html)** — Panorama do quadro de pessoal e despesa com pessoal.
+* 📑 **[Despesas Orçadas](dashboard/despesasorcadas.html)** — Previsão x execução orçamentária.
+* 💵 **[Receitas](dashboard/receitas.html)** — Arrecadação realizada.
+* 🏦 **[Receitas Orçadas](dashboard/receitasorcadas.html)** — Previsão de arrecadação.
+* 👥 **[Servidores](dashboard/servidores.html)** — Quadro de pessoal.
+
+### 📋 SICONFI - Relatório Resumido da Execução Orçamentária (RREO)
+* 📑 **[Anexo 1 - Balanço Orçamentário](siconfi/rreo_anexo1.html)**
+* 📑 **[Anexo 2 - Despesas por Função/Subfunção](siconfi/rreo_anexo2.html)**
+* 📑 **[Anexo 3 - Receita Corrente Líquida (RCL)](siconfi/rreo_anexo3.html)**
+* 📑 **[Anexo 4 - Receitas/Despesas Previdenciárias](siconfi/rreo_anexo4.html)**
+* 📑 **[Anexo 6 - Resultados Primário e Nominal](siconfi/rreo_anexo6.html)**
+* 📑 **[Anexo 7 - Restos a Pagar](siconfi/rreo_anexo7.html)**
+* 📑 **[Anexo 9 - Operações de Crédito / Regra de Ouro](siconfi/rreo_anexo9.html)**
+* 📑 **[Anexo 10 - Projeção Atuarial do RPPS](siconfi/rreo_anexo10.html)**
+* 📑 **[Anexo 11 - Alienação de Ativos](siconfi/rreo_anexo11.html)**
+* 📑 **[Anexo 13 - Parcerias Público-Privadas (PPP)](siconfi/rreo_anexo13.html)**
+* 📑 **[Anexo 14 - Demonstrativo Simplificado](siconfi/rreo_anexo14.html)**
+
+### 🛡️ SICONFI - Relatório de Gestão Fiscal (RGF)
+* 🛡️ **[Anexo 1 - Despesa com Pessoal](siconfi/rgf_anexo1.html)**
+* 🛡️ **[Anexo 2 - Dívida Consolidada Líquida](siconfi/rgf_anexo2.html)**
+* 🛡️ **[Anexo 3 - Garantias e Contragarantias](siconfi/rgf_anexo3.html)**
+* 🛡️ **[Anexo 4 - Operações de Crédito](siconfi/rgf_anexo4.html)**
+* 🛡️️ **[Anexo 5 - Disponibilidade de Caixa e Restos a Pagar](siconfi/rgf_anexo5.html)**
+* 🛡️ **[Anexo 6 - Simplificado do RGF](siconfi/rgf_anexo6.html)**
+
+### 📦 Suprimentos
+* 📥 **[Entrada de Produtos](suprimentos/entrada.html)** — Consulta de entrada de produtos.
+* 📤 **[Saída de Produtos](suprimentos/saida.html)** — Consulta de saída de produtos.
+* 📄 **[Contratos](suprimentos/contratos.html)** — Consulta de contratos por ano.
 
 ### 📚 PCASP
-* 📖 **[Plano de Contas](pcasp/plano_de_contas.html)** — Estrutura e consulta do Plano de Contas Aplicado ao Setor Público.
+* 📖 **[Plano de Contas](pcasp/plano_de_contas.html)** — Plano de Contas Aplicado ao Setor Público.
 
 ---
 
@@ -58,6 +87,6 @@ O site reúne uma coleção de **dashboards e relatórios analíticos** estrutur
 
 ---
 
-<p center align="center">
+<p align="center">
   <i>"A transparência é o melhor mecanismo de controle e eficiência na gestão pública."</i>
 </p>
