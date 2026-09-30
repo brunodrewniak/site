@@ -213,6 +213,7 @@ const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7
 const $ = id => document.getElementById(id);
 let fonteAtual = "rreo";
 let ultimosItens = [];         // lista bruta da última consulta
+let ultimaUrlTentativa = "";   // usada para oferecer "abrir em nova aba" quando o fetch falha (ex.: CORS)
 let graficos = {};
 
 function moeda(v){ return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(v)||0); }
@@ -224,7 +225,15 @@ function moedaCompacta(v){
   return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
 }
 function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
-function mostrarStatus(t,tipo="info"){ const el=$("status"); el.className="alert alert-"+tipo+" status"; el.textContent=t; }
+function mostrarStatus(t,tipo="info",urlParaAbrir){
+  const el=$("status"); el.className="alert alert-"+tipo+" status";
+  el.innerHTML = escapeHtml(t) + (urlParaAbrir
+    ? ` <button type="button" class="btn btn-sm btn-outline-dark ms-2" onclick="window.open('${urlParaAbrir.replace(/'/g,"%27")}','_blank')">
+        <i class="bi bi-box-arrow-up-right"></i> Abrir resposta da API em nova aba
+      </button>
+      <div class="small-muted mt-2">Se a página abrir com o JSON, use Ctrl+S para salvar e depois carregue o arquivo em "Carregar JSON Local" abaixo.</div>`
+    : "");
+}
 function mostrarLoading(s){ $("loading").classList.toggle("d-none",!s); }
 function destruirGraficos(){ Object.keys(graficos).forEach(k=>{ graficos[k].destroy(); }); graficos = {}; $("graficosArea").innerHTML=""; }
 
@@ -282,7 +291,15 @@ function montarUrlMSC(offset){
 
 // -------------------- Consulta --------------------
 async function fetchJson(url){
-  const r = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+  ultimaUrlTentativa = url;
+  let r;
+  try {
+    r = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+  } catch (erroRede) {
+    // Isso é o sintoma típico de bloqueio de CORS no navegador: o fetch nem chega a
+    // receber uma resposta HTTP, só um erro genérico de rede.
+    throw new Error("Falha de rede/CORS ao chamar a API (o navegador provavelmente bloqueou a requisição de outra origem)");
+  }
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -299,14 +316,14 @@ async function consultar(){
       const itens = Array.isArray(json) ? json : json.items;
       if(!Array.isArray(itens)) throw new Error("Estrutura de resposta inesperada.");
       ultimosItens = itens;
-      if(!itens.length){ mostrarStatus("A API não retornou registros para os parâmetros informados. Tente outro período/anexo ou carregue um JSON local.", "warning"); limparResultado(); return; }
+      if(!itens.length){ mostrarStatus("A API não retornou registros para os parâmetros informados. Tente outro período/anexo ou carregue um JSON local.", "warning", url); limparResultado(); return; }
       processarGenerico(itens);
       mostrarStatus(`${itens.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
     } else {
       await consultarMSC();
     }
   } catch (err) {
-    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize "Carregar JSON Local".`, "warning");
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Use o botão abaixo para abrir a URL manualmente, salve o JSON (Ctrl+S) e carregue com "Carregar JSON Local".`, "warning", ultimaUrlTentativa);
   } finally { mostrarLoading(false); }
 }
 
@@ -424,7 +441,7 @@ async function consultarMSC(){
     $("msc-tv").value = tvOriginal;
   }
   ultimosItens = itensIni.concat(itensFim);
-  if(!ultimosItens.length){ mostrarStatus("A API não retornou registros para os parâmetros informados.", "warning"); limparResultado(); return; }
+  if(!ultimosItens.length){ mostrarStatus("A API não retornou registros para os parâmetros informados.", "warning", ultimaUrlTentativa); limparResultado(); return; }
   processarMSC(itensIni, itensFim, modoComparar);
   mostrarStatus(`${itensIni.length.toLocaleString("pt-BR")} lançamentos (inicial)${modoComparar ? ` + ${itensFim.length.toLocaleString("pt-BR")} (final)` : ""} carregados via API do Tesouro Nacional (Siconfi).`, "success");
 }
