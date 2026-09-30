@@ -284,7 +284,9 @@ function montarUrlMSC(offset){
     co_tipo_matriz: $("msc-cotipo").value.trim(),
     id_tv: tv
   });
-  if($("msc-classe").value) p.set("classe_conta", $("msc-classe").value);
+// Força a classe_conta=5 ou usa a selecionada caso o usuário queira mudar dinamicamente
+  p.set("classe_conta", $("msc-classe").value || "5");
+  //if($("msc-classe").value) p.set("classe_conta", $("msc-classe").value);
   if(offset) p.set("offset", offset);
   return `${API_BASE}/${$("msc-tipo").value}?${p.toString()}`;
 }
