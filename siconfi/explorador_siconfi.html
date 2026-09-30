@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explorador Siconfi | RREO, RGF e MSC | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{ --azul:#0d6efd; --azul-escuro:#073b6f; --verde:#198754; --vermelho:#dc3545; --fundo:#f4f7fb; }
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.chart-box{height:340px;position:relative;}
+.table-responsive{max-height:560px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.76rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rreo-table{font-size:.8rem}
+.rreo-table td.valor, .rreo-table th.valor{text-align:right;white-space:nowrap}
+.rreo-table td.conta-nome{white-space:nowrap}
+.source-tab{cursor:pointer}
+.source-tab.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.kpi .valor{font-size:1.1rem;font-weight:700;color:var(--azul-escuro)}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#"><i class="bi bi-bank"></i> Contabilidade Pública</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<span class="badge bg-light text-primary mb-3">API de Dados Abertos do Tesouro Nacional (Siconfi)</span>
+<h1 class="display-6 fw-bold">Explorador Consolidado — RREO, RGF e MSC</h1>
+<p class="lead mb-0">Uma única página para consultar qualquer anexo do RREO, do RGF e as Matrizes de Saldos Contábeis (Patrimonial, Orçamentária e de Controle), saldo inicial e final.</p>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div class="btn-group mb-4 w-100" role="group">
+<button class="btn btn-outline-primary source-tab active" data-fonte="rreo"><i class="bi bi-journal-text"></i> RREO</button>
+<button class="btn btn-outline-primary source-tab" data-fonte="rgf"><i class="bi bi-journal-check"></i> RGF</button>
+<button class="btn btn-outline-primary source-tab" data-fonte="msc"><i class="bi bi-grid-3x3-gap"></i> Matriz de Saldos Contábeis (MSC)</button>
+</div>
+
+<div id="status" class="alert alert-info status">Selecione a fonte de dados e clique em "Consultar".</div>
+
+<!-- ==================== RREO ==================== -->
+<div id="painel-rreo" class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">RREO — Relatório Resumido da Execução Orçamentária</h5>
+<div class="row g-3">
+<div class="col-md-2"><label class="form-label fw-semibold">Exercício</label><input type="number" id="rreo-exercicio" class="form-control" value="2026"></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Bimestre</label>
+<select id="rreo-periodo" class="form-select"><option value="1">1º</option><option value="2">2º</option><option value="3" selected>3º</option><option value="4">4º</option><option value="5">5º</option><option value="6">6º</option></select></div>
+<div class="col-md-4"><label class="form-label fw-semibold">Anexo</label>
+<select id="rreo-anexo" class="form-select">
+<option value="RREO-Anexo 01">Anexo 1 — Balanço Orçamentário</option>
+<option value="RREO-Anexo 02">Anexo 2 — Despesas por Função/Subfunção</option>
+<option value="RREO-Anexo 03">Anexo 3 — Receita Corrente Líquida</option>
+<option value="RREO-Anexo 04">Anexo 4 — Receitas e Despesas Previdenciárias (RPPS)</option>
+<option value="RREO-Anexo 06">Anexo 6 — Resultados Primário e Nominal</option>
+<option value="RREO-Anexo 07">Anexo 7 — Restos a Pagar por Poder e Órgão</option>
+<option value="RREO-Anexo 09">Anexo 9 — Regra de Ouro</option>
+<option value="RREO-Anexo 10 - RPPS">Anexo 10 — Projeção Atuarial do RPPS</option>
+<option value="RREO-Anexo 11">Anexo 11 — Alienação de Ativos</option>
+<option value="RREO-Anexo 13">Anexo 13 — Parcerias Público-Privadas</option>
+<option value="RREO-Anexo 14">Anexo 14 — Demonstrativo Simplificado</option>
+</select></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Esfera</label>
+<select id="rreo-esfera" class="form-select"><option value="M" selected>Municipal</option><option value="E">Estadual</option><option value="U">União</option></select></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Ente (IBGE)</label><input type="text" id="rreo-ente" class="form-control" value="4104204"></div>
+</div>
+</div>
+</div>
+
+<!-- ==================== RGF ==================== -->
+<div id="painel-rgf" class="card mb-4 d-none">
+<div class="card-body">
+<h5 class="card-title mb-3">RGF — Relatório de Gestão Fiscal</h5>
+<div class="row g-3">
+<div class="col-md-2"><label class="form-label fw-semibold">Exercício</label><input type="number" id="rgf-exercicio" class="form-control" value="2026"></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Periodicidade</label>
+<select id="rgf-periodicidade" class="form-select"><option value="Q" selected>Quadrimestral</option><option value="S">Semestral</option></select></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Período</label>
+<select id="rgf-periodo" class="form-select"><option value="1" selected>1º</option><option value="2">2º</option><option value="3">3º</option></select></div>
+<div class="col-md-3"><label class="form-label fw-semibold">Anexo</label>
+<select id="rgf-anexo" class="form-select">
+<option value="RGF-Anexo 01">Anexo 1 — Despesa com Pessoal</option>
+<option value="RGF-Anexo 02">Anexo 2 — Dívida Consolidada Líquida</option>
+<option value="RGF-Anexo 03">Anexo 3 — Garantias e Contragarantias</option>
+<option value="RGF-Anexo 04">Anexo 4 — Operações de Crédito</option>
+<option value="RGF-Anexo 05">Anexo 5 — Disponibilidade de Caixa</option>
+<option value="RGF-Anexo 06">Anexo 6 — Restos a Pagar (RGF)</option>
+<option value="RGF-Anexo 07">Anexo 7 — Demonstrativo Simplificado do RGF</option>
+</select></div>
+<div class="col-md-1"><label class="form-label fw-semibold">Esfera</label>
+<select id="rgf-esfera" class="form-select"><option value="M" selected>M</option><option value="E">E</option><option value="U">U</option></select></div>
+<div class="col-md-1"><label class="form-label fw-semibold">Poder</label>
+<select id="rgf-poder" class="form-select"><option value="E" selected>Exec.</option><option value="L">Legisl.</option><option value="J">Judic.</option><option value="M">Min.Púb.</option><option value="D">Defens.</option></select></div>
+<div class="col-md-1"><label class="form-label fw-semibold">Ente</label><input type="text" id="rgf-ente" class="form-control" value="4104204"></div>
+</div>
+<div class="alert alert-warning small mt-3 mb-0">
+<strong>Atenção:</strong> nos testes desta página, a API do RGF devolveu resultados vazios/desatualizados independentemente dos parâmetros enviados — possível cache do lado do Tesouro Nacional que ignora a query string. Se a consulta abaixo vier vazia, use <strong>"Carregar JSON Local"</strong> com um arquivo baixado diretamente do navegador.
+</div>
+</div>
+</div>
+
+<!-- ==================== MSC ==================== -->
+<div id="painel-msc" class="card mb-4 d-none">
+<div class="card-body">
+<h5 class="card-title mb-3">Matriz de Saldos Contábeis (MSC)</h5>
+<div class="row g-3">
+<div class="col-md-2"><label class="form-label fw-semibold">Tipo de Matriz</label>
+<select id="msc-tipo" class="form-select">
+<option value="msc_patrimonial" selected>Patrimonial</option>
+<option value="msc_orcamentaria">Orçamentária</option>
+<option value="msc_controle">Controle</option>
+</select></div>
+<div class="col-md-2"><label class="form-label fw-semibold">co_tipo_matriz</label><input type="text" id="msc-cotipo" class="form-control" value="MSCC"></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Ano de Referência</label><input type="number" id="msc-ano" class="form-control" value="2026"></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Mês de Referência</label>
+<select id="msc-mes" class="form-select">
+<option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04" selected>04</option><option value="05">05</option><option value="06">06</option>
+<option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+</select></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Classe da Conta</label>
+<select id="msc-classe" class="form-select">
+<option value="">Todas</option>
+<option value="1">1 — Ativo</option><option value="2">2 — Passivo</option><option value="3">3 — VPD</option><option value="4">4 — VPA</option>
+<option value="5">5 — Orçamentária (Controle)</option><option value="6">6 — Compensações</option><option value="7">7 — Controles Diversos</option><option value="8">8 — Controles Diversos</option>
+</select></div>
+<div class="col-md-2"><label class="form-label fw-semibold">Ente (IBGE)</label><input type="text" id="msc-ente" class="form-control" value="4104204"></div>
+</div>
+<div class="row g-3 mt-1">
+<div class="col-md-3"><label class="form-label fw-semibold">Saldo</label>
+<select id="msc-tv" class="form-select">
+<option value="beginning_balance">Inicial (beginning_balance)</option>
+<option value="ending_balance">Final (ending_balance)</option>
+<option value="both" selected>Comparar Inicial x Final</option>
+</select></div>
+<div class="col-md-3"><label class="form-label fw-semibold">Agregar por</label>
+<select id="msc-nivel" class="form-select">
+<option value="1">Classe (1 dígito)</option>
+<option value="3">Grupo (3 dígitos)</option>
+<option value="6">Subgrupo (6 dígitos)</option>
+<option value="9">Elemento (9 dígitos)</option>
+<option value="0" selected>Conta completa</option>
+</select></div>
+<div class="col-md-3"><label class="form-label fw-semibold">Limite de páginas</label>
+<select id="msc-paginas" class="form-select"><option value="1">1 (até 5.000 linhas)</option><option value="2" selected>2 (até 10.000)</option><option value="4">4 (até 20.000)</option></select></div>
+</div>
+<div class="alert alert-info small mt-3 mb-0">
+A MSC traz o razão contábil analítico (por conta, poder/órgão e fonte de recursos) — <strong>não</strong> tem nomes de conta, apenas o código (padrão PCASP). Os valores são agregados na página conforme o nível escolhido acima. Os nomes dos endpoints <code>msc_orcamentaria</code> e <code>msc_controle</code> foram inferidos a partir de <code>msc_patrimonial</code> — se a consulta retornar erro, verifique o nome exato na documentação do Tesouro.
+</div>
+</div>
+</div>
+
+<div class="d-flex gap-2 flex-wrap align-items-center mb-4">
+<button id="btnConsultar" class="btn btn-primary"><i class="bi bi-search"></i> Consultar</button>
+<button id="btnCsv" class="btn btn-outline-primary"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</button>
+<label class="btn btn-outline-primary mb-0"><i class="bi bi-file-type-json"></i> Carregar JSON Local
+<input type="file" id="inputJson" accept=".json" style="display:none">
+</label>
+<span class="small-muted ms-auto">URL: <code id="urlApiTexto">—</code></span>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted">Consultando a API...</div>
+</div>
+
+<section class="row g-3 mb-4" id="kpisArea"></section>
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0" id="tituloTabela">Resultado</h5>
+<input type="text" id="filtroTexto" class="form-control form-control-sm" style="max-width:260px" placeholder="Filtrar linhas...">
+</div>
+<div class="table-responsive"><table class="table table-bordered table-sm rreo-table">
+<thead class="table-dark"><tr id="thead-resultado"></tr></thead>
+<tbody id="tbody-resultado"></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="row g-4 mb-4" id="graficosArea"></section>
+
+</main>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Explorador Consolidado Siconfi — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_BASE = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c"];
+const $ = id => document.getElementById(id);
+let fonteAtual = "rreo";
+let ultimosItens = [];         // lista bruta da última consulta
+let graficos = {};
+
+function moeda(v){ return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(v)||0); }
+function moedaCompacta(v){
+  v = Number(v)||0; const a = Math.abs(v);
+  if(a >= 1e9) return (v/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(a >= 1e6) return (v/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(a >= 1e3) return (v/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function mostrarStatus(t,tipo="info"){ const el=$("status"); el.className="alert alert-"+tipo+" status"; el.textContent=t; }
+function mostrarLoading(s){ $("loading").classList.toggle("d-none",!s); }
+function destruirGraficos(){ Object.keys(graficos).forEach(k=>{ graficos[k].destroy(); }); graficos = {}; $("graficosArea").innerHTML=""; }
+
+// -------------------- Alternância de fonte --------------------
+document.querySelectorAll(".source-tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".source-tab").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    fonteAtual = btn.dataset.fonte;
+    ["rreo","rgf","msc"].forEach(f=> $(`painel-${f}`).classList.toggle("d-none", f !== fonteAtual));
+    $("kpisArea").innerHTML = ""; $("tbody-resultado").innerHTML = ""; $("thead-resultado").innerHTML = "";
+    destruirGraficos();
+    mostrarStatus(`Fonte selecionada: ${fonteAtual.toUpperCase()}. Ajuste os parâmetros e clique em "Consultar".`);
+  });
+});
+
+// -------------------- Montagem de URLs --------------------
+function montarUrlRREO(){
+  const p = new URLSearchParams({
+    an_exercicio: $("rreo-exercicio").value.trim(),
+    nr_periodo: $("rreo-periodo").value.trim(),
+    co_tipo_demonstrativo: "RREO",
+    no_anexo: $("rreo-anexo").value,
+    co_esfera: $("rreo-esfera").value,
+    id_ente: $("rreo-ente").value.trim()
+  });
+  return `${API_BASE}/rreo?${p.toString()}`;
+}
+function montarUrlRGF(){
+  const p = new URLSearchParams({
+    an_exercicio: $("rgf-exercicio").value.trim(),
+    in_periodicidade: $("rgf-periodicidade").value,
+    nr_periodo: $("rgf-periodo").value,
+    co_tipo_demonstrativo: "RGF",
+    no_anexo: $("rgf-anexo").value,
+    co_esfera: $("rgf-esfera").value,
+    co_poder: $("rgf-poder").value,
+    id_ente: $("rgf-ente").value.trim()
+  });
+  return `${API_BASE}/rgf?${p.toString()}`;
+}
+function montarUrlMSC(offset){
+  const tv = $("msc-tv").value === "both" ? "beginning_balance" : $("msc-tv").value;
+  const p = new URLSearchParams({
+    id_ente: $("msc-ente").value.trim(),
+    an_referencia: $("msc-ano").value.trim(),
+    me_referencia: $("msc-mes").value,
+    co_tipo_matriz: $("msc-cotipo").value.trim(),
+    id_tv: tv
+  });
+  if($("msc-classe").value) p.set("classe_conta", $("msc-classe").value);
+  if(offset) p.set("offset", offset);
+  return `${API_BASE}/${$("msc-tipo").value}?${p.toString()}`;
+}
+
+// -------------------- Consulta --------------------
+async function fetchJson(url){
+  const r = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+  if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function consultar(){
+  mostrarLoading(true);
+  destruirGraficos();
+  try {
+    if(fonteAtual === "rreo" || fonteAtual === "rgf"){
+      const url = fonteAtual === "rreo" ? montarUrlRREO() : montarUrlRGF();
+      $("urlApiTexto").textContent = url;
+      mostrarStatus(`Buscando URL: ${url}`);
+      const json = await fetchJson(url);
+      const itens = Array.isArray(json) ? json : json.items;
+      if(!Array.isArray(itens)) throw new Error("Estrutura de resposta inesperada.");
+      ultimosItens = itens;
+      if(!itens.length){ mostrarStatus("A API não retornou registros para os parâmetros informados. Tente outro período/anexo ou carregue um JSON local.", "warning"); limparResultado(); return; }
+      processarGenerico(itens);
+      mostrarStatus(`${itens.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+    } else {
+      await consultarMSC();
+    }
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize "Carregar JSON Local".`, "warning");
+  } finally { mostrarLoading(false); }
+}
+
+// -------------------- RREO / RGF: pivot genérico --------------------
+// Hierarquia detectada automaticamente pelos espaços iniciais do campo "conta"
+// (convenção usada pela própria API/relatório para indicar subitens).
+function processarGenerico(itens){
+  const dados = {};   // chave -> { conta, nivel, valores:{coluna:valor} }
+  const ordem = [];
+  const colunas = [];
+
+  itens.forEach(item=>{
+    if(!item || !item.coluna || item.conta === undefined) return;
+    const contaBruta = String(item.conta);
+    const nivel = Math.min(4, (contaBruta.match(/^ */)[0]||"").length);
+    const contaLimpa = contaBruta.trim();
+    const chave = (item.cod_conta || contaLimpa) + "::" + contaLimpa;
+    if(!dados[chave]){ dados[chave] = { conta: contaLimpa, nivel, valores:{} }; ordem.push(chave); }
+    dados[chave].valores[item.coluna] = item.valor;
+    if(!colunas.includes(item.coluna)) colunas.push(item.coluna);
+  });
+
+  renderizarTabelaGenerica(dados, ordem, colunas);
+  renderizarKpisGenericos(itens);
+  renderizarGraficosGenericos(dados, ordem, colunas);
+}
+
+function renderizarKpisGenericos(itens){
+  const inst = itens.find(i=>i.instituicao)?.instituicao || "-";
+  $("navInstituicao").textContent = inst;
+  const exercicio = itens[0]?.exercicio, periodo = itens[0]?.periodo, anexo = itens[0]?.anexo;
+  $("kpisArea").innerHTML = `
+    <div class="col-md-4"><div class="card kpi h-100"><div class="card-body">
+      <div class="text-muted small">Instituição</div><div class="valor" style="font-size:1rem">${escapeHtml(inst)}</div></div></div></div>
+    <div class="col-md-4"><div class="card kpi h-100"><div class="card-body">
+      <div class="text-muted small">Demonstrativo</div><div class="valor" style="font-size:1rem">${escapeHtml(anexo||"-")} — Exercício ${exercicio||"-"}, Período ${periodo||"-"}</div></div></div></div>
+    <div class="col-md-4"><div class="card kpi h-100"><div class="card-body">
+      <div class="text-muted small">Registros carregados</div><div class="valor">${itens.length.toLocaleString("pt-BR")}</div></div></div></div>`;
+}
+
+function renderizarTabelaGenerica(dados, ordem, colunas){
+  $("tituloTabela").textContent = `Resultado — ${fonteAtual.toUpperCase()}`;
+  let head = `<th style="min-width:280px">Especificação</th>` + colunas.map(c=>`<th class="valor">${escapeHtml(c)}</th>`).join("");
+  $("thead-resultado").innerHTML = head;
+
+  function linhaHtml(chave){
+    const it = dados[chave];
+    const ind = it.nivel ? `style="padding-left:${1+it.nivel*1.2}rem"` : "";
+    const bold = it.nivel === 0 ? "fw-bold" : "";
+    let html = `<tr data-chave="${escapeHtml(it.conta.toLowerCase())}"><td class="conta-nome ${bold}" ${ind}>${escapeHtml(it.conta)}</td>`;
+    colunas.forEach(c=>{
+      const v = it.valores[c];
+      html += `<td class="valor">${v===undefined ? "—" : (/^%|percentual/i.test(c) ? (Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})+"%") : moeda(v))}</td>`;
+    });
+    return html + `</tr>`;
+  }
+  $("tbody-resultado").innerHTML = ordem.map(linhaHtml).join("");
+  aplicarFiltroTexto();
+}
+
+function renderizarGraficosGenericos(dados, ordem, colunas){
+  if(!colunas.length){ return; }
+  const colFinal = colunas[colunas.length-1];
+  const itensTop = ordem.map(k=>dados[k]).filter(it=>typeof it.valores[colFinal] === "number")
+    .sort((a,b)=>Math.abs(b.valores[colFinal]) - Math.abs(a.valores[colFinal])).slice(0,15);
+
+  $("graficosArea").innerHTML = `
+    <div class="col-lg-6"><div class="card h-100"><div class="card-body">
+      <h5 class="card-title mb-1">Maiores valores — ${escapeHtml(colFinal)}</h5>
+      <div class="chart-box"><canvas id="graficoTop"></canvas></div>
+    </div></div></div>
+    <div class="col-lg-6"><div class="card h-100"><div class="card-body">
+      <h5 class="card-title mb-1">Linhas de nível 0 (totais)</h5>
+      <div class="chart-box"><canvas id="graficoTotais"></canvas></div>
+    </div></div></div>`;
+
+  graficos.top = new Chart($("graficoTop"), { type:"bar",
+    data:{ labels: itensTop.map(i=>i.conta), datasets:[{ data: itensTop.map(i=>i.valores[colFinal]), backgroundColor: CORES[0] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>moeda(ctx.raw) } } }, scales:{ x:{ ticks:{ callback:v=>moedaCompacta(v) } } } } });
+
+  const totais = ordem.map(k=>dados[k]).filter(it=>it.nivel===0).slice(0,15);
+  graficos.totais = new Chart($("graficoTotais"), { type:"bar",
+    data:{ labels: totais.map(i=>i.conta), datasets:[{ data: totais.map(i=>i.valores[colFinal]||0), backgroundColor: CORES[4] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>moeda(ctx.raw) } } }, scales:{ x:{ ticks:{ callback:v=>moedaCompacta(v) } } } } });
+}
+
+// -------------------- MSC --------------------
+async function buscarPaginadoMSC(offsetInicial){
+  const maxPaginas = parseInt($("msc-paginas").value,10);
+  let offset = offsetInicial || 0, pagina = 0, todos = [];
+  while(pagina < maxPaginas){
+    const url = montarUrlMSC(offset);
+    if(pagina===0) $("urlApiTexto").textContent = url;
+    const json = await fetchJson(url);
+    const itens = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(itens)) throw new Error("Estrutura de resposta inesperada.");
+    todos = todos.concat(itens);
+    pagina++;
+    if(!json.hasMore) break;
+    offset += (json.limit || itens.length || 5000);
+  }
+  return todos;
+}
+
+async function consultarMSC(){
+  const modoComparar = $("msc-tv").value === "both";
+  mostrarStatus("Buscando saldo inicial...");
+  const itensIni = await buscarPaginadoMSC(0);
+  let itensFim = [];
+  if(modoComparar){
+    mostrarStatus("Buscando saldo final...");
+    const tvOriginal = $("msc-tv").value;
+    $("msc-tv").value = "ending_balance";
+    itensFim = await buscarPaginadoMSC(0);
+    $("msc-tv").value = tvOriginal;
+  }
+  ultimosItens = itensIni.concat(itensFim);
+  if(!ultimosItens.length){ mostrarStatus("A API não retornou registros para os parâmetros informados.", "warning"); limparResultado(); return; }
+  processarMSC(itensIni, itensFim, modoComparar);
+  mostrarStatus(`${itensIni.length.toLocaleString("pt-BR")} lançamentos (inicial)${modoComparar ? ` + ${itensFim.length.toLocaleString("pt-BR")} (final)` : ""} carregados via API do Tesouro Nacional (Siconfi).`, "success");
+}
+
+function nivelPrefixo(codigo){ return parseInt($("msc-nivel").value,10); }
+function prefixoConta(codigo){
+  const n = nivelPrefixo();
+  return n ? String(codigo).padEnd(9,"0").slice(0,n) : String(codigo);
+}
+function agregarMSC(itens){
+  const agr = {};
+  itens.forEach(it=>{
+    if(!it || !it.conta_contabil) return;
+    const chave = prefixoConta(it.conta_contabil);
+    if(!agr[chave]) agr[chave] = { conta: chave, d:0, c:0, n:0 };
+    const v = Number(it.valor)||0;
+    if(it.natureza_conta === "C") agr[chave].c += v; else agr[chave].d += v;
+    agr[chave].n++;
+  });
+  return agr;
+}
+
+function processarMSC(itensIni, itensFim, comparar){
+  const inst = itensIni.find(i=>i.cod_ibge)?.cod_ibge || "-";
+  $("navInstituicao").textContent = `Ente IBGE ${inst}`;
+
+  const agrIni = agregarMSC(itensIni);
+  const agrFim = comparar ? agregarMSC(itensFim) : null;
+  const chaves = new Set([...Object.keys(agrIni), ...(agrFim?Object.keys(agrFim):[])]);
+  const linhas = [...chaves].map(chave=>{
+    const ini = agrIni[chave] || {d:0,c:0,n:0};
+    const saldoIni = ini.d - ini.c;
+    if(comparar){
+      const fim = agrFim[chave] || {d:0,c:0,n:0};
+      const saldoFim = fim.d - fim.c;
+      return { conta:chave, saldoIni, saldoFim, variacao: saldoFim - saldoIni, lancamentos: ini.n + fim.n };
+    }
+    return { conta:chave, saldo:saldoIni, debito:ini.d, credito:ini.c, lancamentos: ini.n };
+  }).sort((a,b)=> Math.abs((b.saldoFim ?? b.saldo)) - Math.abs((a.saldoFim ?? a.saldo)));
+
+  $("kpisArea").innerHTML = `
+    <div class="col-md-4"><div class="card kpi h-100"><div class="card-body">
+      <div class="text-muted small">Lançamentos analíticos carregados</div><div class="valor">${itensIni.length.toLocaleString("pt-BR")}${comparar?` + ${itensFim.length.toLocaleString("pt-BR")}`:""}</div></div></div></div>
+    <div class="col-md-4"><div class="card kpi h-100"><div class="card-body">
+      <div class="text-muted small">Contas agregadas (nível escolhido)</div><div class="valor">${linhas.length.toLocaleString("pt-BR")}</div></div></div></div>
+    <div class="col-md-4"><div class="card kpi h-100"><div class="card-body">
+      <div class="text-muted small">Saldo total (${comparar?"final":"inicial"})</div><div class="valor">${moeda(linhas.reduce((s,l)=>s+(l.saldoFim ?? l.saldo),0))}</div></div></div></div>`;
+
+  $("tituloTabela").textContent = "Resultado — MSC (agregado)";
+  if(comparar){
+    $("thead-resultado").innerHTML = `<th>Conta Contábil</th><th class="valor">Saldo Inicial</th><th class="valor">Saldo Final</th><th class="valor">Variação</th><th class="valor">Lançamentos</th>`;
+    $("tbody-resultado").innerHTML = linhas.map(l=>`<tr data-chave="${l.conta}"><td class="conta-nome">${l.conta}</td><td class="valor">${moeda(l.saldoIni)}</td><td class="valor">${moeda(l.saldoFim)}</td><td class="valor">${moeda(l.variacao)}</td><td class="valor">${l.lancamentos}</td></tr>`).join("");
+  } else {
+    $("thead-resultado").innerHTML = `<th>Conta Contábil</th><th class="valor">Débito</th><th class="valor">Crédito</th><th class="valor">Saldo</th><th class="valor">Lançamentos</th>`;
+    $("tbody-resultado").innerHTML = linhas.map(l=>`<tr data-chave="${l.conta}"><td class="conta-nome">${l.conta}</td><td class="valor">${moeda(l.debito)}</td><td class="valor">${moeda(l.credito)}</td><td class="valor">${moeda(l.saldo)}</td><td class="valor">${l.lancamentos}</td></tr>`).join("");
+  }
+  aplicarFiltroTexto();
+
+  const top = linhas.slice(0,15);
+  $("graficosArea").innerHTML = `
+    <div class="col-lg-6"><div class="card h-100"><div class="card-body">
+      <h5 class="card-title mb-1">Maiores saldos por conta (${comparar?"final":"inicial"})</h5>
+      <div class="chart-box"><canvas id="graficoMscTop"></canvas></div>
+    </div></div></div>
+    ${comparar ? `<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+      <h5 class="card-title mb-1">Saldo Inicial x Saldo Final</h5>
+      <div class="chart-box"><canvas id="graficoMscComparativo"></canvas></div>
+    </div></div></div>` : ""}`;
+
+  destruirGraficosParcial();
+  graficos.mscTop = new Chart($("graficoMscTop"), { type:"bar",
+    data:{ labels: top.map(l=>l.conta), datasets:[{ data: top.map(l=>l.saldoFim ?? l.saldo), backgroundColor: CORES[0] }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>moeda(ctx.raw) } } }, scales:{ x:{ ticks:{ callback:v=>moedaCompacta(v) } } } } });
+
+  if(comparar){
+    graficos.mscComparativo = new Chart($("graficoMscComparativo"), { type:"bar",
+      data:{ labels: top.map(l=>l.conta), datasets:[
+        { label:"Saldo Inicial", data: top.map(l=>l.saldoIni), backgroundColor: CORES[1] },
+        { label:"Saldo Final", data: top.map(l=>l.saldoFim), backgroundColor: CORES[3] } ] },
+      options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:"bottom"}, tooltip:{ callbacks:{ label: ctx=>`${ctx.dataset.label}: ${moeda(ctx.raw)}` } } }, scales:{ x:{ ticks:{ callback:v=>moedaCompacta(v) } } } } });
+  }
+}
+function destruirGraficosParcial(){ /* placeholder: gráficos MSC recriados a cada consulta */ }
+
+// -------------------- Filtro de texto / limpeza --------------------
+function aplicarFiltroTexto(){
+  const termo = $("filtroTexto").value.trim().toLowerCase();
+  document.querySelectorAll("#tbody-resultado tr").forEach(tr=>{
+    const chave = tr.getAttribute("data-chave") || "";
+    tr.style.display = (!termo || chave.includes(termo)) ? "" : "none";
+  });
+}
+$("filtroTexto").addEventListener("input", aplicarFiltroTexto);
+function limparResultado(){ $("thead-resultado").innerHTML=""; $("tbody-resultado").innerHTML=""; $("kpisArea").innerHTML=""; destruirGraficos(); }
+
+// -------------------- CSV --------------------
+function exportarCSV(){
+  if(!ultimosItens.length){ alert("Não existem dados para exportar. Faça uma consulta primeiro."); return; }
+  const campos = Array.from(new Set(ultimosItens.flatMap(i=>Object.keys(i))));
+  const linhas = [campos];
+  ultimosItens.forEach(i=> linhas.push(campos.map(c=> i[c] ?? "")));
+  const csv = linhas.map(l=>l.map(v=>`"${String(v ?? "").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `siconfi_${fonteAtual}_campo_largo.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+// -------------------- JSON local --------------------
+$("inputJson").addEventListener("change", e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try {
+      const res = JSON.parse(evt.target.result);
+      const itens = Array.isArray(res) ? res : res.items;
+      if(!Array.isArray(itens)) throw new Error("Estrutura do arquivo JSON inválida (esperado objeto com a chave 'items').");
+      ultimosItens = itens;
+      if(fonteAtual === "msc"){
+        // sem comparação automática ao carregar de arquivo local: trata tudo como um único conjunto
+        processarMSC(itens, [], false);
+      } else {
+        processarGenerico(itens);
+      }
+      mostrarStatus(`${itens.length.toLocaleString("pt-BR")} registros carregados a partir do arquivo JSON local.`, "success");
+    } catch (err) { mostrarStatus("Erro ao processar o arquivo JSON selecionado: " + err.message, "danger"); }
+  };
+  reader.readAsText(file);
+});
+
+$("btnConsultar").addEventListener("click", consultar);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+mostrarStatus('Selecione a fonte de dados (RREO, RGF ou MSC), ajuste os parâmetros e clique em "Consultar".');
+</script>
+
+</body>
+</html>
