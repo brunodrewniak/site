@@ -158,8 +158,6 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 <option value="9">Elemento (9 dígitos)</option>
 <option value="0" selected>Conta completa</option>
 </select></div>
-<div class="col-md-3"><label class="form-label fw-semibold">Limite de páginas</label>
-<select id="msc-paginas" class="form-select"><option value="1">1 (até 5.000 linhas)</option><option value="2" selected>2 (até 10.000)</option><option value="4">4 (até 20.000)</option></select></div>
 </div>
 <div class="alert alert-info small mt-3 mb-0">
 A MSC traz o razão contábil analítico (por conta, poder/órgão e fonte de recursos) — <strong>não</strong> tem nomes de conta, apenas o código (padrão PCASP). Os valores são agregados na página conforme o nível escolhido acima. Os nomes dos endpoints <code>msc_orcamentaria</code> e <code>msc_controle</code> foram inferidos a partir de <code>msc_patrimonial</code> — se a consulta retornar erro, verifique o nome exato na documentação do Tesouro.
@@ -414,6 +412,23 @@ function renderizarGraficosGenericos(dados, ordem, colunas){
 
 // -------------------- MSC --------------------
 async function buscarPaginadoMSC(offsetInicial){
+  let offset = offsetInicial || 0, todos = [], temMais = true;
+  while(temMais){
+    const url = montarUrlMSC(offset);
+    if(todos.length === 0) $("urlApiTexto").textContent = url;
+    const json = await fetchJson(url);
+    const itens = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(itens)) throw new Error("Estrutura de resposta inesperada.");
+    todos = todos.concat(itens);
+    temMais = Boolean(json.hasMore);
+    if(temMais) {
+      offset += (json.limit || itens.length || 5000);
+    }
+  }
+  return todos;
+}
+  
+/*async function buscarPaginadoMSC(offsetInicial){
   const maxPaginas = parseInt($("msc-paginas").value,10);
   let offset = offsetInicial || 0, pagina = 0, todos = [];
   while(pagina < maxPaginas){
@@ -428,7 +443,7 @@ async function buscarPaginadoMSC(offsetInicial){
     offset += (json.limit || itens.length || 5000);
   }
   return todos;
-}
+}*/
 
 async function consultarMSC(){
   const modoComparar = $("msc-tv").value === "both";
