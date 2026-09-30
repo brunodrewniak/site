@@ -37,25 +37,25 @@ O site reúne uma coleção de **dashboards, relatórios analíticos e demonstra
 * 👥 **[Servidores](dashboard/servidores.html)** — Quadro de pessoal.
 
 ### 📋 SICONFI - Relatório Resumido da Execução Orçamentária (RREO)
-* 📑 **[Anexo 1 - Balanço Orçamentário](siconfi/rreo_anexo1.html)**
-* 📑 **[Anexo 2 - Despesas por Função/Subfunção](siconfi/rreo_anexo2.html)**
-* 📑 **[Anexo 3 - Receita Corrente Líquida (RCL)](siconfi/rreo_anexo3.html)**
-* 📑 **[Anexo 4 - Receitas/Despesas Previdenciárias](siconfi/rreo_anexo4.html)**
-* 📑 **[Anexo 6 - Resultados Primário e Nominal](siconfi/rreo_anexo6.html)**
-* 📑 **[Anexo 7 - Restos a Pagar](siconfi/rreo_anexo7.html)**
-* 📑 **[Anexo 9 - Operações de Crédito / Regra de Ouro](siconfi/rreo_anexo9.html)**
-* 📑 **[Anexo 10 - Projeção Atuarial do RPPS](siconfi/rreo_anexo10.html)**
-* 📑 **[Anexo 11 - Alienação de Ativos](siconfi/rreo_anexo11.html)**
-* 📑 **[Anexo 13 - Parcerias Público-Privadas (PPP)](siconfi/rreo_anexo13.html)**
-* 📑 **[Anexo 14 - Demonstrativo Simplificado](siconfi/rreo_anexo14.html)**
+* 📑 **[Anexo 1](siconfi/rreo_anexo1.html)** - Balanço Orçamentário
+* 📑 **[Anexo 2](siconfi/rreo_anexo2.html)** - Despesas por Função/Subfunção
+* 📑 **[Anexo 3](siconfi/rreo_anexo3.html)** - Receita Corrente Líquida (RCL)
+* 📑 **[Anexo 4](siconfi/rreo_anexo4.html)** - Receitas/Despesas Previdenciárias
+* 📑 **[Anexo 6](siconfi/rreo_anexo6.html)** - Resultados Primário e Nominal
+* 📑 **[Anexo 7](siconfi/rreo_anexo7.html)** - Restos a Pagar
+* 📑 **[Anexo 9](siconfi/rreo_anexo9.html)** - Operações de Crédito / Regra de Ouro
+* 📑 **[Anexo 10](siconfi/rreo_anexo10.html)** - Projeção Atuarial do RPPS
+* 📑 **[Anexo 11](siconfi/rreo_anexo11.html)** - Alienação de Ativos
+* 📑 **[Anexo 13](siconfi/rreo_anexo13.html)** - Parcerias Público-Privadas (PPP)
+* 📑 **[Anexo 14](siconfi/rreo_anexo14.html)** - Demonstrativo Simplificado
 
 ### 🛡️ SICONFI - Relatório de Gestão Fiscal (RGF)
-* 🛡️ **[Anexo 1 - Despesa com Pessoal](siconfi/rgf_anexo1.html)**
-* 🛡️ **[Anexo 2 - Dívida Consolidada Líquida](siconfi/rgf_anexo2.html)**
-* 🛡️ **[Anexo 3 - Garantias e Contragarantias](siconfi/rgf_anexo3.html)**
-* 🛡️ **[Anexo 4 - Operações de Crédito](siconfi/rgf_anexo4.html)**
-* 🛡️️ **[Anexo 5 - Disponibilidade de Caixa e Restos a Pagar](siconfi/rgf_anexo5.html)**
-* 🛡️ **[Anexo 6 - Simplificado do RGF](siconfi/rgf_anexo6.html)**
+* 🛡️ **[Anexo 1](siconfi/rgf_anexo1.html)** - Despesa com Pessoal
+* 🛡️ **[Anexo 2](siconfi/rgf_anexo2.html)** - Dívida Consolidada Líquida
+* 🛡️ **[Anexo 3](siconfi/rgf_anexo3.html)** - Garantias e Contragarantias
+* 🛡️ **[Anexo 4](siconfi/rgf_anexo4.html)** - Operações de Crédito
+* 🛡️ **[Anexo 5](siconfi/rgf_anexo5.html)** - Disponibilidade de Caixa e Restos a Pagar
+* 🛡️ **[Anexo 6](siconfi/rgf_anexo6.html)** - Simplificado do Relatório de Gestão Fiscal
 
 ### 📦 Suprimentos
 * 📥 **[Entrada de Produtos](suprimentos/entrada.html)** — Consulta de entrada de produtos.
