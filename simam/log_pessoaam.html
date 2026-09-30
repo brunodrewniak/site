@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Erros de Validação - PessoaAM</title>
+    
+    <!-- Bibliotecas para geração do PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+        h2 {
+            color: #1155cc;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .file-input-wrapper {
+            margin: 25px 0 15px 0;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn-upload {
+            background-color: #1155cc;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(17, 85, 204, 0.3);
+        }
+        .btn-upload:hover {
+            background-color: #0b3c94;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #666;
+            padding: 12px;
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 12px;
+            text-align: left;
+        }
+        .preview-table th {
+            background-color: #1155cc;
+            color: white;
+            padding: 8px;
+        }
+        .preview-table td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+        }
+        .preview-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .btn-pdf {
+            background-color: #198754;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 2px 5px rgba(25, 135, 84, 0.3);
+        }
+        .btn-pdf:hover {
+            background-color: #146c43;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Relatório de Erros - PessoaAM</h2>
+    <p>Selecione o arquivo TXT de log de erros. <br> O sistema processará os registros e exportará um <strong>relatório em PDF estruturado</strong> com as inconsistências encontradas.</p>
+    
+    <div class="file-input-wrapper">
+        <label for="txtFile" class="btn-upload">Selecionar Arquivo TXT Log</label>
+        <input type="file" id="txtFile" accept=".txt">
+    </div>
+    
+    <div id="status">Aguardando seleção do arquivo...</div>
+
+    <div id="resultArea" style="display:none;">
+        <button id="btnExportPdf" class="btn-pdf">Baixar Relatório em PDF</button>
+        <div style="max-height: 300px; overflow-y: auto; margin-top: 15px; border: 1px solid #ddd;">
+            <table class="preview-table" id="previewTable">
+                <thead>
+                    <tr>
+                        <th>Reg.</th>
+                        <th>CNPJ/CPF</th>
+                        <th>Nome</th>
+                        <th>cdIbge</th>
+                        <th>agUf</th>
+                        <th>dsEndereco</th>
+                        <th>cdCep</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+let dadosProcessados = [];
+
+document.getElementById('txtFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const statusDiv = document.getElementById('status');
+    statusDiv.style.backgroundColor = "#eef2ff";
+    statusDiv.style.color = '#1155cc';
+    statusDiv.innerText = "Processando arquivo TXT...";
+
+    const reader = new FileReader();
+    reader.readAsText(file, 'ISO-8859-1');
+
+    reader.onload = function(event) {
+        try {
+            const conteúdo = event.target.result;
+            const linhas = conteúdo.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            
+            // Objeto para agrupar as inconsistências por CNPJ/CPF
+            const registrosMap = {};
+
+            linhas.forEach(linha => {
+                linha = linha.trim();
+                if (!linha) return;
+
+                // Extrai o conteúdo dentro de Linha: [...]
+                const matchLinha = linha.match(/Linha:\s*\[(.*?)\]/);
+                if (matchLinha) {
+                    const campos = matchLinha[1].split(',');
+
+                    const registro = (campos[0] || '').trim();
+                    const doc = (campos[1] || '').trim();
+                    const nome = (campos[2] || '').trim();
+
+                    if (!doc) return;
+
+                    if (!registrosMap[doc]) {
+                        registrosMap[doc] = {
+                            registro: registro,
+                            cnpjCpf: doc,
+                            nome: nome,
+                            cdIbge: 'Sem Valor',
+                            agUf: 'Sem Valor',
+                            dsEndereco: 'Vazio',
+                            cdCep: 'Vazio'
+                        };
+                    }
+
+                    // Identifica o campo com erro específico
+                    if (linha.includes('cdIbge')) registrosMap[doc].cdIbge = 'Inválido/Ausente';
+                    if (linha.includes('agUf')) registrosMap[doc].agUf = 'Inválido/Ausente';
+                    if (linha.includes('dsEndereco')) registrosMap[doc].dsEndereco = 'Ausente';
+                    if (linha.includes('cdCep')) registrosMap[doc].cdCep = 'Ausente';
+                }
+            });
+
+            dadosProcessados = Object.values(registrosMap);
+
+            if (dadosProcessados.length > 0) {
+                renderPreviewTable(dadosProcessados);
+                document.getElementById('resultArea').style.display = 'block';
+
+                statusDiv.style.backgroundColor = "#d1e7dd";
+                statusDiv.style.color = '#0f5132';
+                statusDiv.innerHTML = `<b>Sucesso!</b> ${dadosProcessados.length} registros com pendências/erros identificados.`;
+            } else {
+                statusDiv.style.backgroundColor = "#f8d7da";
+                statusDiv.style.color = '#842029';
+                statusDiv.innerHTML = "<b>Atenção:</b> Nenhum registro pôde ser extraído do arquivo.";
+            }
+
+        } catch (error) {
+            statusDiv.style.backgroundColor = "#f8d7da";
+            statusDiv.style.color = '#842029';
+            statusDiv.innerText = "Erro ao processar arquivo: " + error.message;
+            console.error(error);
+        }
+    };
+});
+
+function renderPreviewTable(dados) {
+    const tbody = document.getElementById('previewTable').querySelector('tbody');
+    tbody.innerHTML = '';
+
+    dados.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${d.registro}</td>
+            <td>${d.cnpjCpf}</td>
+            <td>${d.nome}</td>
+            <td>${d.cdIbge}</td>
+            <td>${d.agUf}</td>
+            <td>${d.dsEndereco}</td>
+            <td>${d.cdCep}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Exportação para PDF usando jsPDF + AutoTable
+document.getElementById('btnExportPdf').addEventListener('click', function() {
+    if (dadosProcessados.length === 0) return;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape', 'mm', 'a4'); // Orientação paisagem para caber todas as colunas
+
+    // Cabeçalho do PDF
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(17, 85, 204); // #1155cc
+    doc.text("Relatório de Erros e Inconsistências de Cadastros (PessoaAM)", 14, 15);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')} | Total de Inconsistências: ${dadosProcessados.length}`, 14, 22);
+
+    // Mapeamento de colunas para o PDF
+    const columns = [
+        { header: "Registro", dataKey: "registro" },
+        { header: "CNPJ / CPF", dataKey: "cnpjCpf" },
+        { header: "Nome / Razão Social", dataKey: "nome" },
+        { header: "cdIbge", dataKey: "cdIbge" },
+        { header: "agUf", dataKey: "agUf" },
+        { header: "dsEndereco", dataKey: "dsEndereco" },
+        { header: "cdCep", dataKey: "cdCep" }
+    ];
+
+    // Estilização da tabela
+    doc.autoTable({
+        columns: columns,
+        body: dadosProcessados,
+        startY: 28,
+        theme: 'grid',
+        headStyles: {
+            fillColor: [17, 85, 204],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            fontSize: 9
+        },
+        bodyStyles: {
+            fontSize: 8,
+            textColor: [50, 50, 50]
+        },
+        columnStyles: {
+            registro: { cellWidth: 18, halign: 'center' },
+            cnpjCpf: { cellWidth: 38 },
+            nome: { cellWidth: 'auto' },
+            cdIbge: { cellWidth: 25, halign: 'center' },
+            agUf: { cellWidth: 25, halign: 'center' },
+            dsEndereco: { cellWidth: 25, halign: 'center' },
+            cdCep: { cellWidth: 25, halign: 'center' }
+        },
+        alternateRowStyles: {
+            fillColor: [244, 246, 249]
+        }
+    });
+
+    // Salva o documento
+    doc.save("Relatorio_Erros_PessoaAM.pdf");
+});
+</script>
+
+</body>
+</html>
