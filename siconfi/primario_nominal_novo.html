@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resultado Primário e Nominal | Campo Largo</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --azul:#0d6efd;
+  --azul-escuro:#073b6f;
+  --verde:#198754;
+  --amarelo:#c9a300;
+  --laranja:#fd7e14;
+  --vermelho:#dc3545;
+  --fundo:#f4f7fb;
+}
+body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.navbar{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.hero{background:linear-gradient(135deg,#073b6f,#0d6efd);color:#fff}
+.card{border:0;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+.kpi{border-left:5px solid var(--azul)}
+.kpi.kpi-verde{border-left-color:var(--verde)}
+.kpi.kpi-amarelo{border-left-color:var(--amarelo)}
+.kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi .valor{font-size:1.2rem;font-weight:700;color:var(--azul-escuro)}
+.kpi .valor.cor-verde{color:var(--verde)}
+.kpi .valor.cor-amarelo{color:var(--amarelo)}
+.kpi .valor.cor-vermelho{color:var(--vermelho)}
+.chart-box{height:320px;position:relative;}
+.chart-box.chart-box-sm{height:260px;}
+.chart-box.chart-box-lg{height:400px;}
+.table-responsive{max-height:640px}
+.table thead th{position:sticky;top:0;z-index:2;font-size:.78rem}
+.status{font-size:.92rem}
+.small-muted{font-size:.82rem;color:#6c757d}
+.rf-table{font-size:.85rem}
+.rf-table td.valor, .rf-table th.valor{text-align:right;white-space:nowrap}
+.rf-table tr.total{font-weight:700;background:#eef3fb}
+.view-toggle .btn.active{background-color:var(--azul);color:#fff;border-color:var(--azul)}
+.chart-card-desc{font-size:.8rem;color:#6c757d}
+.badge-fonte{font-size:.7rem}
+
+
+.pos-card{border-top:6px solid #adb5bd;height:100%}
+.pos-card.verde{border-top-color:var(--verde)}.pos-card.amarelo{border-top-color:var(--amarelo)}.pos-card.vermelho{border-top-color:var(--vermelho)}
+.pos-card .tema{font-weight:700;color:var(--azul-escuro)}
+.pos-card .big{font-size:1.55rem;font-weight:700;line-height:1.1}
+.pos-card li{margin-bottom:.15rem}
+.sel{display:inline-block;padding:.1rem .55rem;border-radius:20px;font-size:.74rem;font-weight:700;color:#fff;background:#6c757d}
+.sel.verde{background:var(--verde)}.sel.amarelo{background:var(--amarelo)}.sel.vermelho{background:var(--vermelho)}
+.leitura{border-left:6px solid #6c757d;background:#fff}
+.leitura.verde{border-left-color:var(--verde)}.leitura.amarelo{border-left-color:var(--amarelo)}.leitura.vermelho{border-left-color:var(--vermelho)}
+
+/* ---------- Área de impressão / PDF ---------- */
+#printArea{display:none}
+@media print{
+  @page{ size: A4 landscape; margin: 10mm; }
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{ display:block !important; position:absolute; left:0; top:0; width:100%; background:#fff; color:#000; font-family:Arial,Helvetica,sans-serif; }
+  #printArea .print-header{ text-align:center; margin-bottom:5px; line-height:1.15; }
+  #printArea .print-header h1{ font-size:13pt; margin:0; font-weight:800; }
+  #printArea .print-sub{ font-size:8.5pt; margin:0; }
+  #printArea .print-title{ font-size:10.5pt; font-weight:700; margin:2px 0; }
+  #printArea .print-secao{ font-size:9pt; font-weight:700; text-align:center; margin:8px 0 3px; background:#073b6f; color:#fff; padding:3px; }
+  #printArea table{ width:100%; border-collapse:collapse; font-size:8.6pt; line-height:1.2; margin-bottom:8px; }
+  #printArea th, #printArea td{ border:1px solid #000; padding:2.5px 5px; }
+  #printArea th{ background:#e3e3e3 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; text-align:center; }
+  #printArea td.valor, #printArea th.valor{ text-align:right; white-space:nowrap; }
+  #printArea tr.total{ font-weight:700; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea .print-footer{ font-size:7.4pt; color:#333; margin-top:5px; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+<div class="container">
+<a class="navbar-brand fw-bold" href="#">
+<i class="bi bi-bank"></i> Contabilidade Pública
+</a>
+<div class="text-white small" id="navInstituicao">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-5">
+<div class="container">
+<div class="row align-items-center">
+<div class="col-lg-9">
+<span class="badge bg-light text-primary mb-3">RREO · RGF — SICONFI / TESOURO NACIONAL</span>
+<h1 class="display-6 fw-bold">Resultado Primário e Resultado Nominal</h1>
+<p class="lead mb-0">
+Indicadores de suficiência financeira e cumprimento da meta fiscal do ente, consultados diretamente na API de Dados Abertos do Tesouro Nacional.
+</p>
+</div>
+</div>
+</div>
+</header>
+
+<main class="container py-4">
+
+<div id="status" class="alert alert-info status">
+Aguardando consulta...
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<h5 class="card-title mb-3">Período e parâmetros da consulta</h5>
+
+<div class="row g-3">
+
+<div class="col-md-3">
+<label class="form-label fw-semibold">Exercício</label>
+<input type="number" id="filtroExercicio" class="form-control" value="2026" min="2000" max="2100">
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Quadrimestre</label>
+<select id="filtroBimestre" class="form-select">
+<option value="2">1º Quadrimestre (Jan-Abr)</option>
+<option value="4" selected>2º Quadrimestre (Mai-Ago)</option>
+<option value="6">3º Quadrimestre (Set-Dez)</option>
+</select>
+</div>
+
+<div class="col-md-4">
+<label class="form-label fw-semibold">Ente (código IBGE)</label>
+<input type="text" id="filtroEnte" class="form-control" value="4104204">
+</div>
+
+<!-- Parâmetros fixos (Esfera Municipal / Poder Executivo / Periodicidade Quadrimestral para o RGF)
+     não ficam editáveis nem visíveis na tela -->
+<input type="hidden" id="filtroEsfera" value="M">
+<input type="hidden" id="filtroPoder" value="E">
+
+<div class="col-md-1 d-flex align-items-end">
+<button id="btnConsultar" class="btn btn-primary w-100" title="Consultar">
+<i class="bi bi-search"></i>
+</button>
+</div>
+
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsv" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+</button>
+
+<button id="btnImprimir" class="btn btn-outline-danger btn-sm">
+<i class="bi bi-printer"></i> Imprimir / Gerar PDF
+</button>
+
+<div class="btn-group view-toggle ms-auto" role="group" aria-label="Alternar visualização">
+<button type="button" class="btn btn-outline-primary active" id="btnVerTabelas"><i class="bi bi-table"></i> Ver Tabelas</button>
+<button type="button" class="btn btn-outline-primary" id="btnVerGraficos"><i class="bi bi-bar-chart-line"></i> Ver Gráficos</button>
+</div>
+</div>
+
+<div class="small-muted mt-3">
+Resultado Primário/Nominal — RREO Anexo 14: <code id="urlRreoTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code><br>
+Dívida Consolidada Líquida (cruzamento) — RGF Anexo 2: <code id="urlRgfTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rgf</code>
+</div>
+
+<div class="alert alert-secondary small mt-3 mb-0">
+<i class="bi bi-info-circle"></i> <strong>Sobre as fontes:</strong> o Resultado Primário e o Resultado Nominal já vêm oficialmente calculados pelo Tesouro Nacional no <strong>RREO - Anexo 14</strong> (Demonstrativo Simplificado), por isso o painel usa esse anexo como fonte principal em vez de tentar recalculá-los a partir de lançamentos contábeis. A <strong>MSC (Matriz de Saldos Contábeis)</strong> foi avaliada para esta versão, mas ela expõe saldos contábeis linha a linha (milhares de registros por conta/função/fonte), sem os indicadores já consolidados — reconstruir o Resultado Primário/Nominal a partir dela exigiria replicar regras específicas do PCASP com risco real de divergência do valor oficial. Por isso ela não é usada no cálculo; o Anexo 2 do RGF entra apenas como uma segunda fonte, independente, para conferir se a variação da Dívida Consolidada Líquida bate com o Resultado Nominal apurado.
+</div>
+
+</div>
+</div>
+
+<div id="loading" class="text-center py-4 d-none">
+<div class="spinner-border text-primary" role="status"></div>
+<div class="mt-2 text-muted" id="loadingTexto">Consultando a API...</div>
+</div>
+
+<section id="posicao" class="mb-4">
+<h4 class="mb-1">Posição do município</h4>
+<div class="small-muted mb-3" id="posicaoPeriodo">Acumulado até o quadrimestre selecionado.</div>
+<div id="leitura" class="card leitura mb-3 d-none"><div class="card-body py-3"></div></div>
+<div class="row g-3" id="cardsPosicao"></div>
+<div class="small-muted mt-2">Faixas: verde = dentro da folga; amarelo = atenção; vermelho = limite ultrapassado. Mínimos de saúde e educação são anuais: abaixo do mínimo antes do 3º quadrimestre fica em atenção. Dados ausentes na API aparecem em cinza.</div>
+</section>
+
+<section class="row g-3 mb-4">
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100" id="kpiPrimarioCard">
+<div class="card-body">
+<div class="text-muted small">Resultado Primário Apurado</div>
+<div id="kpiPrimario" class="valor">R$ 0,00</div>
+<div id="kpiPrimarioSituacao" class="small-muted"></div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100" id="kpiNominalCard">
+<div class="card-body">
+<div class="text-muted small">Resultado Nominal Apurado</div>
+<div id="kpiNominal" class="valor">R$ 0,00</div>
+<div id="kpiNominalSituacao" class="small-muted"></div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">% da Meta — Primário / Nominal</div>
+<div id="kpiPercMetas" class="valor" style="font-size:1rem">- / -</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100" id="kpiConvergenciaCard">
+<div class="card-body">
+<div class="text-muted small">Convergência Nominal x Variação da DCL</div>
+<div id="kpiConvergencia" class="valor" style="font-size:1rem">-</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Receita Corrente Líquida (RCL)</div>
+<div id="kpiRcl" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Dívida Consolidada Líquida (atual)</div>
+<div id="kpiDcl" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card kpi h-100">
+<div class="card-body">
+<div class="text-muted small">Variação da DCL no Exercício</div>
+<div id="kpiVariacaoDcl" class="valor">R$ 0,00</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-6 col-xl-3">
+<div class="card h-100">
+<div class="card-body">
+<div class="text-muted small">Ente / Período</div>
+<div id="kpiEnte" class="valor" style="font-size:.9rem">-</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<!-- ===================== VISÃO EM TABELAS ===================== -->
+<div id="viewTabelas">
+
+<div class="row g-4">
+
+<div class="col-lg-6">
+<section class="card mb-4 h-100">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Resultado Primário <span class="badge bg-secondary badge-fonte">Acima da Linha</span></h5>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rf-table">
+<thead class="table-dark">
+<tr><th>Conceito</th><th class="valor">Meta (LDO) (a)</th><th class="valor">Apurado (b)</th><th class="valor">% da Meta (b/a)</th></tr>
+</thead>
+<tbody id="tbodyPrimario"></tbody>
+</table>
+</div>
+<div class="small-muted">Mede se as receitas do dia a dia (impostos, taxas) cobrem as despesas correntes e de capital, sem juros nem amortizações da dívida.</div>
+</div>
+</section>
+</div>
+
+<div class="col-lg-6">
+<section class="card mb-4 h-100">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Resultado Nominal <span class="badge bg-secondary badge-fonte">Abaixo da Linha</span></h5>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rf-table">
+<thead class="table-dark">
+<tr><th>Conceito</th><th class="valor">Meta (LDO) (a)</th><th class="valor">Apurado (b)</th><th class="valor">% da Meta (b/a)</th></tr>
+</thead>
+<tbody id="tbodyNominal"></tbody>
+</table>
+</div>
+<div class="small-muted">Mede a variação total da Dívida Consolidada Líquida no período — inclui juros e encargos.</div>
+</div>
+</section>
+</div>
+
+</div>
+
+<section class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<h5 class="mb-0">Validação Cruzada — Dívida Consolidada Líquida (RGF - Anexo 2)</h5>
+<span class="small-muted">Fonte independente: a variação da DCL deveria convergir com o Resultado Nominal apurado</span>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered table-sm rf-table">
+<thead class="table-dark">
+<tr><th>Conceito</th><th class="valor">Valor</th></tr>
+</thead>
+<tbody id="tbodyValidacao"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+</div>
+
+<!-- ===================== VISÃO EM GRÁFICOS ===================== -->
+<div id="viewGraficos" class="d-none">
+
+<section class="row g-4 mb-4">
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">1. Resultado Primário: Meta x Apurado</h5>
+<div class="chart-card-desc mb-2" id="descPrimario">Comparação entre a meta fixada na LDO e o resultado apurado até o bimestre.</div>
+<div class="chart-box"><canvas id="graficoPrimario"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">2. Resultado Nominal: Meta x Apurado</h5>
+<div class="chart-card-desc mb-2" id="descNominal">Comparação entre a meta fixada na LDO e o resultado apurado até o bimestre.</div>
+<div class="chart-box"><canvas id="graficoNominal"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-12">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">3. Evolução Bimestral no Exercício</h5>
+<div class="chart-card-desc mb-2" id="descEvolucao">Resultado Primário e Nominal apurados, bimestre a bimestre, desde o início do exercício.</div>
+<div class="chart-box chart-box-lg"><canvas id="graficoEvolucao"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">4. Convergência: Resultado Nominal x Variação da DCL</h5>
+<div class="chart-card-desc mb-2" id="descConvergencia">Os dois valores deveriam ser próximos — divergências grandes sugerem falha de conciliação ou passivos não capturados.</div>
+<div class="chart-box"><canvas id="graficoConvergencia"></canvas></div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title mb-1">5. Painel de Metas Fiscais (% Atingido)</h5>
+<div class="chart-card-desc mb-2">Percentual da meta já atingido em cada indicador — 100% é a linha de referência.</div>
+<div class="chart-box"><canvas id="graficoPainelMetas"></canvas></div>
+</div>
+</div>
+</div>
+
+</section>
+
+</div>
+
+<div class="alert alert-info small">
+<strong>Consulta direta à API:</strong> O painel busca os dados diretamente na API de Dados Abertos do Tesouro Nacional (Siconfi). Se o navegador bloquear a requisição (CORS), a mensagem de status abaixo dos filtros vai indicar isso.
+</div>
+
+</main>
+
+<!-- =====================================================================
+     ÁREA DE IMPRESSÃO / PDF
+     ===================================================================== -->
+<div id="printArea">
+<div class="print-page">
+
+<div class="print-header">
+<h1 id="printInstituicao">MUNICÍPIO DE CAMPO LARGO - PR</h1>
+<div class="print-sub">Painel de Indicadores Fiscais — Resultado Primário e Resultado Nominal</div>
+<div class="print-title">Fonte: RREO - Anexo 14 (Demonstrativo Simplificado) e RGF - Anexo 2</div>
+<div class="print-sub" id="printPeriodo">Período de Referência: -</div>
+</div>
+
+<div class="print-secao">RESULTADO PRIMÁRIO (ACIMA DA LINHA)</div>
+<table>
+<thead><tr><th>Conceito</th><th>Meta (LDO) (a)</th><th>Apurado (b)</th><th>% da Meta (b/a)</th></tr></thead>
+<tbody id="printTbodyPrimario"></tbody>
+</table>
+
+<div class="print-secao">RESULTADO NOMINAL (ABAIXO DA LINHA)</div>
+<table>
+<thead><tr><th>Conceito</th><th>Meta (LDO) (a)</th><th>Apurado (b)</th><th>% da Meta (b/a)</th></tr></thead>
+<tbody id="printTbodyNominal"></tbody>
+</table>
+
+<div class="print-secao">VALIDAÇÃO CRUZADA — DÍVIDA CONSOLIDADA LÍQUIDA (RGF - ANEXO 2)</div>
+<table>
+<thead><tr><th>Conceito</th><th>Valor</th></tr></thead>
+<tbody id="printTbodyValidacao"></tbody>
+</table>
+
+<div class="print-footer">
+Fonte: API de Dados Abertos do Tesouro Nacional (Siconfi) — RREO Anexo 14 e RGF Anexo 2.<br>
+Relatório gerado automaticamente pelo Dashboard de Contabilidade Pública em <span id="printDataHora"></span>.
+</div>
+
+</div>
+</div>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">
+Resultado Primário e Resultado Nominal — Campo Largo/PR<br>
+Dados provenientes da API de Dados Abertos do Tesouro Nacional (Siconfi).
+</div>
+</footer>
+
+<script>
+const API_RREO = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo";
+const API_RGF = "https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rgf";
+const CORES = ["#0d6efd","#0dcaf0","#ffc107","#dc3545","#198754","#6f42c1","#fd7e14","#20c997","#073b6f","#e83e8c","#adb5bd"];
+
+const $ = id => document.getElementById(id);
+
+// -------------------- Contas do RREO - Anexo 14 usadas --------------------
+const COD_PRIMARIO = "ResultadoPrimarioAcimaDaLinhaSemRPPSDemonstrativoSimplificado";
+const COD_NOMINAL = "ResultadoNominalAbaixoDaLinhaSemRPPSDemonstrativoSimplificado";
+const COD_RCL = "ReceitaCorrenteLiquidaDemonstrativoSimplificado";
+
+const COL_META = "Meta Fixada no Anexo de Metas Fiscais da LDO (a)";
+const COL_APURADO = "Resultado Apurado até o Bimestre (b)";
+const COL_PERC = "% em Relação à Meta (b/a)";
+const COL_RCL_VALOR = "Até o Bimestre";
+
+// -------------------- Conta do RGF - Anexo 2 usada (cruzamento) --------------------
+const COD_DCL = "DividaConsolidadaLiquida";
+const COL_SALDO_ANTERIOR = "SALDO DO EXERCÍCIO ANTERIOR";
+function colQuad(n){ return `Até o ${n}º Quadrimestre`; }
+
+let dadosAnexo14 = {};      // { cod_conta: { conta, valores:{coluna:valor} } }
+let dadosDivida = {};       // idem, para o RGF Anexo 2
+let evolucaoBimestral = []; // [{ bimestre, primarioApurado, primarioMeta, nominalApurado, nominalMeta }]
+let metaConsulta = {};
+let graficos = {};
+
+function moeda(valor){
+  return new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(Number(valor)||0);
+}
+function moedaCompacta(valor){
+  const v = Number(valor)||0;
+  const abs = Math.abs(v);
+  const sinal = v < 0 ? "-" : "";
+  if(abs >= 1e9) return sinal + (abs/1e9).toLocaleString("pt-BR",{maximumFractionDigits:2}) + " bi";
+  if(abs >= 1e6) return sinal + (abs/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi";
+  if(abs >= 1e3) return sinal + (abs/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil";
+  return v.toLocaleString("pt-BR",{maximumFractionDigits:2});
+}
+function moedaContabil(valor){
+  const v = Number(valor)||0;
+  const f = moeda(Math.abs(v));
+  return v < 0 ? `(${f})` : f;
+}
+function percentContabil(valor){
+  const v = Number(valor)||0;
+  const f = Math.abs(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%";
+  return v < 0 ? `(${f})` : f;
+}
+function escapeHtml(valor){
+  return String(valor ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+function mostrarStatus(texto,tipo="info"){
+  const el = $("status");
+  el.className = "alert alert-" + tipo + " status";
+  el.textContent = texto;
+}
+function mostrarLoading(sim, texto){
+  $("loading").classList.toggle("d-none",!sim);
+  if(texto) $("loadingTexto").textContent = texto;
+}
+
+function getValor(mapa, cod, coluna){
+  const item = mapa[cod];
+  if(!item) return 0;
+  const v = item.valores[coluna];
+  return typeof v === "number" ? v : 0;
+}
+function getConta(mapa, cod, fallback){
+  const item = mapa[cod];
+  return item ? item.conta : (fallback || cod);
+}
+
+function bimestreParaQuadrimestre(bimestre){
+  return Math.ceil(Number(bimestre) / 2);
+}
+
+function montarUrlRREO(bimestre){
+  const exercicio = $("filtroExercicio").value.trim();
+  const esfera = $("filtroEsfera").value.trim();
+  const ente = $("filtroEnte").value.trim();
+  const params = new URLSearchParams({
+    an_exercicio: exercicio,
+    nr_periodo: bimestre,
+    co_tipo_demonstrativo: "RREO",
+    no_anexo: "RREO-Anexo 14",
+    co_esfera: esfera,
+    id_ente: ente
+  });
+  return `${API_RREO}?${params.toString()}`;
+}
+
+function montarUrlRGF(quadrimestre){
+  const exercicio = $("filtroExercicio").value.trim();
+  const esfera = $("filtroEsfera").value.trim();
+  const poder = $("filtroPoder").value.trim();
+  const ente = $("filtroEnte").value.trim();
+  const params = new URLSearchParams({
+    an_exercicio: exercicio,
+    in_periodicidade: "Q",
+    nr_periodo: quadrimestre,
+    co_tipo_demonstrativo: "RGF",
+    no_anexo: "RGF-Anexo 02",
+    co_esfera: esfera,
+    co_poder: poder,
+    id_ente: ente
+  });
+  return `${API_RGF}?${params.toString()}`;
+}
+
+async function buscarJson(url){
+  const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+  if(!response.ok) throw new Error(`HTTP ${response.status}`);
+  const json = await response.json();
+  const lista = Array.isArray(json) ? json : json.items;
+  if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+  return lista;
+}
+
+function indexarPorConta(lista){
+  const mapa = {};
+  let meta = {};
+  lista.forEach(item=>{
+    if(!item || !item.cod_conta) return;
+    if(!mapa[item.cod_conta]) mapa[item.cod_conta] = { conta: item.conta, valores:{} };
+    mapa[item.cod_conta].valores[item.coluna] = Number(item.valor) || 0;
+    if(!meta.instituicao){
+      meta = { instituicao:item.instituicao, cod_ibge:item.cod_ibge, uf:item.uf, exercicio:item.exercicio, periodo:item.periodo };
+    }
+  });
+  return { mapa, meta };
+}
+
+async function consultarTudo(){
+  const bimestreAtual = Number($("filtroBimestre").value);
+  const quadrimestreAtual = bimestreParaQuadrimestre(bimestreAtual);
+  const urlRreo = montarUrlRREO(bimestreAtual);
+  const urlRgf = montarUrlRGF(quadrimestreAtual);
+  $("urlRreoTexto").textContent = urlRreo;
+  $("urlRgfTexto").textContent = urlRgf;
+
+  mostrarLoading(true, "Consultando RREO (Resultado Primário/Nominal) e RGF (Dívida Consolidada)...");
+  mostrarStatus(`Buscando dados do ${bimestreAtual}º bimestre (RREO) e do ${quadrimestreAtual}º quadrimestre (RGF)...`);
+
+  try {
+    const [listaRreo, listaRgf] = await Promise.all([
+      buscarJson(urlRreo),
+      buscarJson(urlRgf),
+    ]);
+
+    const idxRreo = indexarPorConta(listaRreo);
+    const idxRgf = indexarPorConta(listaRgf);
+    dadosAnexo14 = idxRreo.mapa;
+    dadosDivida = idxRgf.mapa;
+    metaConsulta = Object.assign({}, idxRreo.meta, { quadrimestre: quadrimestreAtual, bimestre: bimestreAtual });
+
+    mostrarStatus("Buscando evolução bimestral do exercício...");
+    await carregarEvolucaoBimestral(bimestreAtual);
+
+    await carregarPosicao(quadrimestreAtual);
+    atualizarCabecalho();
+    atualizarKPIs();
+    renderizarTabelas();
+    renderizarGraficos();
+
+    mostrarStatus(`Dados carregados com sucesso — ${bimestreAtual}º bimestre de ${$("filtroExercicio").value}.`, "success");
+  } catch (err) {
+    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Isso costuma acontecer por bloqueio de CORS do navegador para este domínio.`, "warning");
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+// Busca, em paralelo, o RREO-Anexo 14 de todos os bimestres de 1 até o
+// selecionado, para montar o gráfico de evolução no exercício.
+async function carregarEvolucaoBimestral(bimestreAtual){
+  const bimestres = [];
+  for(let b = 1; b <= bimestreAtual; b++) bimestres.push(b);
+
+  const resultados = await Promise.allSettled(
+    bimestres.map(b => buscarJson(montarUrlRREO(b)))
+  );
+
+  evolucaoBimestral = resultados.map((res, i) => {
+    const bimestre = bimestres[i];
+    if(res.status !== "fulfilled") return { bimestre, primarioApurado:null, primarioMeta:null, nominalApurado:null, nominalMeta:null };
+    const { mapa } = indexarPorConta(res.value);
+    return {
+      bimestre,
+      primarioApurado: getValor(mapa, COD_PRIMARIO, COL_APURADO),
+      primarioMeta: getValor(mapa, COD_PRIMARIO, COL_META),
+      nominalApurado: getValor(mapa, COD_NOMINAL, COL_APURADO),
+      nominalMeta: getValor(mapa, COD_NOMINAL, COL_META),
+    };
+  });
+}
+
+function atualizarCabecalho(){
+  if(!metaConsulta.instituicao) return;
+  $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+  $("kpiEnte").textContent = `${metaConsulta.instituicao} — ${metaConsulta.bimestre}º Bimestre/${metaConsulta.exercicio}`;
+  $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
+  $("printPeriodo").textContent = `Entidade: ${metaConsulta.instituicao} (IBGE ${metaConsulta.cod_ibge || "-"}) — ${metaConsulta.bimestre}º Bimestre / ${metaConsulta.quadrimestre}º Quadrimestre de ${metaConsulta.exercicio}`;
+}
+
+function situacaoResultado(valor, tipo){
+  // Para ambos, "bom" = superávit primário (valor positivo) e Resultado
+  // Nominal negativo (redução de dívida). O Resultado Nominal usa o sinal
+  // invertido em relação ao Primário.
+  const bom = valor >= 0;
+  return bom
+    ? { texto: tipo === "nominal" ? "Dívida líquida em redução" : "Superávit primário", classe:"verde" }
+    : { texto: tipo === "nominal" ? "Dívida líquida em expansão" : "Déficit primário", classe:"vermelho" };
+}
+
+function atualizarKPIs(){
+  const primarioApurado = getValor(dadosAnexo14, COD_PRIMARIO, COL_APURADO);
+  const primarioMeta = getValor(dadosAnexo14, COD_PRIMARIO, COL_META);
+  const primarioPerc = getValor(dadosAnexo14, COD_PRIMARIO, COL_PERC);
+  const nominalApurado = getValor(dadosAnexo14, COD_NOMINAL, COL_APURADO);
+  const nominalMeta = getValor(dadosAnexo14, COD_NOMINAL, COL_META);
+  const nominalPerc = getValor(dadosAnexo14, COD_NOMINAL, COL_PERC);
+  const rcl = getValor(dadosAnexo14, COD_RCL, COL_RCL_VALOR);
+
+  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(metaConsulta.quadrimestre || 1));
+  const dclAnterior = getValor(dadosDivida, COD_DCL, COL_SALDO_ANTERIOR);
+  const variacaoDcl = dclAtual - dclAnterior;
+
+  $("kpiPrimario").textContent = moedaContabil(primarioApurado);
+  $("kpiNominal").textContent = moedaContabil(nominalApurado);
+  $("kpiPercMetas").textContent = `${percentContabil(primarioPerc)} / ${percentContabil(nominalPerc)}`;
+  $("kpiRcl").textContent = moeda(rcl);
+  $("kpiDcl").textContent = moedaContabil(dclAtual);
+  $("kpiVariacaoDcl").textContent = moedaContabil(variacaoDcl);
+
+  const sitPrimario = situacaoResultado(primarioApurado, "primario");
+  $("kpiPrimario").className = "valor cor-" + sitPrimario.classe;
+  $("kpiPrimarioSituacao").textContent = sitPrimario.texto;
+  $("kpiPrimarioCard").className = "card kpi h-100 kpi-" + sitPrimario.classe;
+
+  const sitNominal = situacaoResultado(nominalApurado, "nominal");
+  $("kpiNominal").className = "valor cor-" + sitNominal.classe;
+  $("kpiNominalSituacao").textContent = sitNominal.texto;
+  $("kpiNominalCard").className = "card kpi h-100 kpi-" + sitNominal.classe;
+
+  // Convergência: diferença entre o Resultado Nominal apurado e a variação
+  // da DCL apurada de forma independente pelo RGF - Anexo 2.
+  const divergencia = nominalApurado + variacaoDcl;
+  const divergenciaPercRcl = rcl ? Math.abs(divergencia) / rcl * 100 : 0;
+  const convergente = divergenciaPercRcl < 1; // divergência menor que 1% da RCL: considerada aceitável
+  $("kpiConvergencia").textContent = convergente ? "Convergente" : "Divergência relevante";
+  $("kpiConvergencia").className = "valor cor-" + (convergente ? "verde" : "amarelo");
+  $("kpiConvergenciaCard").className = "card kpi h-100 kpi-" + (convergente ? "verde" : "amarelo");
+}
+
+// -------------------- Posição do município (cards por tema) --------------------
+
+let dadosPessoal = {};
+const norm = t => String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+function achar(mapa, re){ return Object.values(mapa).find(i => re.test(norm(i.conta))) || null; }
+function vcol(item, re){
+  if(!item) return null;
+  const k = Object.keys(item.valores).find(c => re.test(norm(c)));
+  return k === undefined ? null : item.valores[k];
+}
+function vexato(item, coluna){ return item && typeof item.valores[coluna] === "number" ? item.valores[coluna] : null; }
+const pct = n => n === null || n === undefined ? "-" : Number(n).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%";
+const ROTULO = { verde:"Confortável", amarelo:"Atenção", vermelho:"Crítico", cinza:"Sem dados" };
+
+async function carregarPosicao(quadrimestre){
+  dadosPessoal = {};
+  try{
+    const exercicio = $("filtroExercicio").value.trim();
+    const params = new URLSearchParams({ an_exercicio:exercicio, in_periodicidade:"Q", nr_periodo:quadrimestre, co_tipo_demonstrativo:"RGF",
+      no_anexo:"RGF-Anexo 01", co_esfera:$("filtroEsfera").value.trim(), co_poder:$("filtroPoder").value.trim(), id_ente:$("filtroEnte").value.trim() });
+    dadosPessoal = indexarPorConta(await buscarJson(`${API_RGF}?${params}`)).mapa;
+  }catch(e){ dadosPessoal = {}; }
+  renderizarPosicao();
+}
+
+// Procura a conta pelo nome OU pelo cod_conta (sem acentos/espaços) e devolve o % aplicado
+function pctAplicado(mapa, re){
+  for(const [cod,i] of Object.entries(mapa)){
+    if(!re.test(norm(i.conta + " " + cod))) continue;
+    const v = vcol(i, /aplicad/);
+    if(v !== null) return v;
+  }
+  return null;
+}
+
+function cardPosicao(tema, icone, status, destaque, linhas){
+  return `<div class="col-md-6 col-xl-4"><div class="card pos-card ${status}"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <span class="tema"><i class="bi ${icone}"></i> ${tema}</span><span class="sel ${status}">${ROTULO[status]}</span></div>
+    <div class="big mb-2">${destaque}</div>
+    <ul class="small ps-3 mb-0">${linhas.map(l => `<li>${l}</li>`).join("")}</ul></div></div></div>`;
+}
+
+function renderizarPosicao(){
+  const q = metaConsulta.quadrimestre || 1;
+  const qCol = colQuad(q), qAnt = q === 1 ? COL_SALDO_ANTERIOR : colQuad(q-1);
+  const rcl = getValor(dadosAnexo14, COD_RCL, COL_RCL_VALOR);
+  const cards = []; const alertas = []; let pior = "verde";
+  const ordem = { cinza:0, verde:1, amarelo:2, vermelho:3 };
+  const reg = (tema, st) => { if(ordem[st] > ordem[pior]) pior = st; if(st==="amarelo"||st==="vermelho") alertas.push(`${tema.toLowerCase()}${st==="vermelho"?" (crítico)":""}`); };
+
+  // 1. Resultado primário
+  const pMeta = getValor(dadosAnexo14, COD_PRIMARIO, COL_META), pAp = getValor(dadosAnexo14, COD_PRIMARIO, COL_APURADO);
+  const stP = pAp >= pMeta ? "verde" : "vermelho";
+  cards.push(cardPosicao("Resultado primário","bi-graph-up-arrow",stP, moedaContabil(pAp),
+    [`Meta da LDO: ${moedaContabil(pMeta)}`, pAp >= pMeta ? `Meta superada em ${moeda(pAp-pMeta)}` : `Abaixo da meta em ${moeda(pMeta-pAp)}`, pAp>=0?"Superávit primário no período":"Déficit primário no período"])); reg("Resultado primário", stP);
+
+  // 2. Endividamento
+  const dcl = vexato(achar(dadosDivida,/divida consolidada liquida/), qCol);
+  const rclAj = vexato(achar(dadosDivida,/ajustada.*endividamento/), qCol) || rcl;
+  const dclAnt = vexato(achar(dadosDivida,/divida consolidada liquida/), COL_SALDO_ANTERIOR);
+  if(dcl === null || !rclAj) cards.push(cardPosicao("Endividamento","bi-bank","cinza","-",["DCL não disponível para o período."]));
+  else {
+    const p = dcl/rclAj*100; const st = p > 120 ? "vermelho" : p >= 108 ? "amarelo" : "verde";
+    cards.push(cardPosicao("Endividamento","bi-bank",st,`${pct(p)} da RCL`,
+      [`DCL: ${moedaContabil(dcl)}`, `Limite do Senado: 120% (alerta em 108%)`, dclAnt!==null?`Variação no exercício: ${moedaContabil(dcl-dclAnt)}`:""].filter(Boolean))); reg("Endividamento", st);
+  }
+
+  // 3. Liquidez
+  const cx = achar(dadosDivida,/disponibilidade de caixa bruta/); const cxAt = vexato(cx,qCol), cxAnt = vexato(cx,qAnt);
+  if(cxAt === null) cards.push(cardPosicao("Liquidez","bi-cash-stack","cinza","-",["Caixa não disponível para o período."]));
+  else {
+    const dv = cxAnt === null ? null : cxAt - cxAnt; const st = dv !== null && dv < 0 ? "amarelo" : "verde";
+    cards.push(cardPosicao("Liquidez","bi-cash-stack",st,moeda(cxAt),
+      ["Disponibilidade de caixa bruta", dv===null?"":`${dv<0?"Queda":"Alta"} de ${moeda(Math.abs(dv))} no quadrimestre`, `Equivale a ${(cxAt/rcl*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}% da RCL`].filter(Boolean))); reg("Liquidez", st);
+  }
+
+  // 4. Pessoal (RGF Anexo 1, Poder Executivo)
+  const dtp = vcol(achar(dadosPessoal,/despesa total com pessoal/), /%/);
+  if(dtp === null) cards.push(cardPosicao("Despesa com pessoal","bi-people","cinza","-",["RGF Anexo 1 não disponível para o período."]));
+  else {
+    const lm = vcol(achar(dadosPessoal,/limite maximo/),/%/) ?? 54, lp = vcol(achar(dadosPessoal,/limite prudencial/),/%/) ?? 51.3, la = vcol(achar(dadosPessoal,/limite de alerta/),/%/) ?? 48.6;
+    const st = dtp > lm ? "vermelho" : dtp >= la ? "amarelo" : "verde";
+    cards.push(cardPosicao("Despesa com pessoal","bi-people",st,`${pct(dtp)} da RCL`,
+      [`Poder Executivo, últimos 12 meses`, `Alerta ${pct(la)} · Prudencial ${pct(lp)} · Máximo ${pct(lm)}`, dtp<la?`Folga até o alerta: ${(la-dtp).toFixed(2).replace(".",",")} p.p.`:`Acima do alerta em ${(dtp-la).toFixed(2).replace(".",",")} p.p.`])); reg("Despesa com pessoal", st);
+  }
+
+  // 5. Educação e saúde
+  const mde = pctAplicado(dadosAnexo14,/desenvolvimento.{0,3}do.{0,3}ensino|\bmde\b/), sau = pctAplicado(dadosAnexo14,/servicos.{0,3}publicos.{0,3}de.{0,3}saude|\basps\b/);
+  if(mde === null || sau === null) console.table(Object.entries(dadosAnexo14).map(([cod,i]) => ({ cod_conta:cod, conta:i.conta, colunas:Object.keys(i.valores).join(" | ") })));
+  const avalia = (v,min) => v === null ? "cinza" : v >= min ? "verde" : (q >= 3 ? "vermelho" : "amarelo");
+  const sM = avalia(mde,25), sS = avalia(sau,15), stE = [sM,sS].sort((a,b)=>ordem[b]-ordem[a])[0];
+  cards.push(cardPosicao("Educação e saúde","bi-mortarboard",stE,`${pct(mde)} · ${pct(sau)}`,
+    [`Ensino: ${pct(mde)} aplicado (mínimo anual 25%)`, `Saúde: ${pct(sau)} aplicado (mínimo anual 15%)`, stE==="cinza"?`Não encontrei as linhas no RREO (${Object.keys(dadosAnexo14).length} contas carregadas). Abra o Console (F12) para ver os nomes.`:(q<3?"Mínimos anuais: ainda há tempo até dezembro.":"Fechamento do exercício: mínimo deve estar cumprido.")])); reg("Educação e saúde", stE);
+
+  // 6. Risco de longo prazo
+  const atu = vexato(achar(dadosDivida,/passivo atuarial/), qCol);
+  const prec = (vexato(achar(dadosDivida,/precatorios posteriores.*vencidos/), qCol)||0) + (vexato(achar(dadosDivida,/precatorios posteriores.*nao incluidos/), qCol)||0);
+  if(atu === null && !prec) cards.push(cardPosicao("Risco de longo prazo","bi-hourglass-split","cinza","-",["Passivo atuarial e precatórios não disponíveis."]));
+  else {
+    const st = atu !== null && rcl && atu > rcl ? "amarelo" : "verde";
+    cards.push(cardPosicao("Risco de longo prazo","bi-hourglass-split",st,atu!==null?`${moeda(atu)}`:moeda(prec),
+      [atu!==null?`Passivo atuarial: ${(atu/rcl).toLocaleString("pt-BR",{maximumFractionDigits:2})}x a RCL (fora da dívida consolidada)`:"", `Precatórios posteriores a 05/05/2000: ${moeda(prec)}`].filter(Boolean))); reg("Risco de longo prazo", st);
+  }
+
+  $("cardsPosicao").innerHTML = cards.join("");
+  $("posicaoPeriodo").textContent = `Acumulado até o ${q}º quadrimestre de ${$("filtroExercicio").value} — ${metaConsulta.instituicao || "Campo Largo"}.`;
+  const msg = pior === "vermelho" ? `Há limite ultrapassado: ${alertas.join(", ")}.`
+    : pior === "amarelo" ? `Sem descumprimento de limites, com pontos de atenção em: ${alertas.join(", ")}.`
+    : "Posição confortável em todos os temas avaliados.";
+  const el = $("leitura"); el.className = "card leitura mb-3 " + pior; el.firstElementChild.innerHTML = `<strong>Leitura geral:</strong> ${msg}`;
+}
+
+// -------------------- Tabelas --------------------
+
+function linhaIndicador(mapa, cod, fallback){
+  const nome = getConta(mapa, cod, fallback);
+  const meta = getValor(mapa, cod, COL_META);
+  const apurado = getValor(mapa, cod, COL_APURADO);
+  const perc = getValor(mapa, cod, COL_PERC);
+  return `<tr class="total">
+    <td>${escapeHtml(nome)}</td>
+    <td class="valor">${moedaContabil(meta)}</td>
+    <td class="valor">${moedaContabil(apurado)}</td>
+    <td class="valor">${percentContabil(perc)}</td>
+  </tr>`;
+}
+
+function renderizarTabelas(){
+  const htmlPrimario = linhaIndicador(dadosAnexo14, COD_PRIMARIO, "RESULTADO PRIMÁRIO (SEM RPPS) — ACIMA DA LINHA");
+  const htmlNominal = linhaIndicador(dadosAnexo14, COD_NOMINAL, "RESULTADO NOMINAL (SEM RPPS) — ABAIXO DA LINHA");
+
+  $("tbodyPrimario").innerHTML = htmlPrimario;
+  $("tbodyNominal").innerHTML = htmlNominal;
+  $("printTbodyPrimario").innerHTML = htmlPrimario;
+  $("printTbodyNominal").innerHTML = htmlNominal;
+
+  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(metaConsulta.quadrimestre || 1));
+  const dclAnterior = getValor(dadosDivida, COD_DCL, COL_SALDO_ANTERIOR);
+  const variacaoDcl = dclAtual - dclAnterior;
+  const nominalApurado = getValor(dadosAnexo14, COD_NOMINAL, COL_APURADO);
+  const divergencia = nominalApurado + variacaoDcl;
+
+  const htmlValidacao = `
+    <tr><td>Dívida Consolidada Líquida — Saldo do Exercício Anterior</td><td class="valor">${moedaContabil(dclAnterior)}</td></tr>
+    <tr><td>Dívida Consolidada Líquida — Até o ${metaConsulta.quadrimestre || "-"}º Quadrimestre</td><td class="valor">${moedaContabil(dclAtual)}</td></tr>
+    <tr class="total"><td>Variação da DCL no Exercício (independente, via RGF)</td><td class="valor">${moedaContabil(variacaoDcl)}</td></tr>
+    <tr><td>Resultado Nominal Apurado (RREO - Anexo 14)</td><td class="valor">${moedaContabil(nominalApurado)}</td></tr>
+    <tr class="total"><td>Divergência entre as duas fontes</td><td class="valor">${moedaContabil(divergencia)}</td></tr>
+  `;
+  $("tbodyValidacao").innerHTML = htmlValidacao;
+  $("printTbodyValidacao").innerHTML = htmlValidacao;
+}
+
+// -------------------- Gráficos --------------------
+
+function destruirGrafico(id){
+  if(graficos[id]){ graficos[id].destroy(); delete graficos[id]; }
+}
+
+function renderizarGraficos(){
+  graficoPrimario();
+  graficoNominal();
+  graficoEvolucao();
+  graficoConvergencia();
+  graficoPainelMetas();
+}
+
+// 1. Resultado Primário: Meta x Apurado
+function graficoPrimario(){
+  const meta = getValor(dadosAnexo14, COD_PRIMARIO, COL_META);
+  const apurado = getValor(dadosAnexo14, COD_PRIMARIO, COL_APURADO);
+  const perc = getValor(dadosAnexo14, COD_PRIMARIO, COL_PERC);
+  const sit = situacaoResultado(apurado, "primario");
+
+  $("descPrimario").textContent = `Apurado: ${moedaContabil(apurado)} (${percentContabil(perc)} da meta) — ${sit.texto}.`;
+
+  destruirGrafico("primario");
+  graficos.primario = new Chart($("graficoPrimario"), {
+    type: "bar",
+    data: { labels:["Meta (LDO)","Apurado"], datasets:[{ data:[meta, apurado], backgroundColor:[CORES[1], sit.classe==="verde"?CORES[4]:CORES[3]] }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 2. Resultado Nominal: Meta x Apurado
+function graficoNominal(){
+  const meta = getValor(dadosAnexo14, COD_NOMINAL, COL_META);
+  const apurado = getValor(dadosAnexo14, COD_NOMINAL, COL_APURADO);
+  const perc = getValor(dadosAnexo14, COD_NOMINAL, COL_PERC);
+  const sit = situacaoResultado(apurado, "nominal");
+
+  $("descNominal").textContent = `Apurado: ${moedaContabil(apurado)} (${percentContabil(perc)} da meta) — ${sit.texto}.`;
+
+  destruirGrafico("nominal");
+  graficos.nominal = new Chart($("graficoNominal"), {
+    type: "bar",
+    data: { labels:["Meta (LDO)","Apurado"], datasets:[{ data:[meta, apurado], backgroundColor:[CORES[1], sit.classe==="verde"?CORES[4]:CORES[3]] }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 3. Evolução bimestral no exercício
+function graficoEvolucao(){
+  const labels = evolucaoBimestral.map(e => `${e.bimestre}º Bim.`);
+  const primario = evolucaoBimestral.map(e => e.primarioApurado);
+  const nominal = evolucaoBimestral.map(e => e.nominalApurado);
+
+  const bimestresComFalha = evolucaoBimestral.filter(e => e.primarioApurado === null).length;
+  $("descEvolucao").textContent = bimestresComFalha > 0
+    ? `${bimestresComFalha} bimestre(s) não puderam ser carregados (dados podem não estar disponíveis para o período).`
+    : "Resultado Primário e Nominal apurados, bimestre a bimestre, desde o início do exercício.";
+
+  destruirGrafico("evolucao");
+  graficos.evolucao = new Chart($("graficoEvolucao"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label:"Resultado Primário", data:primario, borderColor:CORES[0], backgroundColor:CORES[0], tension:.25, spanGaps:true },
+        { label:"Resultado Nominal", data:nominal, borderColor:CORES[3], backgroundColor:CORES[3], tension:.25, spanGaps:true },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${moedaContabil(ctx.raw)}` } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 4. Convergência: Resultado Nominal x Variação da DCL
+function graficoConvergencia(){
+  const nominalApurado = getValor(dadosAnexo14, COD_NOMINAL, COL_APURADO);
+  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(metaConsulta.quadrimestre || 1));
+  const dclAnterior = getValor(dadosDivida, COD_DCL, COL_SALDO_ANTERIOR);
+  const variacaoDcl = dclAtual - dclAnterior;
+  const divergencia = nominalApurado + variacaoDcl;
+  const rcl = getValor(dadosAnexo14, COD_RCL, COL_RCL_VALOR);
+  const divergenciaPercRcl = rcl ? Math.abs(divergencia) / rcl * 100 : 0;
+
+  $("descConvergencia").textContent = `Divergência: ${moedaContabil(divergencia)} (${divergenciaPercRcl.toFixed(2)}% da RCL) — ${divergenciaPercRcl < 1 ? "considerada aceitável" : "vale investigar a causa"}.`;
+
+  destruirGrafico("convergencia");
+  graficos.convergencia = new Chart($("graficoConvergencia"), {
+    type: "bar",
+    data: {
+      labels: ["Resultado Nominal Apurado (RREO)", "Redução da DCL (RGF)"],
+      datasets: [{ data:[nominalApurado, -variacaoDcl], backgroundColor:[CORES[3], CORES[6]] }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moedaContabil(ctx.raw) } } },
+      scales:{ y:{ ticks:{ callback: v => moedaCompacta(v) } } }
+    }
+  });
+}
+
+// 5. Painel de metas fiscais (% atingido)
+function graficoPainelMetas(){
+  const primarioPerc = getValor(dadosAnexo14, COD_PRIMARIO, COL_PERC);
+  const nominalPerc = getValor(dadosAnexo14, COD_NOMINAL, COL_PERC);
+
+  destruirGrafico("painelMetas");
+  graficos.painelMetas = new Chart($("graficoPainelMetas"), {
+    type: "bar",
+    data: {
+      labels: ["Resultado Primário", "Resultado Nominal"],
+      datasets: [
+        { label:"% da Meta Atingido", data:[primarioPerc, nominalPerc], backgroundColor:[CORES[0], CORES[6]] },
+        { label:"Referência (100%)", data:[100,100], backgroundColor:"rgba(220,53,69,.35)" },
+      ]
+    },
+    options: {
+      indexAxis:"y",
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${percentContabil(ctx.raw)}` } } },
+      scales:{ x:{ ticks:{ callback: v => v+"%" } } }
+    }
+  });
+}
+
+// -------------------- Exportação CSV --------------------
+
+function exportarCSV(){
+  const linhas = [
+    ["Resultado Primário", getConta(dadosAnexo14,COD_PRIMARIO), getValor(dadosAnexo14,COD_PRIMARIO,COL_META), getValor(dadosAnexo14,COD_PRIMARIO,COL_APURADO), getValor(dadosAnexo14,COD_PRIMARIO,COL_PERC)],
+    ["Resultado Nominal", getConta(dadosAnexo14,COD_NOMINAL), getValor(dadosAnexo14,COD_NOMINAL,COL_META), getValor(dadosAnexo14,COD_NOMINAL,COL_APURADO), getValor(dadosAnexo14,COD_NOMINAL,COL_PERC)],
+  ];
+  evolucaoBimestral.forEach(e => {
+    linhas.push([`Evolução - ${e.bimestre}º Bimestre`, "Resultado Primário Apurado", "", e.primarioApurado, ""]);
+    linhas.push([`Evolução - ${e.bimestre}º Bimestre`, "Resultado Nominal Apurado", "", e.nominalApurado, ""]);
+  });
+
+  const cabecalho = ["Indicador","Conceito","Meta (a)","Apurado (b)","% da Meta (b/a)"];
+  const csv = [cabecalho,...linhas]
+    .map(linha=> linha.map(v=> `"${String(v ?? "").replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "resultado_primario_nominal_campo_largo.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// -------------------- Alternância Tabelas / Gráficos --------------------
+
+$("btnVerTabelas").addEventListener("click", function(){
+  $("viewTabelas").classList.remove("d-none");
+  $("viewGraficos").classList.add("d-none");
+  $("btnVerTabelas").classList.add("active");
+  $("btnVerGraficos").classList.remove("active");
+});
+$("btnVerGraficos").addEventListener("click", function(){
+  $("viewGraficos").classList.remove("d-none");
+  $("viewTabelas").classList.add("d-none");
+  $("btnVerGraficos").classList.add("active");
+  $("btnVerTabelas").classList.remove("active");
+  Object.values(graficos).forEach(g => g && g.resize && g.resize());
+});
+
+// -------------------- Impressão / PDF --------------------
+
+function prepararEImprimir(){
+  if(!Object.keys(dadosAnexo14).length){
+    alert("Não há dados carregados para imprimir. Faça uma consulta primeiro.");
+    return;
+  }
+  $("printDataHora").textContent = new Date().toLocaleString("pt-BR");
+  window.print();
+}
+
+$("btnImprimir").addEventListener("click", prepararEImprimir);
+$("btnConsultar").addEventListener("click", consultarTudo);
+$("btnCsv").addEventListener("click", exportarCSV);
+
+// Inicia consulta ao carregar a página
+consultarTudo();
+</script>
+
+</body>
+</html>
