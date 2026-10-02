@@ -45,6 +45,17 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .chart-card-desc{font-size:.8rem;color:#6c757d}
 .badge-fonte{font-size:.7rem}
 
+
+.pos-card{border-top:6px solid #adb5bd;height:100%}
+.pos-card.verde{border-top-color:var(--verde)}.pos-card.amarelo{border-top-color:var(--amarelo)}.pos-card.vermelho{border-top-color:var(--vermelho)}
+.pos-card .tema{font-weight:700;color:var(--azul-escuro)}
+.pos-card .big{font-size:1.55rem;font-weight:700;line-height:1.1}
+.pos-card li{margin-bottom:.15rem}
+.sel{display:inline-block;padding:.1rem .55rem;border-radius:20px;font-size:.74rem;font-weight:700;color:#fff;background:#6c757d}
+.sel.verde{background:var(--verde)}.sel.amarelo{background:var(--amarelo)}.sel.vermelho{background:var(--vermelho)}
+.leitura{border-left:6px solid #6c757d;background:#fff}
+.leitura.verde{border-left-color:var(--verde)}.leitura.amarelo{border-left-color:var(--amarelo)}.leitura.vermelho{border-left-color:var(--vermelho)}
+
 /* ---------- Área de impressão / PDF ---------- */
 #printArea{display:none}
 @media print{
@@ -110,14 +121,11 @@ Aguardando consulta...
 </div>
 
 <div class="col-md-4">
-<label class="form-label fw-semibold">Bimestre (RREO)</label>
+<label class="form-label fw-semibold">Quadrimestre</label>
 <select id="filtroBimestre" class="form-select">
-<option value="1">1º Bimestre (Jan-Fev)</option>
-<option value="2">2º Bimestre (Mar-Abr)</option>
-<option value="3">3º Bimestre (Mai-Jun)</option>
-<option value="4">4º Bimestre (Jul-Ago)</option>
-<option value="5">5º Bimestre (Set-Out)</option>
-<option value="6">6º Bimestre (Nov-Dez)</option>
+<option value="2">1º Quadrimestre (Jan-Abr)</option>
+<option value="4" selected>2º Quadrimestre (Mai-Ago)</option>
+<option value="6">3º Quadrimestre (Set-Dez)</option>
 </select>
 </div>
 
@@ -154,6 +162,26 @@ Aguardando consulta...
 </div>
 </div>
 
+<div class="border rounded p-3 mt-3 bg-light">
+<div class="fw-semibold mb-2"><i class="bi bi-filetype-json"></i> Dados paralelos (JSON)</div>
+<div class="row g-2 align-items-end">
+<div class="col-md-5">
+<label class="form-label small mb-1" for="selAnexoJson">Anexo que este arquivo contém</label>
+<select id="selAnexoJson" class="form-select form-select-sm">
+<option value="rreo">RREO - Anexo 14 (primário, nominal, ensino, saúde)</option>
+<option value="rgf1">RGF - Anexo 1 (despesa com pessoal)</option>
+<option value="rgf2">RGF - Anexo 2 (dívida consolidada líquida)</option>
+</select>
+</div>
+<div class="col-md-auto">
+<button type="button" id="btnAnexarJson" class="btn btn-outline-primary btn-sm"><i class="bi bi-paperclip"></i> Anexar JSON</button>
+<input type="file" id="arquivoJson" accept=".json,application/json" class="d-none">
+</div>
+<div class="col-md small-muted">Use o JSON no mesmo formato da API do Siconfi. O arquivo anexado substitui a consulta daquele anexo.</div>
+</div>
+<div id="listaManuais" class="mt-2 d-flex gap-2 flex-wrap"></div>
+</div>
+
 <div class="small-muted mt-3">
 Resultado Primário/Nominal — RREO Anexo 14: <code id="urlRreoTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rreo</code><br>
 Dívida Consolidada Líquida (cruzamento) — RGF Anexo 2: <code id="urlRgfTexto">https://apidatalake.tesouro.gov.br/ords/cdwhprd/siconfi/tt/rgf</code>
@@ -170,6 +198,14 @@ Dívida Consolidada Líquida (cruzamento) — RGF Anexo 2: <code id="urlRgfTexto
 <div class="spinner-border text-primary" role="status"></div>
 <div class="mt-2 text-muted" id="loadingTexto">Consultando a API...</div>
 </div>
+
+<section id="posicao" class="mb-4">
+<h4 class="mb-1">Posição do município</h4>
+<div class="small-muted mb-3" id="posicaoPeriodo">Acumulado até o quadrimestre selecionado.</div>
+<div id="leitura" class="card leitura mb-3 d-none"><div class="card-body py-3"></div></div>
+<div class="row g-3" id="cardsPosicao"></div>
+<div class="small-muted mt-2">Faixas: verde = dentro da folga; amarelo = atenção; vermelho = limite ultrapassado. Mínimos de saúde e educação são anuais: abaixo do mínimo antes do 3º quadrimestre fica em atenção. Dados ausentes na API aparecem em cinza.</div>
+</section>
 
 <section class="row g-3 mb-4">
 
@@ -579,11 +615,14 @@ async function consultarTudo(){
     const idxRgf = indexarPorConta(listaRgf);
     dadosAnexo14 = idxRreo.mapa;
     dadosDivida = idxRgf.mapa;
+    if(manuais.rreo) dadosAnexo14 = manuais.rreo;
+    if(manuais.rgf2) dadosDivida = manuais.rgf2;
     metaConsulta = Object.assign({}, idxRreo.meta, { quadrimestre: quadrimestreAtual, bimestre: bimestreAtual });
 
     mostrarStatus("Buscando evolução bimestral do exercício...");
     await carregarEvolucaoBimestral(bimestreAtual);
 
+    await carregarPosicao(quadrimestreAtual);
     atualizarCabecalho();
     atualizarKPIs();
     renderizarTabelas();
@@ -592,6 +631,7 @@ async function consultarTudo(){
     mostrarStatus(`Dados carregados com sucesso — ${bimestreAtual}º bimestre de ${$("filtroExercicio").value}.`, "success");
   } catch (err) {
     mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Isso costuma acontecer por bloqueio de CORS do navegador para este domínio.`, "warning");
+    if(manuais.rreo || manuais.rgf1 || manuais.rgf2){ aplicarManuais(); mostrarStatus("API indisponível: exibindo os dados anexados manualmente.", "warning"); }
   } finally {
     mostrarLoading(false);
   }
@@ -633,7 +673,7 @@ function situacaoResultado(valor, tipo){
   // Para ambos, "bom" = superávit primário (valor positivo) e Resultado
   // Nominal negativo (redução de dívida). O Resultado Nominal usa o sinal
   // invertido em relação ao Primário.
-  const bom = tipo === "nominal" ? valor <= 0 : valor >= 0;
+  const bom = valor >= 0;
   return bom
     ? { texto: tipo === "nominal" ? "Dívida líquida em redução" : "Superávit primário", classe:"verde" }
     : { texto: tipo === "nominal" ? "Dívida líquida em expansão" : "Déficit primário", classe:"vermelho" };
@@ -671,13 +711,177 @@ function atualizarKPIs(){
 
   // Convergência: diferença entre o Resultado Nominal apurado e a variação
   // da DCL apurada de forma independente pelo RGF - Anexo 2.
-  const divergencia = nominalApurado - variacaoDcl;
+  const divergencia = nominalApurado + variacaoDcl;
   const divergenciaPercRcl = rcl ? Math.abs(divergencia) / rcl * 100 : 0;
   const convergente = divergenciaPercRcl < 1; // divergência menor que 1% da RCL: considerada aceitável
   $("kpiConvergencia").textContent = convergente ? "Convergente" : "Divergência relevante";
   $("kpiConvergencia").className = "valor cor-" + (convergente ? "verde" : "amarelo");
   $("kpiConvergenciaCard").className = "card kpi h-100 kpi-" + (convergente ? "verde" : "amarelo");
 }
+
+// -------------------- Posição do município (cards por tema) --------------------
+
+let dadosPessoal = {};
+const norm = t => String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+function achar(mapa, re){ return Object.values(mapa).find(i => re.test(norm(i.conta))) || null; }
+function vcol(item, re){
+  if(!item) return null;
+  const k = Object.keys(item.valores).find(c => re.test(norm(c)));
+  return k === undefined ? null : item.valores[k];
+}
+function vexato(item, coluna){ return item && typeof item.valores[coluna] === "number" ? item.valores[coluna] : null; }
+const pct = n => n === null || n === undefined ? "-" : Number(n).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%";
+const ROTULO = { verde:"Confortável", amarelo:"Atenção", vermelho:"Crítico", cinza:"Sem dados" };
+
+async function carregarPosicao(quadrimestre){
+  dadosPessoal = {};
+  try{
+    const exercicio = $("filtroExercicio").value.trim();
+    const params = new URLSearchParams({ an_exercicio:exercicio, in_periodicidade:"Q", nr_periodo:quadrimestre, co_tipo_demonstrativo:"RGF",
+      no_anexo:"RGF-Anexo 01", co_esfera:$("filtroEsfera").value.trim(), co_poder:$("filtroPoder").value.trim(), id_ente:$("filtroEnte").value.trim() });
+    dadosPessoal = indexarPorConta(await buscarJson(`${API_RGF}?${params}`)).mapa;
+  }catch(e){ dadosPessoal = {}; }
+  if(manuais.rgf1) dadosPessoal = manuais.rgf1;
+  renderizarPosicao();
+}
+
+// Procura a conta pelo nome OU pelo cod_conta (sem acentos/espaços) e devolve o % aplicado
+function pctAplicado(mapa, re){
+  for(const [cod,i] of Object.entries(mapa)){
+    if(!re.test(norm(i.conta + " " + cod))) continue;
+    const v = vcol(i, /aplicad/);
+    if(v !== null) return v;
+  }
+  return null;
+}
+
+function cardPosicao(tema, icone, status, destaque, linhas){
+  return `<div class="col-md-6 col-xl-4"><div class="card pos-card ${status}"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <span class="tema"><i class="bi ${icone}"></i> ${tema}</span><span class="sel ${status}">${ROTULO[status]}</span></div>
+    <div class="big mb-2">${destaque}</div>
+    <ul class="small ps-3 mb-0">${linhas.map(l => `<li>${l}</li>`).join("")}</ul></div></div></div>`;
+}
+
+function renderizarPosicao(){
+  const q = metaConsulta.quadrimestre || 1;
+  const qCol = colQuad(q), qAnt = q === 1 ? COL_SALDO_ANTERIOR : colQuad(q-1);
+  const rcl = getValor(dadosAnexo14, COD_RCL, COL_RCL_VALOR);
+  const cards = []; const alertas = []; let pior = "verde";
+  const ordem = { cinza:0, verde:1, amarelo:2, vermelho:3 };
+  const reg = (tema, st) => { if(ordem[st] > ordem[pior]) pior = st; if(st==="amarelo"||st==="vermelho") alertas.push(`${tema.toLowerCase()}${st==="vermelho"?" (crítico)":""}`); };
+
+  // 1. Resultado primário
+  const pMeta = getValor(dadosAnexo14, COD_PRIMARIO, COL_META), pAp = getValor(dadosAnexo14, COD_PRIMARIO, COL_APURADO);
+  const stP = pAp >= pMeta ? "verde" : "vermelho";
+  cards.push(cardPosicao("Resultado primário","bi-graph-up-arrow",stP, moedaContabil(pAp),
+    [`Meta da LDO: ${moedaContabil(pMeta)}`, pAp >= pMeta ? `Meta superada em ${moeda(pAp-pMeta)}` : `Abaixo da meta em ${moeda(pMeta-pAp)}`, pAp>=0?"Superávit primário no período":"Déficit primário no período"])); reg("Resultado primário", stP);
+
+  // 2. Endividamento
+  const dcl = vexato(achar(dadosDivida,/divida consolidada liquida/), qCol);
+  const rclAj = vexato(achar(dadosDivida,/ajustada.*endividamento/), qCol) || rcl;
+  const dclAnt = vexato(achar(dadosDivida,/divida consolidada liquida/), COL_SALDO_ANTERIOR);
+  if(dcl === null || !rclAj) cards.push(cardPosicao("Endividamento","bi-bank","cinza","-",["DCL não disponível para o período."]));
+  else {
+    const p = dcl/rclAj*100; const st = p > 120 ? "vermelho" : p >= 108 ? "amarelo" : "verde";
+    cards.push(cardPosicao("Endividamento","bi-bank",st,`${pct(p)} da RCL`,
+      [`DCL: ${moedaContabil(dcl)}`, `Limite do Senado: 120% (alerta em 108%)`, dclAnt!==null?`Variação no exercício: ${moedaContabil(dcl-dclAnt)}`:""].filter(Boolean))); reg("Endividamento", st);
+  }
+
+  // 3. Liquidez
+  const cx = achar(dadosDivida,/disponibilidade de caixa bruta/); const cxAt = vexato(cx,qCol), cxAnt = vexato(cx,qAnt);
+  if(cxAt === null) cards.push(cardPosicao("Liquidez","bi-cash-stack","cinza","-",["Caixa não disponível para o período."]));
+  else {
+    const dv = cxAnt === null ? null : cxAt - cxAnt; const st = dv !== null && dv < 0 ? "amarelo" : "verde";
+    cards.push(cardPosicao("Liquidez","bi-cash-stack",st,moeda(cxAt),
+      ["Disponibilidade de caixa bruta", dv===null?"":`${dv<0?"Queda":"Alta"} de ${moeda(Math.abs(dv))} no quadrimestre`, `Equivale a ${(cxAt/rcl*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}% da RCL`].filter(Boolean))); reg("Liquidez", st);
+  }
+
+  // 4. Pessoal (RGF Anexo 1, Poder Executivo)
+  const dtp = vcol(achar(dadosPessoal,/despesa total com pessoal/), /%/);
+  if(dtp === null) cards.push(cardPosicao("Despesa com pessoal","bi-people","cinza","-",["RGF Anexo 1 não disponível para o período."]));
+  else {
+    const lm = vcol(achar(dadosPessoal,/limite maximo/),/%/) ?? 54, lp = vcol(achar(dadosPessoal,/limite prudencial/),/%/) ?? 51.3, la = vcol(achar(dadosPessoal,/limite de alerta/),/%/) ?? 48.6;
+    const st = dtp > lm ? "vermelho" : dtp >= la ? "amarelo" : "verde";
+    cards.push(cardPosicao("Despesa com pessoal","bi-people",st,`${pct(dtp)} da RCL`,
+      [`Poder Executivo, últimos 12 meses`, `Alerta ${pct(la)} · Prudencial ${pct(lp)} · Máximo ${pct(lm)}`, dtp<la?`Folga até o alerta: ${(la-dtp).toFixed(2).replace(".",",")} p.p.`:`Acima do alerta em ${(dtp-la).toFixed(2).replace(".",",")} p.p.`])); reg("Despesa com pessoal", st);
+  }
+
+  // 5. Educação e saúde
+  const mde = pctAplicado(dadosAnexo14,/desenvolvimento.{0,3}do.{0,3}ensino|\bmde\b/), sau = pctAplicado(dadosAnexo14,/servicos.{0,3}publicos.{0,3}de.{0,3}saude|\basps\b/);
+  if(mde === null || sau === null) console.table(Object.entries(dadosAnexo14).map(([cod,i]) => ({ cod_conta:cod, conta:i.conta, colunas:Object.keys(i.valores).join(" | ") })));
+  const avalia = (v,min) => v === null ? "cinza" : v >= min ? "verde" : (q >= 3 ? "vermelho" : "amarelo");
+  const sM = avalia(mde,25), sS = avalia(sau,15), stE = [sM,sS].sort((a,b)=>ordem[b]-ordem[a])[0];
+  cards.push(cardPosicao("Educação e saúde","bi-mortarboard",stE,`${pct(mde)} · ${pct(sau)}`,
+    [`Ensino: ${pct(mde)} aplicado (mínimo anual 25%)`, `Saúde: ${pct(sau)} aplicado (mínimo anual 15%)`, stE==="cinza"?`Não encontrei as linhas no RREO (${Object.keys(dadosAnexo14).length} contas carregadas). Abra o Console (F12) para ver os nomes.`:(q<3?"Mínimos anuais: ainda há tempo até dezembro.":"Fechamento do exercício: mínimo deve estar cumprido.")])); reg("Educação e saúde", stE);
+
+  // 6. Risco de longo prazo
+  const atu = vexato(achar(dadosDivida,/passivo atuarial/), qCol);
+  const prec = (vexato(achar(dadosDivida,/precatorios posteriores.*vencidos/), qCol)||0) + (vexato(achar(dadosDivida,/precatorios posteriores.*nao incluidos/), qCol)||0);
+  if(atu === null && !prec) cards.push(cardPosicao("Risco de longo prazo","bi-hourglass-split","cinza","-",["Passivo atuarial e precatórios não disponíveis."]));
+  else {
+    const st = atu !== null && rcl && atu > rcl ? "amarelo" : "verde";
+    cards.push(cardPosicao("Risco de longo prazo","bi-hourglass-split",st,atu!==null?`${moeda(atu)}`:moeda(prec),
+      [atu!==null?`Passivo atuarial: ${(atu/rcl).toLocaleString("pt-BR",{maximumFractionDigits:2})}x a RCL (fora da dívida consolidada)`:"", `Precatórios posteriores a 05/05/2000: ${moeda(prec)}`].filter(Boolean))); reg("Risco de longo prazo", st);
+  }
+
+  $("cardsPosicao").innerHTML = cards.join("");
+  $("posicaoPeriodo").textContent = `Acumulado até o ${q}º quadrimestre de ${$("filtroExercicio").value} — ${metaConsulta.instituicao || "Campo Largo"}.`;
+  const msg = pior === "vermelho" ? `Há limite ultrapassado: ${alertas.join(", ")}.`
+    : pior === "amarelo" ? `Sem descumprimento de limites, com pontos de atenção em: ${alertas.join(", ")}.`
+    : "Posição confortável em todos os temas avaliados.";
+  const el = $("leitura"); el.className = "card leitura mb-3 " + pior; el.firstElementChild.innerHTML = `<strong>Leitura geral:</strong> ${msg}`;
+}
+
+// -------------------- Dados paralelos (JSON anexado) --------------------
+
+const manuais = { rreo:null, rgf1:null, rgf2:null };
+const manuaisArquivo = {};
+const ROT_ANEXO = { rreo:"RREO Anexo 14", rgf1:"RGF Anexo 1", rgf2:"RGF Anexo 2" };
+const RE_ANEXO = { rreo:/rreo.*14/i, rgf1:/rgf.*\b0?1\b/i, rgf2:/rgf.*\b0?2\b/i };
+
+function renderTudo(){ atualizarCabecalho(); atualizarKPIs(); renderizarTabelas(); renderizarGraficos(); renderizarPosicao(); }
+
+function aplicarManuais(){
+  if(manuais.rreo) dadosAnexo14 = manuais.rreo;
+  if(manuais.rgf2) dadosDivida = manuais.rgf2;
+  if(manuais.rgf1) dadosPessoal = manuais.rgf1;
+  renderTudo();
+}
+
+function listarManuais(){
+  $("listaManuais").innerHTML = Object.keys(manuais).filter(k => manuais[k]).map(k =>
+    `<span class="badge text-bg-primary">${ROT_ANEXO[k]}: ${escapeHtml(manuaisArquivo[k])} <a href="#" class="text-white ms-1" data-rm="${k}" title="Remover e voltar à API">&times;</a></span>`).join("");
+}
+
+$("btnAnexarJson").addEventListener("click", () => $("arquivoJson").click());
+
+$("arquivoJson").addEventListener("change", async ev => {
+  const arquivo = ev.target.files[0]; ev.target.value = "";
+  if(!arquivo) return;
+  const tipo = $("selAnexoJson").value;
+  try{
+    const json = JSON.parse(await arquivo.text());
+    const lista = Array.isArray(json) ? json : json.items;
+    if(!Array.isArray(lista) || !lista.some(i => i && i.cod_conta)) throw new Error("o arquivo não tem a estrutura da API do Siconfi (lista de itens com cod_conta).");
+    const idx = indexarPorConta(lista);
+    const anexoArq = (lista.find(i => i && i.anexo) || {}).anexo;
+    const b = Number($("filtroBimestre").value);
+    metaConsulta = Object.assign({}, idx.meta, metaConsulta, { bimestre:b, quadrimestre:bimestreParaQuadrimestre(b) });
+    manuais[tipo] = idx.mapa; manuaisArquivo[tipo] = arquivo.name;
+    aplicarManuais(); listarManuais();
+    const diverge = anexoArq && !RE_ANEXO[tipo].test(anexoArq);
+    mostrarStatus(diverge ? `Arquivo carregado como ${ROT_ANEXO[tipo]}, mas ele se identifica como "${anexoArq}". Confira se escolheu o anexo certo.` : `${ROT_ANEXO[tipo]} carregado de "${arquivo.name}".`, diverge ? "warning" : "success");
+  }catch(e){
+    mostrarStatus(`Não foi possível ler o JSON (${e.message})`, "danger");
+  }
+});
+
+$("listaManuais").addEventListener("click", ev => {
+  const k = ev.target.dataset && ev.target.dataset.rm;
+  if(!k) return;
+  ev.preventDefault(); manuais[k] = null; delete manuaisArquivo[k]; listarManuais(); consultarTudo();
+});
 
 // -------------------- Tabelas --------------------
 
@@ -707,7 +911,7 @@ function renderizarTabelas(){
   const dclAnterior = getValor(dadosDivida, COD_DCL, COL_SALDO_ANTERIOR);
   const variacaoDcl = dclAtual - dclAnterior;
   const nominalApurado = getValor(dadosAnexo14, COD_NOMINAL, COL_APURADO);
-  const divergencia = nominalApurado - variacaoDcl;
+  const divergencia = nominalApurado + variacaoDcl;
 
   const htmlValidacao = `
     <tr><td>Dívida Consolidada Líquida — Saldo do Exercício Anterior</td><td class="valor">${moedaContabil(dclAnterior)}</td></tr>
@@ -811,7 +1015,7 @@ function graficoConvergencia(){
   const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(metaConsulta.quadrimestre || 1));
   const dclAnterior = getValor(dadosDivida, COD_DCL, COL_SALDO_ANTERIOR);
   const variacaoDcl = dclAtual - dclAnterior;
-  const divergencia = nominalApurado - variacaoDcl;
+  const divergencia = nominalApurado + variacaoDcl;
   const rcl = getValor(dadosAnexo14, COD_RCL, COL_RCL_VALOR);
   const divergenciaPercRcl = rcl ? Math.abs(divergencia) / rcl * 100 : 0;
 
@@ -821,8 +1025,8 @@ function graficoConvergencia(){
   graficos.convergencia = new Chart($("graficoConvergencia"), {
     type: "bar",
     data: {
-      labels: ["Resultado Nominal Apurado (RREO)", "Variação da DCL (RGF)"],
-      datasets: [{ data:[nominalApurado, variacaoDcl], backgroundColor:[CORES[3], CORES[6]] }]
+      labels: ["Resultado Nominal Apurado (RREO)", "Redução da DCL (RGF)"],
+      datasets: [{ data:[nominalApurado, -variacaoDcl], backgroundColor:[CORES[3], CORES[6]] }]
     },
     options: {
       responsive:true, maintainAspectRatio:false,
