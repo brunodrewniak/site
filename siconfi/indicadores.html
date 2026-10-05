@@ -969,7 +969,7 @@ async function carregarEvolucaoBimestral(bimestreAtual){
 
 function atualizarCabecalho(){
   if(!metaConsulta.instituicao) return;
-  $("navInstituicao").textContent = `${metaConsulta.instituicao} — ${metaConsulta.uf || ""}`;
+  $("navInstituicao").textContent = `${metaConsulta.instituicao}`;
   $("kpiEnte").textContent = `${metaConsulta.instituicao} — ${metaConsulta.bimestre}º Bimestre/${metaConsulta.exercicio}`;
   $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
   $("printPeriodo").textContent = `Entidade: ${metaConsulta.instituicao} (IBGE ${metaConsulta.cod_ibge || "-"}) — ${metaConsulta.bimestre}º Bimestre / ${metaConsulta.quadrimestre}º Quadrimestre de ${metaConsulta.exercicio}`;
