@@ -21,12 +21,17 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             border: 1px solid #e2e8f0;
         }
+        th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        th.sortable:hover { background-color: #e2e8f0; }
+        @media print {
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <div class="max-w-7xl mx-auto space-y-6">
-        
+
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-900 text-white p-6 rounded-2xl shadow-lg">
             <div>
@@ -34,7 +39,7 @@
                 <h1 class="text-2xl md:text-3xl font-bold mt-1">Apuração do Saldo de Disponibilidade de Recursos</h1>
                 <p class="text-slate-400 text-sm mt-1">Panorama por Secretarias, Distribuição de Compromissos e Fontes</p>
             </div>
-            <div class="mt-4 md:mt-0 flex items-center space-x-3">
+            <div class="mt-4 md:mt-0 flex items-center space-x-3 no-print">
                 <button onclick="resetFilters()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center">
                     <i class="fas fa-undo mr-2"></i> Resetar Filtros
                 </button>
@@ -44,8 +49,20 @@
             </div>
         </div>
 
+        <!-- Fonte de Dados (discreta) -->
+        <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 px-1 text-xs text-gray-400 no-print">
+            <span id="dataStatus" class="mr-auto">Aguardando carregamento dos dados...</span>
+            <button onclick="loadDefaultJson()" title="Recarregar disponibilidade.json" class="hover:text-slate-700 transition flex items-center">
+                <i class="fas fa-sync-alt mr-1.5"></i> Recarregar
+            </button>
+            <button onclick="document.getElementById('fileInput').click()" title="Carregar um arquivo .json do computador" class="hover:text-slate-700 transition flex items-center">
+                <i class="fas fa-folder-open mr-1.5"></i> Abrir arquivo...
+            </button>
+            <input type="file" id="fileInput" accept=".json,application/json" class="hidden">
+        </div>
+
         <!-- Filtros Dinâmicos -->
-        <div class="card p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card p-5 grid grid-cols-1 md:grid-cols-3 gap-4 no-print">
             <div>
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Filtrar por Secretaria</label>
                 <select id="filterSecretaria" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
@@ -124,312 +141,749 @@
             </div>
         </div>
 
-        <!-- Seção de Gráficos Principais -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <!-- Gráfico 1: Panorama por Secretaria (Saldo Negativo a Saldo Positivo) -->
-            <div class="card p-5">
-                <div class="mb-4">
-                    <h2 class="text-base font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-sort-amount-up-alt text-indigo-600 mr-2"></i> Panorama por Secretaria (Resultado Líquido)
-                    </h2>
-                    <p class="text-xs text-gray-500">Ordenado do maior saldo negativo ao maior saldo positivo (Todas as secretarias)</p>
+        <!-- Barra de Visualizações (discreta) -->
+        <div class="flex items-center justify-between px-1 text-xs text-gray-400 no-print">
+            <span class="uppercase tracking-wider font-semibold">Visualizações</span>
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <button id="btnChartsMenu" class="hover:text-slate-700 transition flex items-center">
+                        <i class="fas fa-chart-bar mr-1.5"></i> Escolher gráficos <i class="fas fa-chevron-down ml-1.5 text-[9px]"></i>
+                    </button>
+                    <div id="chartsMenu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-lg shadow-lg z-20 p-2 text-gray-700">
+                        <div id="chartsMenuList" class="max-h-80 overflow-y-auto"></div>
+                    </div>
                 </div>
-                <div class="relative min-h-[450px] w-full">
-                    <canvas id="chartResultadoSec"></canvas>
-                </div>
+                <button id="btnToggleCharts" onclick="toggleCharts()" class="hover:text-slate-700 transition flex items-center">
+                    <i class="fas fa-eye-slash mr-1.5"></i> <span>Ocultar gráficos</span>
+                </button>
             </div>
-
-            <!-- Gráfico 2: Composição dos Compromissos -->
-            <div class="card p-5 flex flex-col justify-between">
-                <div>
-                    <h2 class="text-base font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-chart-pie text-amber-600 mr-2"></i> Composição dos Compromissos
-                    </h2>
-                    <p class="text-xs text-gray-500">Distribuição do total de R$ compromissados por categoria</p>
-                </div>
-                <div class="relative h-80 w-full flex items-center justify-center my-auto">
-                    <canvas id="chartComposicaoCompromissos"></canvas>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-xs text-slate-600 border-t pt-3 mt-2">
-                    <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-1"></span> A Liquidar</div>
-                    <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 mr-1"></span> Liquidados</div>
-                    <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-purple-500 mr-1"></span> Restos Não Processados</div>
-                    <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-rose-400 mr-1"></span> Restos Processados</div>
-                </div>
-            </div>
-
         </div>
+
+        <!-- Gráficos (gerados dinamicamente) -->
+        <div id="chartsGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
 
         <!-- Tabela Detalhada -->
         <div class="card p-5">
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                 <h2 class="text-base font-bold text-gray-800 flex items-center">
                     <i class="fas fa-table text-slate-700 mr-2"></i> Detalhamento por Secretaria, Fonte e Destinação
                 </h2>
-                <span id="recordCount" class="text-xs font-semibold text-gray-500 mt-2 sm:mt-0">Exibindo 0 registros</span>
+                <div class="flex items-center gap-4 text-xs text-gray-400">
+                    <span id="recordCount" class="font-semibold text-gray-500">Exibindo 0 registros</span>
+                    <div class="relative no-print">
+                        <button id="btnColsMenu" class="hover:text-slate-700 transition flex items-center">
+                            <i class="fas fa-columns mr-1.5"></i> Colunas <i class="fas fa-chevron-down ml-1.5 text-[9px]"></i>
+                        </button>
+                        <div id="colsMenu" class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-20 p-2 text-gray-700">
+                            <div id="colsMenuList"></div>
+                            <button onclick="resetColumns()" class="w-full text-left text-xs text-gray-400 hover:text-slate-700 px-2 pt-2 mt-1 border-t border-slate-100">
+                                <i class="fas fa-undo mr-1.5"></i> Restaurar padrão
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-slate-100 text-slate-600 uppercase text-xs font-semibold border-b border-slate-200">
-                            <th class="p-3">Secretaria</th>
-                            <th class="p-3">Cód. / Destinação de Recursos</th>
-                            <th class="p-3 text-right">Disp. Caixa (R$)</th>
-                            <th class="p-3 text-right">Compromissos (R$)</th>
-                            <th class="p-3 text-right">Saldo Positivo (R$)</th>
-                            <th class="p-3 text-right">Saldo Negativo (R$)</th>
-                        </tr>
+                        <tr id="tableHead" class="bg-slate-100 text-slate-600 uppercase text-xs font-semibold border-b border-slate-200"></tr>
                     </thead>
-                    <tbody id="tableBody" class="text-xs text-gray-700 divide-y divide-gray-100">
-                        <!-- Linhas geradas via Javascript -->
-                    </tbody>
+                    <tbody id="tableBody" class="text-xs text-gray-700 divide-y divide-gray-100"></tbody>
                 </table>
             </div>
+            <p class="text-[11px] text-gray-400 mt-3 no-print">Clique no título de uma coluna para ordenar (crescente, decrescente, sem ordenação).</p>
         </div>
+
+        <!-- Rodapé -->
+        <footer class="text-center text-xs text-gray-500 py-4 border-t border-slate-200 no-print">
+            <a href="conversor_disponibilidade.html" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium hover:underline">
+                <i class="fas fa-exchange-alt mr-2"></i> Abrir o Conversor de Disponibilidade
+            </a>
+            <p class="mt-1">Use o conversor para gerar o arquivo <strong>disponibilidade.json</strong> a partir da planilha de origem.</p>
+        </footer>
 
     </div>
 
-    <!-- Script de Processamento e Renderização -->
     <script>
-    const formatBRL = (val) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+    // =========================================================
+    // Utilidades
+    // =========================================================
+    const formatBRL = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+    const fmtM = (v) => 'R$ ' + (v / 1e6).toFixed(1).replace('.', ',') + 'M';
+    const num = (v) => Number(v) || 0;
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const trunc = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+    const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+    const COLORS = {
+        green: '#10b981', red: '#ef4444', blue: '#3b82f6', amber: '#f59e0b',
+        purple: '#a855f7', rose: '#f43f5e', slate: '#94a3b8'
     };
 
-    // Carregamento assíncrono do arquivo dados.json
-    fetch('disponibilidade.json')
-        .then(response => response.json())
-        .then(rawData => {
-            // Toda a lógica que depende dos dados entra aqui dentro
-            console.log(rawData);
-            // ex: renderizarTabela(rawData);
-        })
-        .catch(error => console.error('Erro ao carregar os dados:', error));
-</script>
-	
-	
-	<script>
-     
-        let chartResultadoSecInstance = null;
-        let chartComposicaoCompromissosInstance = null;
+    // Grupo de recursos derivado da descrição da fonte
+    function classifyGrupo(i) {
+        const t = norm(i["Destinação de Recursos"]);
+        if (i.Secretaria === 'Todas' || num(i.Codigo) === 0 || t.includes('recursos livres')) return 'Recursos Livres';
+        if (t.includes('operacao de credito')) return 'Operações de Crédito';
+        if (/convenio|termo de compromisso|termo de adesao|patrocinio/.test(t)) return 'Convênios e Repasses';
+        if (t.includes('emenda')) return 'Emendas';
+        if (/fundeb|educacao|salario educacao|fnde|escolar|escola|pnae|pnate/.test(t)) return 'Educação';
+        if (/assistencia|suas\b|paif|bolsa familia|idoso|\bcedi|crianca|adolescencia|mulher|cedm|deficiente|coede|igualdade racial|consepir|centro pop|vidas aquecidas|\bfia\b|pcd/.test(t)) return 'Assistência Social e Direitos';
+        if (/saude|\bsus\b|samu|atencao|bloco de custeio|bloco de investimento|agentes comunitarios|enfermagem|\bupa\b/.test(t)) return 'Saúde';
+        if (/fundo|royalties|cosip|taxas|multas|alienacao|gerenciamento de transito|bilhetagem|iluminacao/.test(t)) return 'Fundos e Receitas Próprias';
+        return 'Outros';
+    }
 
-        // Preenche o filtro com todas as secretarias encontradas
-        function populateSecretariaDropdown() {
-            const select = document.getElementById('filterSecretaria');
-            const secretarias = [...new Set(rawData.map(item => item.Secretaria))].filter(s => s !== 'Todas').sort();
-            
-            secretarias.forEach(sec => {
-                const opt = document.createElement('option');
-                opt.value = sec;
-                opt.textContent = sec;
-                select.appendChild(opt);
-            });
+    // =========================================================
+    // Estado e preferências
+    // =========================================================
+    let rawData = [];
+    const chartInstances = {};
+    const PREF_KEY = 'dispDashPrefs_v1';
+
+    // Colunas da tabela
+    const COLUMNS = [
+        { key: 'secretaria', label: 'Secretaria', def: true, type: 'text', align: 'left',
+          val: i => i.Secretaria, cell: i => `<span class="font-semibold text-slate-700">${esc(i.Secretaria)}</span>` },
+        { key: 'fonte', label: 'Cód. / Destinação de Recursos', def: true, type: 'num', align: 'left',
+          val: i => num(i.Codigo),
+          cell: i => `<span class="font-bold text-slate-900">${Math.round(num(i.Codigo))}</span> - ${esc(i["Destinação de Recursos"])}` },
+        { key: 'disp', label: 'Disp. Caixa (R$)', def: true, type: 'num', align: 'right',
+          val: i => num(i["Disp. Caixa"]), cell: i => `<span class="font-medium">${formatBRL(i["Disp. Caixa"])}</span>` },
+        { key: 'comp', label: 'Compromissos (R$)', def: true, type: 'num', align: 'right',
+          val: i => num(i["Total (a+b+c)"]), cell: i => `<span class="text-gray-600">${formatBRL(i["Total (a+b+c)"])}</span>` },
+        { key: 'pos', label: 'Saldo Positivo (R$)', def: true, type: 'num', align: 'right',
+          val: i => num(i["Saldo Positivo"]),
+          cell: i => `<span class="${num(i["Saldo Positivo"]) > 0 ? 'font-semibold text-emerald-600' : 'text-gray-400'}">${formatBRL(i["Saldo Positivo"])}</span>` },
+        { key: 'neg', label: 'Saldo Negativo (R$)', def: true, type: 'num', align: 'right',
+          val: i => num(i["Saldo Negativo"]),
+          cell: i => `<span class="${num(i["Saldo Negativo"]) > 0 ? 'font-semibold text-rose-600' : 'text-gray-400'}">${formatBRL(i["Saldo Negativo"])}</span>` },
+        // Opcionais
+        { key: 'grupo', label: 'Grupo de Recursos', def: false, type: 'text', align: 'left',
+          val: i => i._grupo || '', cell: i => esc(i._grupo || '') },
+        { key: 'liquidados', label: 'Liquidados (R$)', def: false, type: 'num', align: 'right',
+          val: i => num(i["Liquidados"]), cell: i => formatBRL(i["Liquidados"]) },
+        { key: 'aliquidar', label: 'A Liquidar (R$)', def: false, type: 'num', align: 'right',
+          val: i => num(i["A Liquidar"]), cell: i => formatBRL(i["A Liquidar"]) },
+        { key: 'rnp', label: 'Restos Não Processados (R$)', def: false, type: 'num', align: 'right',
+          val: i => num(i["Restos Não Processados"]), cell: i => formatBRL(i["Restos Não Processados"]) },
+        { key: 'rp', label: 'Restos Processados (R$)', def: false, type: 'num', align: 'right',
+          val: i => num(i["Restos Processados"]), cell: i => formatBRL(i["Restos Processados"]) },
+        { key: 'extra', label: 'Saldo Extra (c) (R$)', def: false, type: 'num', align: 'right',
+          val: i => num(i["Saldo Extra (c)"]), cell: i => formatBRL(i["Saldo Extra (c)"]) },
+        { key: 'cobertura', label: 'Cobertura (Caixa ÷ Comprom.)', def: false, type: 'num', align: 'right',
+          val: i => { const c = num(i["Total (a+b+c)"]); return c > 0 ? num(i["Disp. Caixa"]) / c : null; },
+          cell: i => { const c = num(i["Total (a+b+c)"]); if (c <= 0) return '<span class="text-gray-400">—</span>';
+              const p = num(i["Disp. Caixa"]) / c * 100;
+              return `<span class="${p < 100 ? 'text-rose-600' : 'text-emerald-600'}">${p.toFixed(1).replace('.', ',')}%</span>`; } }
+    ];
+    const defaultCols = () => COLUMNS.filter(c => c.def).map(c => c.key);
+
+    // Gráficos (definidos mais abaixo)
+    let CHARTS = [];
+
+    const state = {
+        cols: defaultCols(),
+        charts: {},          // id -> boolean
+        chartsHidden: false,
+        sortKey: null,
+        sortDir: 'asc'
+    };
+
+    function savePrefs() {
+        try {
+            localStorage.setItem(PREF_KEY, JSON.stringify({
+                cols: state.cols, charts: state.charts, chartsHidden: state.chartsHidden
+            }));
+        } catch (e) { /* armazenamento indisponível: ignora */ }
+    }
+
+    function loadPrefs() {
+        try {
+            const p = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+            if (Array.isArray(p.cols)) {
+                const valid = p.cols.filter(k => COLUMNS.some(c => c.key === k));
+                if (valid.length) state.cols = valid;
+            }
+            if (p.charts && typeof p.charts === 'object') state.charts = p.charts;
+            state.chartsHidden = !!p.chartsHidden;
+        } catch (e) { /* ignora */ }
+    }
+
+    // =========================================================
+    // Carregamento de dados
+    // =========================================================
+    function setStatus(message, type) {
+        const el = document.getElementById('dataStatus');
+        el.className = 'mr-auto ' + (type === 'error' ? 'text-rose-500' : 'text-gray-400');
+        el.textContent = message;
+    }
+
+    function normalizeData(parsed) {
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed && typeof parsed === 'object') {
+            const arr = Object.values(parsed).find(v => Array.isArray(v));
+            if (arr) return arr;
         }
+        throw new Error('O arquivo não contém uma lista de registros válida.');
+    }
 
-        function getFilteredData() {
-            const secFilter = document.getElementById('filterSecretaria').value;
-            const condFilter = document.getElementById('filterCondicao').value;
-            const textFilter = document.getElementById('filterText').value.toLowerCase().trim();
-
-            return rawData.filter(item => {
-                if (secFilter !== 'ALL' && item.Secretaria !== secFilter) return false;
-                if (condFilter === 'SUPERAVIT' && item["Saldo Positivo"] <= 0) return false;
-                if (condFilter === 'DEFICIT' && item["Saldo Negativo"] <= 0) return false;
-
-                if (textFilter !== '') {
-                    const codStr = String(item.Codigo || '');
-                    const destStr = (item["Destinação de Recursos"] || '').toLowerCase();
-                    if (!codStr.includes(textFilter) && !destStr.includes(textFilter)) {
-                        return false;
-                    }
-                }
-                return true;
-            });
+    function loadData(parsed, origem) {
+        const data = normalizeData(parsed);
+        if (data.length === 0) throw new Error('O arquivo está vazio.');
+        if (!('Secretaria' in data[0]) || !('Disp. Caixa' in data[0])) {
+            throw new Error('Formato não reconhecido (faltam as colunas "Secretaria" / "Disp. Caixa").');
         }
+        data.forEach(i => { i._grupo = classifyGrupo(i); });
+        rawData = data;
+        populateSecretariaDropdown();
+        document.getElementById('filterSecretaria').value = 'ALL';
+        document.getElementById('filterCondicao').value = 'ALL';
+        document.getElementById('filterText').value = '';
+        updateDashboard();
+        setStatus(`Dados carregados de ${origem} — ${data.length} registros.`, 'ok');
+    }
 
-        function updateDashboard() {
-            const filtered = getFilteredData();
-
-            let totalDisp = 0;
-            let totalCompromissos = 0;
-            let totalSuperavit = 0;
-            let totalDeficit = 0;
-
-            let compALiquidar = 0;
-            let compLiquidados = 0;
-            let compRNP = 0;
-            let compRP = 0;
-
-            filtered.forEach(item => {
-                totalDisp += item["Disp. Caixa"] || 0;
-                totalCompromissos += item["Total (a+b+c)"] || 0;
-                totalSuperavit += item["Saldo Positivo"] || 0;
-                totalDeficit += item["Saldo Negativo"] || 0;
-
-                compALiquidar += item["A Liquidar"] || 0;
-                compLiquidados += item["Liquidados"] || 0;
-                compRNP += item["Restos Não Processados"] || 0;
-                compRP += item["Restos Processados"] || 0;
+    function loadDefaultJson() {
+        setStatus('Carregando disponibilidade.json...', 'info');
+        fetch('disponibilidade.json')
+            .then(response => {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(parsed => loadData(parsed, 'disponibilidade.json'))
+            .catch(error => {
+                console.error('Erro ao carregar os dados:', error);
+                setStatus('Não foi possível carregar disponibilidade.json automaticamente (navegadores costumam bloquear isso ao abrir o HTML direto do disco). Use "Abrir arquivo...".', 'error');
             });
+    }
 
-            // Atualiza KPI Cards
-            document.getElementById('kpiDisp').textContent = formatBRL(totalDisp);
-            document.getElementById('kpiCompromissos').textContent = formatBRL(totalCompromissos);
-            document.getElementById('kpiSuperavit').textContent = formatBRL(totalSuperavit);
-            document.getElementById('kpiDeficit').textContent = formatBRL(totalDeficit);
+    function loadLocalFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                loadData(JSON.parse(e.target.result), file.name);
+            } catch (err) {
+                console.error(err);
+                setStatus('Erro ao ler "' + file.name + '": ' + err.message, 'error');
+            }
+        };
+        reader.onerror = () => setStatus('Não foi possível ler o arquivo selecionado.', 'error');
+        reader.readAsText(file, 'UTF-8');
+    }
 
-            // Atualiza Tabela
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-            
-            filtered.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition border-b border-gray-100";
-                
-                const hasSuperavit = item["Saldo Positivo"] > 0;
-                const hasDeficit = item["Saldo Negativo"] > 0;
-
-                tr.innerHTML = `
-                    <td class="p-3 font-semibold text-slate-700">${item.Secretaria}</td>
-                    <td class="p-3">
-                        <span class="font-bold text-slate-900">${Math.round(item.Codigo)}</span> - ${item["Destinação de Recursos"]}
-                    </td>
-                    <td class="p-3 text-right font-medium">${formatBRL(item["Disp. Caixa"])}</td>
-                    <td class="p-3 text-right text-gray-600">${formatBRL(item["Total (a+b+c)"])}</td>
-                    <td class="p-3 text-right ${hasSuperavit ? 'font-semibold text-emerald-600' : 'text-gray-400'}">${formatBRL(item["Saldo Positivo"])}</td>
-                    <td class="p-3 text-right ${hasDeficit ? 'font-semibold text-rose-600' : 'text-gray-400'}">${formatBRL(item["Saldo Negativo"])}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            document.getElementById('recordCount').textContent = `Exibindo ${filtered.length} registro(s)`;
-
-            // Renderiza Gráficos
-            renderResultadoPorSecretariaChart(filtered);
-            renderComposicaoCompromissosChart(compALiquidar, compLiquidados, compRNP, compRP);
-        }
-
-        // Gráfico 1: Panorama por Secretaria (Resultado Líquido Ordenado)
-        function renderResultadoPorSecretariaChart(data) {
-            const secResultMap = {};
-
-            data.forEach(item => {
-                if (item.Secretaria !== "Todas") {
-                    const liquido = (item["Saldo Positivo"] || 0) - (item["Saldo Negativo"] || 0);
-                    secResultMap[item.Secretaria] = (secResultMap[item.Secretaria] || 0) + liquido;
-                }
-            });
-
-            // Ordena do Maior Saldo Negativo (mais negativo) ao Maior Saldo Positivo (mais positivo)
-            const sortedSecretarias = Object.keys(secResultMap).sort((a, b) => secResultMap[a] - secResultMap[b]);
-            const valoresOrdenados = sortedSecretarias.map(sec => secResultMap[sec]);
-            const backgroundColors = valoresOrdenados.map(v => v < 0 ? '#ef4444' : '#10b981'); // Vermelho se Saldo Negativo, Verde se Saldo Positivo
-
-            if (chartResultadoSecInstance) chartResultadoSecInstance.destroy();
-            
-            const ctx = document.getElementById('chartResultadoSec').getContext('2d');
-            chartResultadoSecInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: sortedSecretarias,
-                    datasets: [{
-                        label: 'Resultado Líquido (R$)',
-                        data: valoresOrdenados,
-                        backgroundColor: backgroundColors,
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    indexAxis: 'y', // Barra Horizontal
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const val = context.raw;
-                                    const tipo = val < 0 ? 'Saldo Negativo Líquido' : 'Saldo Positivo Líquido';
-                                    return `${tipo}: ${formatBRL(val)}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                callback: value => 'R$ ' + (value / 1e6).toFixed(1) + 'M'
-                            },
-                            grid: { color: '#f1f5f9' }
-                        },
-                        y: {
-                            grid: { display: false }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Gráfico 2: Composição dos Compromissos em R$
-        function renderComposicaoCompromissosChart(aLiquidar, liquidados, rnp, rp) {
-            if (chartComposicaoCompromissosInstance) chartComposicaoCompromissosInstance.destroy();
-
-            const ctx = document.getElementById('chartComposicaoCompromissos').getContext('2d');
-            chartComposicaoCompromissosInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['A Liquidar', 'Liquidados', 'Restos Não Processados', 'Restos Processados'],
-                    datasets: [{
-                        data: [aLiquidar, liquidados, rnp, rp],
-                        backgroundColor: [
-                            '#f59e0b', // Âmbar
-                            '#3b82f6', // Azul
-                            '#a855f7', // Roxo
-                            '#f43f5e'  // Rosa/Vermelho
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const val = context.raw;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
-                                    return ` ${context.label}: ${formatBRL(val)} (${pct}%)`;
-                                }
-                            }
-                        }
-                    },
-                    cutout: '65%'
-                }
-            });
-        }
-
-        function applyFilters() {
-            updateDashboard();
-        }
-
-        function resetFilters() {
-            document.getElementById('filterSecretaria').value = 'ALL';
-            document.getElementById('filterCondicao').value = 'ALL';
-            document.getElementById('filterText').value = '';
-            updateDashboard();
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            populateSecretariaDropdown();
-            updateDashboard();
+    function setupFileInput() {
+        const input = document.getElementById('fileInput');
+        input.addEventListener('change', () => {
+            loadLocalFile(input.files[0]);
+            input.value = '';
         });
+    }
+
+    // =========================================================
+    // Filtros
+    // =========================================================
+    function populateSecretariaDropdown() {
+        const select = document.getElementById('filterSecretaria');
+        select.innerHTML = '<option value="ALL">Todas as Secretarias</option>';
+        const secretarias = [...new Set(rawData.map(item => item.Secretaria))].filter(s => s && s !== 'Todas').sort();
+        secretarias.forEach(sec => {
+            const opt = document.createElement('option');
+            opt.value = sec;
+            opt.textContent = sec;
+            select.appendChild(opt);
+        });
+    }
+
+    function getFilteredData() {
+        const secFilter = document.getElementById('filterSecretaria').value;
+        const condFilter = document.getElementById('filterCondicao').value;
+        const textFilter = document.getElementById('filterText').value.toLowerCase().trim();
+
+        return rawData.filter(item => {
+            if (secFilter !== 'ALL' && item.Secretaria !== secFilter) return false;
+            if (condFilter === 'SUPERAVIT' && item["Saldo Positivo"] <= 0) return false;
+            if (condFilter === 'DEFICIT' && item["Saldo Negativo"] <= 0) return false;
+            if (textFilter !== '') {
+                const codStr = String(item.Codigo || '');
+                const destStr = (item["Destinação de Recursos"] || '').toLowerCase();
+                if (!codStr.includes(textFilter) && !destStr.includes(textFilter)) return false;
+            }
+            return true;
+        });
+    }
+
+    // =========================================================
+    // Dropdowns discretos
+    // =========================================================
+    function setupDropdown(btnId, menuId) {
+        const btn = document.getElementById(btnId);
+        const menu = document.getElementById(menuId);
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = menu.classList.contains('hidden');
+            document.querySelectorAll('#chartsMenu, #colsMenu').forEach(m => m.classList.add('hidden'));
+            if (open) menu.classList.remove('hidden');
+        });
+        menu.addEventListener('click', (e) => e.stopPropagation());
+    }
+    document.addEventListener('click', () => {
+        document.querySelectorAll('#chartsMenu, #colsMenu').forEach(m => m.classList.add('hidden'));
+    });
+
+    // =========================================================
+    // Tabela: colunas e ordenação
+    // =========================================================
+    function buildColsMenu() {
+        const list = document.getElementById('colsMenuList');
+        list.innerHTML = '';
+        COLUMNS.forEach(col => {
+            const lbl = document.createElement('label');
+            lbl.className = 'flex items-center gap-2 px-2 py-1.5 text-xs rounded hover:bg-slate-50 cursor-pointer';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = state.cols.includes(col.key);
+            cb.dataset.key = col.key;
+            cb.addEventListener('change', () => toggleColumn(col.key, cb));
+            const sp = document.createElement('span');
+            sp.textContent = col.label;
+            lbl.appendChild(cb);
+            lbl.appendChild(sp);
+            list.appendChild(lbl);
+        });
+    }
+
+    function toggleColumn(key, checkbox) {
+        if (checkbox.checked) {
+            if (!state.cols.includes(key)) state.cols.push(key);
+        } else {
+            if (state.cols.length <= 1) { checkbox.checked = true; return; } // mantém ao menos uma coluna
+            state.cols = state.cols.filter(k => k !== key);
+            if (state.sortKey === key) { state.sortKey = null; }
+        }
+        savePrefs();
+        renderTable(getFilteredData());
+    }
+
+    function resetColumns() {
+        state.cols = defaultCols();
+        if (state.sortKey && !state.cols.includes(state.sortKey)) state.sortKey = null;
+        savePrefs();
+        buildColsMenu();
+        renderTable(getFilteredData());
+    }
+
+    function sortBy(key) {
+        if (state.sortKey !== key) { state.sortKey = key; state.sortDir = 'asc'; }
+        else if (state.sortDir === 'asc') { state.sortDir = 'desc'; }
+        else { state.sortKey = null; state.sortDir = 'asc'; }
+        renderTable(getFilteredData());
+    }
+
+    function sortData(data) {
+        if (!state.sortKey) return data;
+        const col = COLUMNS.find(c => c.key === state.sortKey);
+        if (!col) return data;
+        const dir = state.sortDir === 'asc' ? 1 : -1;
+        return [...data].sort((a, b) => {
+            const va = col.val(a), vb = col.val(b);
+            if (va === null && vb === null) return 0;
+            if (va === null) return 1;   // vazios sempre ao final
+            if (vb === null) return -1;
+            if (col.type === 'text') return dir * String(va).localeCompare(String(vb), 'pt-BR');
+            return dir * (va - vb);
+        });
+    }
+
+    function renderTable(filtered) {
+        const cols = COLUMNS.filter(c => state.cols.includes(c.key));
+
+        const head = document.getElementById('tableHead');
+        head.innerHTML = '';
+        cols.forEach(col => {
+            const th = document.createElement('th');
+            th.className = 'p-3 sortable ' + (col.align === 'right' ? 'text-right' : 'text-left');
+            const active = state.sortKey === col.key;
+            const icon = active ? (state.sortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+            th.innerHTML = `${esc(col.label)} <i class="fas ${icon} ml-1 ${active ? 'text-blue-600' : 'text-slate-300'}"></i>`;
+            th.addEventListener('click', () => sortBy(col.key));
+            head.appendChild(th);
+        });
+
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        sortData(filtered).forEach(item => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50 transition border-b border-gray-100';
+            tr.innerHTML = cols.map(col =>
+                `<td class="p-3 ${col.align === 'right' ? 'text-right' : ''}">${col.cell(item)}</td>`
+            ).join('');
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('recordCount').textContent = `Exibindo ${filtered.length} registro(s)`;
+    }
+
+    // =========================================================
+    // Gráficos
+    // =========================================================
+    const bySecretaria = (data) => {
+        const map = {};
+        data.forEach(i => {
+            if (i.Secretaria === 'Todas') return;
+            const m = map[i.Secretaria] || (map[i.Secretaria] = { disp: 0, comp: 0, pos: 0, neg: 0, liq: 0, aliq: 0, rnp: 0, rp: 0 });
+            m.disp += num(i["Disp. Caixa"]);
+            m.comp += num(i["Total (a+b+c)"]);
+            m.pos += num(i["Saldo Positivo"]);
+            m.neg += num(i["Saldo Negativo"]);
+            m.liq += num(i["Liquidados"]);
+            m.aliq += num(i["A Liquidar"]);
+            m.rnp += num(i["Restos Não Processados"]);
+            m.rp += num(i["Restos Processados"]);
+        });
+        return map;
+    };
+
+    const moneyTooltip = (prefix) => (ctx) => `${prefix || ctx.dataset.label}: ${formatBRL(Math.abs(ctx.raw))}`;
+
+    CHARTS = [
+        {
+            id: 'resultadoSec', icon: 'fa-sort-amount-up-alt', color: 'text-indigo-600', h: 480,
+            title: 'Panorama por Secretaria (Resultado Líquido)',
+            sub: 'Do maior saldo negativo ao maior saldo positivo (exceto Recursos Livres)',
+            render(ctx, data) {
+                const map = bySecretaria(data);
+                const labels = Object.keys(map).sort((a, b) => (map[a].pos - map[a].neg) - (map[b].pos - map[b].neg));
+                const vals = labels.map(l => map[l].pos - map[l].neg);
+                return new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets: [{ label: 'Resultado Líquido (R$)', data: vals,
+                        backgroundColor: vals.map(v => v < 0 ? COLORS.red : COLORS.green), borderRadius: 4 }] },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false },
+                            tooltip: { callbacks: { label: c => `${c.raw < 0 ? 'Saldo Negativo Líquido' : 'Saldo Positivo Líquido'}: ${formatBRL(c.raw)}` } } },
+                        scales: { x: { ticks: { callback: fmtM }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } }
+                    }
+                });
+            }
+        },
+        {
+            id: 'composicao', icon: 'fa-chart-pie', color: 'text-amber-600', h: 480,
+            title: 'Composição dos Compromissos',
+            sub: 'Distribuição do total compromissado por categoria',
+            render(ctx, data) {
+                let al = 0, li = 0, rnp = 0, rp = 0;
+                data.forEach(i => { al += num(i["A Liquidar"]); li += num(i["Liquidados"]); rnp += num(i["Restos Não Processados"]); rp += num(i["Restos Processados"]); });
+                return new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: ['A Liquidar', 'Liquidados', 'Restos Não Processados', 'Restos Processados'],
+                        datasets: [{ data: [al, li, rnp, rp], backgroundColor: [COLORS.amber, COLORS.blue, COLORS.purple, COLORS.rose], borderWidth: 2, borderColor: '#ffffff' }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, cutout: '65%',
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                            tooltip: { callbacks: { label: c => {
+                                const total = c.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = total > 0 ? ((c.raw / total) * 100).toFixed(1) : '0.0';
+                                return ` ${c.label}: ${formatBRL(c.raw)} (${pct}%)`; } } } }
+                    }
+                });
+            }
+        },
+        {
+            id: 'top10Neg', icon: 'fa-triangle-exclamation', color: 'text-rose-600', h: 420,
+            title: 'Top 10 Fontes com Maior Saldo Negativo',
+            sub: 'Onde se concentra a insuficiência financeira (inclui Recursos Livres)',
+            render(ctx, data) {
+                const arr = data.filter(i => num(i["Saldo Negativo"]) > 0)
+                    .sort((a, b) => num(b["Saldo Negativo"]) - num(a["Saldo Negativo"])).slice(0, 10);
+                return new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: arr.map(i => `${Math.round(num(i.Codigo))} · ${trunc(i["Destinação de Recursos"], 38)}`),
+                        datasets: [{ label: 'Saldo Negativo', data: arr.map(i => num(i["Saldo Negativo"])), backgroundColor: COLORS.red, borderRadius: 4 }] },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false },
+                            tooltip: { callbacks: {
+                                title: items => { const i = arr[items[0].dataIndex]; return `${Math.round(num(i.Codigo))} - ${i["Destinação de Recursos"]}`; },
+                                label: moneyTooltip('Saldo Negativo') } } },
+                        scales: { x: { ticks: { callback: fmtM }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+                    }
+                });
+            }
+        },
+        {
+            id: 'caixaVsComp', icon: 'fa-scale-balanced', color: 'text-blue-600', h: 480,
+            title: 'Caixa × Compromissos por Secretaria',
+            sub: 'Tamanho do descasamento, não só o resultado líquido (exceto Recursos Livres)',
+            render(ctx, data) {
+                const map = bySecretaria(data);
+                const labels = Object.keys(map).sort((a, b) => map[b].comp - map[a].comp);
+                return new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets: [
+                        { label: 'Disp. Caixa', data: labels.map(l => map[l].disp), backgroundColor: COLORS.blue, borderRadius: 3 },
+                        { label: 'Compromissos', data: labels.map(l => map[l].comp), backgroundColor: COLORS.amber, borderRadius: 3 }
+                    ] },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                            tooltip: { callbacks: { label: moneyTooltip() } } },
+                        scales: { x: { ticks: { callback: fmtM }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } }
+                    }
+                });
+            }
+        },
+        {
+            id: 'compEmpilhado', icon: 'fa-layer-group', color: 'text-purple-600', h: 480,
+            title: 'Compromissos por Secretaria (Empilhado)',
+            sub: 'Liquidados, A Liquidar e Restos a Pagar (exceto Recursos Livres)',
+            render(ctx, data) {
+                const map = bySecretaria(data);
+                const total = k => map[k].liq + map[k].aliq + map[k].rnp + map[k].rp;
+                const labels = Object.keys(map).sort((a, b) => total(b) - total(a));
+                const ds = (label, field, color) => ({ label, data: labels.map(l => map[l][field]), backgroundColor: color });
+                return new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets: [
+                        ds('Liquidados', 'liq', COLORS.blue), ds('A Liquidar', 'aliq', COLORS.amber),
+                        ds('Restos Não Processados', 'rnp', COLORS.purple), ds('Restos Processados', 'rp', COLORS.rose)
+                    ] },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                            tooltip: { callbacks: { label: moneyTooltip() } } },
+                        scales: { x: { stacked: true, ticks: { callback: fmtM }, grid: { color: '#f1f5f9' } }, y: { stacked: true, grid: { display: false } } }
+                    }
+                });
+            }
+        },
+        {
+            id: 'pareto', icon: 'fa-chart-line', color: 'text-rose-600', h: 420,
+            title: 'Pareto do Saldo Negativo',
+            sub: 'Top 15 fontes e % acumulado sobre todas as fontes com saldo negativo',
+            render(ctx, data) {
+                const neg = data.map(i => ({ i, v: num(i["Saldo Negativo"]) })).filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+                const total = neg.reduce((s, x) => s + x.v, 0);
+                let acc = 0;
+                const cum = neg.map(x => { acc += x.v; return total ? acc / total * 100 : 0; });
+                const top = neg.slice(0, 15);
+                return new Chart(ctx, {
+                    data: { labels: top.map(x => String(Math.round(num(x.i.Codigo)))),
+                        datasets: [
+                            { type: 'bar', label: 'Saldo Negativo', data: top.map(x => x.v), backgroundColor: COLORS.red, borderRadius: 3, yAxisID: 'y', order: 2 },
+                            { type: 'line', label: '% acumulado', data: cum.slice(0, 15), borderColor: '#1e293b', backgroundColor: '#1e293b', pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 }
+                        ] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                            tooltip: { callbacks: {
+                                title: items => { const x = top[items[0].dataIndex]; return `${Math.round(num(x.i.Codigo))} - ${trunc(x.i["Destinação de Recursos"], 70)}`; },
+                                label: c => c.dataset.type === 'line' ? ` % acumulado: ${c.raw.toFixed(1).replace('.', ',')}%` : ` Saldo Negativo: ${formatBRL(c.raw)}` } } },
+                        scales: {
+                            x: { grid: { display: false }, title: { display: true, text: 'Código da fonte', font: { size: 10 } } },
+                            y: { ticks: { callback: fmtM }, grid: { color: '#f1f5f9' } },
+                            y1: { position: 'right', min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { drawOnChartArea: false } }
+                        }
+                    }
+                });
+            }
+        },
+        {
+            id: 'dispersao', icon: 'fa-braille', color: 'text-teal-600', h: 420,
+            title: 'Dispersão: Caixa × Compromissos por Fonte',
+            sub: 'Abaixo da diagonal = saldo negativo (exceto Recursos Livres)',
+            render(ctx, data) {
+                const pts = data.filter(i => i.Secretaria !== 'Todas' && (num(i["Disp. Caixa"]) > 0 || num(i["Total (a+b+c)"]) > 0))
+                    .map(i => ({ x: num(i["Total (a+b+c)"]), y: num(i["Disp. Caixa"]), item: i }));
+                const max = pts.reduce((m, p) => Math.max(m, p.x, p.y), 0);
+                return new Chart(ctx, {
+                    type: 'scatter',
+                    data: { datasets: [
+                        { type: 'scatter', label: 'Fontes', data: pts, pointRadius: 4, pointHoverRadius: 6,
+                          backgroundColor: pts.map(p => num(p.item["Saldo Negativo"]) > 0 ? COLORS.red : COLORS.green) },
+                        { type: 'line', label: 'Equilíbrio', data: [{ x: 0, y: 0 }, { x: max, y: max }],
+                          borderColor: COLORS.slate, borderDash: [6, 4], borderWidth: 1, pointRadius: 0 }
+                    ] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false },
+                            tooltip: { filter: c => c.dataset.type !== 'line',
+                                callbacks: { label: c => {
+                                    const i = c.raw.item;
+                                    return [`${Math.round(num(i.Codigo))} - ${trunc(i["Destinação de Recursos"], 60)}`,
+                                        `Caixa: ${formatBRL(c.raw.y)}`, `Compromissos: ${formatBRL(c.raw.x)}`];
+                                } } } },
+                        scales: {
+                            x: { title: { display: true, text: 'Compromissos', font: { size: 10 } }, ticks: { callback: fmtM }, grid: { color: '#f1f5f9' } },
+                            y: { title: { display: true, text: 'Disp. Caixa', font: { size: 10 } }, ticks: { callback: fmtM }, grid: { color: '#f1f5f9' } }
+                        }
+                    }
+                });
+            }
+        },
+        {
+            id: 'grupos', icon: 'fa-sitemap', color: 'text-slate-600', h: 420,
+            title: 'Saldo por Grupo de Recursos',
+            sub: 'Saldo positivo (verde) e negativo (vermelho) por tipo de fonte, classificado pela descrição',
+            render(ctx, data) {
+                const map = {};
+                data.forEach(i => {
+                    const g = i._grupo || 'Outros';
+                    const m = map[g] || (map[g] = { pos: 0, neg: 0 });
+                    m.pos += num(i["Saldo Positivo"]);
+                    m.neg += num(i["Saldo Negativo"]);
+                });
+                const labels = Object.keys(map).sort((a, b) => (map[a].pos - map[a].neg) - (map[b].pos - map[b].neg));
+                return new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets: [
+                        { label: 'Saldo Positivo', data: labels.map(l => map[l].pos), backgroundColor: COLORS.green, borderRadius: 3 },
+                        { label: 'Saldo Negativo', data: labels.map(l => -map[l].neg), backgroundColor: COLORS.red, borderRadius: 3 }
+                    ] },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                            tooltip: { callbacks: { label: moneyTooltip() } } },
+                        scales: { x: { stacked: true, ticks: { callback: fmtM }, grid: { color: '#f1f5f9' } }, y: { stacked: true, grid: { display: false } } }
+                    }
+                });
+            }
+        }
+    ];
+
+    function buildChartCards() {
+        const grid = document.getElementById('chartsGrid');
+        grid.innerHTML = '';
+        CHARTS.forEach(def => {
+            if (!(def.id in state.charts)) state.charts[def.id] = true;
+            const card = document.createElement('div');
+            card.className = 'card p-5';
+            card.id = 'card-' + def.id;
+            card.innerHTML = `
+                <div class="mb-4">
+                    <h2 class="text-base font-bold text-gray-800 flex items-center">
+                        <i class="fas ${def.icon} ${def.color} mr-2"></i> ${esc(def.title)}
+                    </h2>
+                    <p class="text-xs text-gray-500">${esc(def.sub)}</p>
+                </div>
+                <div class="relative w-full" style="height:${def.h}px"><canvas id="cv-${def.id}"></canvas></div>`;
+            grid.appendChild(card);
+        });
+    }
+
+    function buildChartsMenu() {
+        const list = document.getElementById('chartsMenuList');
+        list.innerHTML = '';
+        CHARTS.forEach(def => {
+            const lbl = document.createElement('label');
+            lbl.className = 'flex items-center gap-2 px-2 py-1.5 text-xs rounded hover:bg-slate-50 cursor-pointer';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = !!state.charts[def.id];
+            cb.addEventListener('change', () => toggleChart(def.id, cb.checked));
+            const ic = document.createElement('i');
+            ic.className = `fas ${def.icon} ${def.color} w-4 text-center`;
+            const sp = document.createElement('span');
+            sp.textContent = def.title;
+            lbl.appendChild(cb);
+            lbl.appendChild(ic);
+            lbl.appendChild(sp);
+            list.appendChild(lbl);
+        });
+    }
+
+    function destroyChart(id) {
+        if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+    }
+
+    function renderChart(def, data) {
+        destroyChart(def.id);
+        const canvas = document.getElementById('cv-' + def.id);
+        if (!canvas) return;
+        chartInstances[def.id] = def.render(canvas.getContext('2d'), data);
+    }
+
+    function renderCharts(data) {
+        if (state.chartsHidden) return;
+        CHARTS.forEach(def => {
+            if (state.charts[def.id]) renderChart(def, data);
+            else destroyChart(def.id);
+        });
+    }
+
+    function applyChartsVisibility() {
+        document.getElementById('chartsGrid').classList.toggle('hidden', state.chartsHidden);
+        const btn = document.getElementById('btnToggleCharts');
+        btn.querySelector('span').textContent = state.chartsHidden ? 'Mostrar gráficos' : 'Ocultar gráficos';
+        btn.querySelector('i').className = 'fas ' + (state.chartsHidden ? 'fa-eye' : 'fa-eye-slash') + ' mr-1.5';
+        CHARTS.forEach(def => {
+            document.getElementById('card-' + def.id).classList.toggle('hidden', !state.charts[def.id]);
+        });
+    }
+
+    function toggleCharts() {
+        state.chartsHidden = !state.chartsHidden;
+        savePrefs();
+        applyChartsVisibility();
+        if (!state.chartsHidden) renderCharts(getFilteredData());
+    }
+
+    function toggleChart(id, checked) {
+        state.charts[id] = checked;
+        savePrefs();
+        document.getElementById('card-' + id).classList.toggle('hidden', !checked);
+        const def = CHARTS.find(c => c.id === id);
+        if (checked && !state.chartsHidden) renderChart(def, getFilteredData());
+        else destroyChart(id);
+    }
+
+    // =========================================================
+    // Dashboard
+    // =========================================================
+    function updateDashboard() {
+        const filtered = getFilteredData();
+
+        let totalDisp = 0, totalCompromissos = 0, totalSuperavit = 0, totalDeficit = 0;
+        filtered.forEach(item => {
+            totalDisp += num(item["Disp. Caixa"]);
+            totalCompromissos += num(item["Total (a+b+c)"]);
+            totalSuperavit += num(item["Saldo Positivo"]);
+            totalDeficit += num(item["Saldo Negativo"]);
+        });
+
+        document.getElementById('kpiDisp').textContent = formatBRL(totalDisp);
+        document.getElementById('kpiCompromissos').textContent = formatBRL(totalCompromissos);
+        document.getElementById('kpiSuperavit').textContent = formatBRL(totalSuperavit);
+        document.getElementById('kpiDeficit').textContent = formatBRL(totalDeficit);
+
+        renderTable(filtered);
+        renderCharts(filtered);
+    }
+
+    function applyFilters() { updateDashboard(); }
+
+    function resetFilters() {
+        document.getElementById('filterSecretaria').value = 'ALL';
+        document.getElementById('filterCondicao').value = 'ALL';
+        document.getElementById('filterText').value = '';
+        updateDashboard();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        loadPrefs();
+        buildChartCards();
+        buildChartsMenu();
+        buildColsMenu();
+        setupDropdown('btnChartsMenu', 'chartsMenu');
+        setupDropdown('btnColsMenu', 'colsMenu');
+        applyChartsVisibility();
+        setupFileInput();
+        updateDashboard();      // estado inicial (zerado)
+        loadDefaultJson();      // tenta o JSON padrão automaticamente
+    });
     </script>
 </body>
 </html>
