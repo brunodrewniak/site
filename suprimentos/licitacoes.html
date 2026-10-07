@@ -32,7 +32,7 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .btn-outline-tema{border-color:var(--cor-secundaria);color:var(--cor-secundaria)}
 .btn-outline-tema:hover{background-color:var(--cor-secundaria);color:#fff}
 .badge-tema{background-color:var(--cor-secundaria);color:#fff;font-weight:600}
-.tr-anulada{background:#fff0f0!important;color:#842029}
+.tr-atencao{background:#fff0f0!important;color:#842029}
 .finalidade{max-width:420px;min-width:280px}
 </style>
 
@@ -75,7 +75,21 @@ body{background:var(--fundo)!important;color:var(--texto-escuro)!important}.navb
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Situação</label>
-          <select id="filtroSituacao" class="form-select"><option value="">Todas</option></select>
+          <select id="filtroSituacao" class="form-select">
+            <option value="">Todas</option>
+            <option value="1">1 - Aberta</option>
+            <option value="2">2 - Anulada Parcial</option>
+            <option value="3">3 - Anulada Total</option>
+            <option value="4">4 - Homologada</option>
+            <option value="5">5 - Revogada Parcial</option>
+            <option value="6">6 - Revogada Total</option>
+            <option value="7">7 - Comprada/Finalizada</option>
+            <option value="8">8 - Deserta</option>
+            <option value="9">9 - Aguardando Julgamento</option>
+            <option value="10">10 - Fracassada</option>
+            <option value="11">11 - Descartada</option>
+            <option value="12">12 - Suspensa</option>
+          </select>
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Filtro Rápido</label>
@@ -191,13 +205,24 @@ let dadosLicitacoes = [], dadosFiltrados = [], graficos = {};
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// Mapeamento conservador: só rotulamos situações com evidência clara nos dados
-// (ex.: presença de DataHomologacao + ValorHomologado = Homologada). As demais
-// aparecem como "Situação N" para não inventar um rótulo incorreto.
+// Tabela oficial de situações de licitação informada pelo usuário.
 const MAPA_SITUACAO = {
-  "1": {texto:"Em Andamento", badge:"bg-primary"},
-  "4": {texto:"Homologada", badge:"bg-success"},
+  "1":  {texto:"Aberta",               badge:"bg-primary"},
+  "2":  {texto:"Anulada Parcial",      badge:"bg-danger"},
+  "3":  {texto:"Anulada Total",        badge:"bg-danger"},
+  "4":  {texto:"Homologada",           badge:"bg-success"},
+  "5":  {texto:"Revogada Parcial",     badge:"bg-warning text-dark"},
+  "6":  {texto:"Revogada Total",       badge:"bg-warning text-dark"},
+  "7":  {texto:"Comprada/Finalizada",  badge:"bg-secondary"},
+  "8":  {texto:"Deserta",              badge:"bg-secondary"},
+  "9":  {texto:"Aguardando Julgamento",badge:"bg-info text-dark"},
+  "10": {texto:"Fracassada",           badge:"bg-secondary"},
+  "11": {texto:"Descartada",           badge:"bg-secondary"},
+  "12": {texto:"Suspensa",             badge:"bg-warning text-dark"},
 };
+// Situações que merecem destaque visual na tabela (anuladas, revogadas, desertas,
+// fracassadas, descartadas e suspensas — tudo que não seguiu o fluxo normal).
+const SITUACOES_ATENCAO = new Set(["2","3","5","6","8","10","11","12"]);
 
 function escapeHtml(v){
   return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
@@ -294,7 +319,6 @@ async function consultarAPI(){
 function popularFiltrosDinamicos(){
   const anos=[...new Set(dadosLicitacoes.map(l=>l.ano).filter(Boolean))].sort((a,b)=>b-a);
   const modalidades=[...new Set(dadosLicitacoes.map(l=>l.modalidadeDescricao).filter(Boolean))].sort();
-  const situacoes=[...new Set(dadosLicitacoes.map(l=>l.situacao).filter(x=>x!==""))].sort();
 
   const selAno=$("filtroAno"), valAno=selAno.value;
   selAno.innerHTML='<option value="">Todos</option>'+anos.map(a=>`<option value="${a}">${a}</option>`).join("");
@@ -304,9 +328,7 @@ function popularFiltrosDinamicos(){
   selMod.innerHTML='<option value="">Todas</option>'+modalidades.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
   selMod.value=valMod;
 
-  const selSit=$("filtroSituacao"), valSit=selSit.value;
-  selSit.innerHTML='<option value="">Todas</option>'+situacoes.map(s=>`<option value="${s}">${escapeHtml(MAPA_SITUACAO[s]?.texto||("Situação "+s))}</option>`).join("");
-  selSit.value=valSit;
+  // O select de Situação já vem com a lista oficial fixa no HTML — não é reconstruído aqui.
 }
 
 function aplicarFiltros(){
@@ -351,7 +373,8 @@ const COR_VERMELHA_ESCURO = "#8b0000";
 const COR_VERMELHA_CLARA = "#e63946";
 const PALETA_VERMELHA = [
   "#8b0000","#a30d17","#c1121f","#d62828","#e63946",
-  "#ef5350","#b71c1c","#9f1239","#be123c","#dc2626"
+  "#ef5350","#b71c1c","#9f1239","#be123c","#dc2626",
+  "#7f1d1d","#f87171"
 ];
 
 function agruparValor(campo, valorCampo){
@@ -443,7 +466,7 @@ function atualizarTabela(){
   const tbody=$("tbody");
   if(!dadosFiltrados.length){tbody.innerHTML='<tr><td colspan="9" class="text-center py-4">Nenhuma licitação encontrada.</td></tr>';return;}
   tbody.innerHTML=dadosFiltrados.map(l=>{
-    const classe=(l.situacao==="7"||l.situacao==="6")?"tr-anulada":"";
+    const classe=SITUACOES_ATENCAO.has(l.situacao)?"tr-atencao":"";
     const badge=MAPA_SITUACAO[l.situacao]?.badge||"bg-secondary";
     return `<tr class="${classe}">
       <td><strong>${escapeHtml(l.licitacaoAnoNumero)}</strong><div class="small-muted">Minuta ${escapeHtml(l.numeroMinuta)}/${escapeHtml(l.anoMinuta)}</div></td>
