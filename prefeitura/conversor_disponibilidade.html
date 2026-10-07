@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Apuração de Saldo (CSV para JSON)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+        }
+        h2 {
+            color: #1155cc;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .file-input-wrapper {
+            margin: 25px 0 15px 0;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn-upload {
+            background-color: #1155cc;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(17, 85, 204, 0.3);
+        }
+        .btn-upload:hover {
+            background-color: #0b3c94;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #666;
+            padding: 12px;
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Conversor de Apuração do Saldo de Recursos</h2>
+    <p>Selecione o arquivo CSV de Apuração.<br> O sistema identificará automaticamente as <strong>Secretarias</strong> pelo código e gerará o arquivo <strong>JSON</strong> com os saldos atualizados.</p>
+   <p>Gestão Patrimonial e Contábil » Relatórios » Destinação de Recursos » Apuração do Saldo das Disponibilidades de Recurso</p>
+
+    
+    <div class="file-input-wrapper">
+        <label for="csvFile" class="btn-upload">Selecionar CSV e Converter para JSON</label>
+        <input type="file" id="csvFile" accept=".csv">
+    </div>
+    
+    <div id="status">Aguardando seleção do arquivo...</div>
+</div>
+
+<script>
+// Mapeamento automático de Código -> Secretaria
+const mapaSecretarias = {
+  0: "Todas",
+  2: "Ordem Pública",
+  12: "Meio Ambiente",
+  17: "Ordem Pública",
+  19: "Desenvolvimento Economico",
+  20: "Meio Ambiente",
+  21: "Procuradoria",
+  22: "Desenvolvimento Urbano",
+  27: "Desenvolvimento Urbano",
+  31: "Agricultura e Pecuaria",
+  39: "Fundo Politica da Mulher",
+  51: "Cultura e Turismo",
+  56: "Educação",
+  59: "Cultura e Turismo",
+  61: "Esporte e Lazer",
+  64: "Desenvolvimento Urbano",
+  70: "Ordem Pública",
+  76: "Agricultura e Pecuaria",
+  77: "Meio Ambiente",
+  78: "Cultura e Turismo",
+  79: "Administração",
+  81: "Saúde",
+  83: "Meio Ambiente",
+  84: "Meio Ambiente",
+  101: "Educação",
+  102: "Educação",
+  103: "Educação",
+  104: "Educação",
+  105: "Educação",
+  107: "Educação",
+  113: "Fundo Assistencia Social",
+  122: "Educação",
+  123: "Educação",
+  124: "Desenvolvimento Social e da Mulher",
+  131: "Fundo Assistencia Social",
+  170: "Educação",
+  192: "Educação",
+  263: "Agricultura e Pecuaria",
+  264: "Desenvolvimento Economico",
+  267: "Infraestrutura Viaria",
+  270: "Administração",
+  272: "Esporte e Lazer",
+  303: "Saúde",
+  304: "Saúde",
+  317: "Saúde",
+  318: "Saúde",
+  320: "Saúde",
+  322: "Saúde",
+  323: "Saúde",
+  324: "Saúde",
+  361: "Saúde",
+  375: "Saúde",
+  376: "Saúde",
+  377: "Saúde",
+  378: "Saúde",
+  379: "Saúde",
+  381: "Saúde",
+  382: "Saúde",
+  383: "Ordem Pública",
+  384: "Saúde",
+  385: "Saúde",
+  386: "Saúde",
+  387: "Saúde",
+  494: "Saúde",
+  500: "Saúde",
+  501: "Planejamento e Transformação Digital",
+  504: "Infraestrutura Viaria",
+  507: "Infraestrutura Viaria",
+  509: "Ordem Pública",
+  510: "Saúde",
+  511: "Meio Ambiente",
+  512: "Infraestrutura Viaria",
+  514: "Ordem Pública",
+  518: "Saúde",
+  571: "Educação",
+  572: "Educação",
+  573: "Educação",
+  601: "Desenvolvimento Urbano",
+  607: "Educação",
+  618: "Educação",
+  622: "Infraestrutura Viaria",
+  688: "Fundo do Idoso",
+  689: "Fundo do Idoso",
+  690: "Fundo do Idoso",
+  691: "Fundo do Idoso",
+  692: "Fundo Apoio ao Deficiente",
+  694: "Fundo do Idoso",
+  695: "Fundo de Igualdade Racial",
+  879: "Fundo Assistencia Social",
+  880: "Fundo Infância e Adolescência",
+  887: "Fundo Assistencia Social",
+  890: "Social e da Mulher",
+  900: "Fundo do Idoso",
+  933: "Fundo Assistencia Social",
+  934: "Fundo Assistencia Social",
+  938: "Fundo Assistencia Social",
+  939: "Fundo Assistencia Social",
+  940: "Fundo Assistencia Social",
+  942: "Fundo Assistencia Social",
+  944: "Social e da Mulher",
+  946: "Fundo Assistencia Social",
+  947: "Fundo Assistencia Social",
+  957: "Fundo da Politica da Mulher",
+  959: "Fundo Apoio ao Deficiente",
+  979: "Fundo Assistencia Social",
+  984: "Ordem Pública",
+  986: "Fundo do Idoso",
+  1011: "Fundo Politica da Mulher",
+  1016: "Infraestrutura Viaria",
+  1022: "Assistencia Social",
+  1040: "Educação",
+  1042: "Educação",
+  1043: "Educação",
+  1045: "Meio Ambiente",
+  1046: "Saúde",
+  1047: "Agricultura e Pecuaria",
+  1051: "Saúde",
+  1056: "Educação",
+  1080: "Cultura e Turismo",
+  1082: "Educação",
+  1083: "Educação",
+  5003: "Saúde",
+  8792: "Social e da Mulher"
+};
+
+function parseValorBR(valStr) {
+    if (!valStr) return 0.0;
+    let limpo = valStr.replace(/"/g, '').trim().replace(/\./g, '').replace(',', '.');
+    let num = parseFloat(limpo);
+    return isNaN(num) ? 0.0 : Math.round(num * 100) / 100;
+}
+
+document.getElementById('csvFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const statusDiv = document.getElementById('status');
+    statusDiv.style.backgroundColor = "#eef2ff";
+    statusDiv.style.color = '#1155cc';
+    statusDiv.innerText = "Processando arquivo CSV...";
+
+    const reader = new FileReader();
+    
+    reader.readAsText(file, 'ISO-8859-1');
+
+    reader.onload = function(event) {
+        try {
+            const conteudoArquivo = event.target.result;
+            const linhas = conteudoArquivo.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            
+            let resultadoJSON = [];
+            let registrosProcessados = 0;
+
+            for (let i = 0; i < linhas.length; i++) {
+                let linhaTxt = linhas[i].trim();
+                if (linhaTxt === "") continue;
+
+                let colunas = linhaTxt.split(';');
+                colunas = colunas.map(c => c.replace(/^"|"$/g, '').trim());
+
+                // Verifica se a linha começa com um código numérico (ex: "00000", "00002", etc.)
+                if (colunas.length >= 11 && /^\d+$/.test(colunas[0])) {
+                    let codigoNum = parseInt(colunas[0], 10);
+                    let secretariaNome = mapaSecretarias[codigoNum] || "Não Especificado";
+                    
+                    let desticacao = colunas[1] || "";
+                    let dispCaixa = parseValorBR(colunas[2]);
+                    let liquidados = parseValorBR(colunas[3]);
+                    let aLiquidar = parseValorBR(colunas[4]);
+                    let restosNaoProc = parseValorBR(colunas[5]);
+                    let restosProc = parseValorBR(colunas[6]);
+                    let saldoExtra = parseValorBR(colunas[7]);
+                    let totalABC = parseValorBR(colunas[8]);
+                    let saldoPositivo = parseValorBR(colunas[9]);
+                    let saldoNegativo = parseValorBR(colunas[10]);
+
+                    resultadoJSON.push({
+                        "Secretaria": secretariaNome,
+                        "Codigo": codigoNum,
+                        "Destinação de Recursos": desticacao,
+                        "Disp. Caixa": dispCaixa,
+                        "Liquidados": liquidados,
+                        "A Liquidar": aLiquidar,
+                        "Restos Não Processados": restosNaoProc,
+                        "Restos Processados": restosProc,
+                        "Saldo Extra (c)": saldoExtra,
+                        "Total (a+b+c)": totalABC,
+                        "Saldo Positivo": saldoPositivo,
+                        "Saldo Negativo": saldoNegativo
+                    });
+
+                    registrosProcessados++;
+                }
+            }
+
+            if (resultadoJSON.length > 0) {
+                const jsonString = JSON.stringify(resultadoJSON, null, 2);
+                const blob = new Blob([jsonString], { type: "application/json;charset=utf-8;" });
+                
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "Apuracao_Saldo_Convertido.json";
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(function() {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 150);
+
+                statusDiv.style.backgroundColor = "#d1e7dd";
+                statusDiv.style.color = '#0f5132';
+                statusDiv.innerHTML = `<b>Sucesso!</b> ${registrosProcessados} registros foram processados e vinculados às suas Secretarias.<br>O arquivo <b>Apuracao_Saldo_Convertido.json</b> foi gerado e baixado!`;
+            } else {
+                statusDiv.style.backgroundColor = "#f8d7da";
+                statusDiv.style.color = '#842029';
+                statusDiv.innerHTML = "<b>Atenção:</b> Nenhum registro válido foi encontrado no CSV.<br>Verifique a estrutura do arquivo selecionado.";
+            }
+        } catch (error) {
+            statusDiv.style.backgroundColor = "#f8d7da";
+            statusDiv.style.color = '#842029';
+            statusDiv.innerText = "Erro ao processar o arquivo: " + error.message;
+            console.error(error);
+        }
+    };
+});
+</script>
+
+</body>
+</html>
