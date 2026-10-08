@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Últimas Notícias - Prefeitura de Campo Largo</title>
+  <style>
+    :root {
+      --primary: #004d99;
+      --secondary: #0073e6;
+      --light-bg: #f4f6f9;
+      --dark-text: #1f2937;
+      --card-bg: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: var(--light-bg);
+      color: var(--dark-text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      color: var(--primary);
+      font-size: 1.8rem;
+    }
+
+    header p {
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+
+    .carousel-container {
+      position: relative;
+      max-width: 800px;
+      width: 100%;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .carousel-track {
+      display: flex;
+      transition: transform 0.4s ease-in-out;
+      width: 100%;
+    }
+
+    .slide {
+      min-width: 100%;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 380px;
+    }
+
+    .badge {
+      align-self: flex-start;
+      background-color: var(--secondary);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+
+    .news-title {
+      font-size: 1.25rem;
+      color: var(--primary);
+      margin-bottom: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .news-desc {
+      font-size: 0.95rem;
+      color: #4b5563;
+      line-height: 1.5;
+      flex-grow: 1;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+    }
+
+    .news-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .news-date {
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+
+    .news-link {
+      color: var(--secondary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .news-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: #f9fafb;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .btn-nav {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-nav:hover {
+      background: #003366;
+    }
+
+    .status-msg {
+      text-align: center;
+      padding: 3rem;
+      color: #6b7280;
+    }
+
+    .error-msg {
+      color: #dc2626;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .refresh-btn {
+      margin-top: 1rem;
+      padding: 8px 16px;
+      background-color: var(--secondary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Notícias do Município de Campo Largo</h1>
+    <p>Sincronizado diretamente com a fonte oficial</p>
+  </header>
+
+  <main class="carousel-container">
+    <div id="status" class="status-msg">Carregando últimas notícias de Campo Largo...</div>
+    <div class="carousel-track" id="track"></div>
+    
+    <div class="controls" id="controls" style="display: none;">
+      <button class="btn-nav" id="prevBtn">❮ Anterior</button>
+      <span id="counter" style="font-size: 0.9rem; font-weight: 600; color: #4b5563;">1 / 10</span>
+      <button class="btn-nav" id="nextBtn">Próxima ❯</button>
+    </div>
+  </main>
+
+  <script>
+    const TARGET_URL = 'https://www.campolargo.pr.gov.br/cidadao/noticia';
+    const PROXY_URL = 'https://api.allorigins.win/get?url=' + encodeURIComponent(TARGET_URL);
+
+    let currentIndex = 0;
+    let newsItems = [];
+
+    async function fetchNews() {
+      const statusEl = document.getElementById('status');
+      const trackEl = document.getElementById('track');
+      const controlsEl = document.getElementById('controls');
+
+      try {
+        const response = await fetch(PROXY_URL);
+        if (!response.ok) throw new Error('Falha ao conectar com o servidor da prefeitura.');
+        
+        const data = await response.json();
+        const htmlText = data.contents;
+
+        // Parse do HTML obtido
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+
+        // Extração dos dados baseados na estrutura do Portal do Cidadão
+        newsItems = parseCampoLargoHTML(doc);
+
+        if (newsItems.length === 0) {
+          throw new Error('Nenhuma notícia encontrada ou layout da página foi alterado.');
+        }
+
+        statusEl.style.display = 'none';
+        controlsEl.style.display = 'flex';
+
+        renderCarousel(newsItems.slice(0, 10)); // Limita às 10 últimas
+        updateCarousel();
+
+      } catch (err) {
+        statusEl.innerHTML = `
+          <div class="error-msg">
+            <p><strong>Não foi possível obter os dados em tempo real.</strong></p>
+            <p style="font-size: 0.85rem; margin-top: 0.5rem;">${err.message}</p>
+            <button class="refresh-btn" onclick="fetchNews()">Tentar Novamente</button>
+          </div>
+        `;
+      }
+    }
+
+    function parseCampoLargoHTML(doc) {
+      const items = [];
+      // Seletor genérico para os blocos de notícias no padrão do sistema IPM/WPO
+      const newsElements = doc.querySelectorAll('.item-noticia, .noticia-item, article, li');
+
+      newsElements.forEach(el => {
+        const titleEl = el.querySelector('h2, h3, .titulo, a');
+        const descEl = el.querySelector('p, .descricao, .resumo');
+        const categoryEl = el.querySelector('.categoria, .badge, span');
+        const dateEl = el.querySelector('.data, time');
+        const linkEl = el.querySelector('a');
+
+        if (titleEl && titleEl.textContent.trim().length > 10) {
+          const title = titleEl.textContent.trim();
+          const description = descEl ? descEl.textContent.trim() : 'Clique abaixo para ler a notícia completa no portal do município.';
+          const category = categoryEl ? categoryEl.textContent.trim() : 'Campo Largo';
+          const date = dateEl ? dateEl.textContent.trim() : '';
+          let link = linkEl ? linkEl.getAttribute('href') : TARGET_URL;
+
+          if (link && !link.startsWith('http')) {
+            link = 'https://www.campolargo.pr.gov.br' + link;
+          }
+
+          // Evita duplicatas de títulos
+          if (!items.some(i => i.title === title)) {
+            items.push({ title, description, category, date, link });
+          }
+        }
+      });
+
+      return items;
+    }
+
+    function renderCarousel(items) {
+      const trackEl = document.getElementById('track');
+      trackEl.innerHTML = '';
+
+      items.forEach(item => {
+        const slide = document.createElement('div');
+        slide.className = 'slide';
+        slide.innerHTML = `
+          <div>
+            <span class="badge">${item.category}</span>
+            <h2 class="news-title">${item.title}</h2>
+            <p class="news-desc">${item.description}</p>
+          </div>
+          <div class="news-footer">
+            <span class="news-date">${item.date}</span>
+            <a href="${item.link}" target="_blank" class="news-link">Ler notícia completa ➔</a>
+          </div>
+        `;
+        trackEl.appendChild(slide);
+      });
+    }
+
+    function updateCarousel() {
+      const trackEl = document.getElementById('track');
+      const counterEl = document.getElementById('counter');
+      
+      trackEl.style.transform = `translateX(-${currentIndex * 100}%)`;
+      counterEl.textContent = `${currentIndex + 1} / ${newsItems.length}`;
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      currentIndex = (currentIndex > 0) ? currentIndex - 1 : newsItems.length - 1;
+      updateCarousel();
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      currentIndex = (currentIndex < newsItems.length - 1) ? currentIndex + 1 : 0;
+      updateCarousel();
+    });
+
+    // Inicia a requisição ao carregar
+    fetchNews();
+  </script>
+</body>
+</html>
