@@ -3,66 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Carrossel de Notícias - Campo Largo</title>
+  <title>Notícias Campo Largo - Carrossel com Imagens</title>
   <style>
     :root {
-      --primary-color: #004d99;
-      --secondary-color: #0073e6;
-      --bg-color: #f3f4f6;
-      --card-bg: #ffffff;
-      --text-color: #1f2937;
+      --primary: #004d99;
+      --secondary: #0073e6;
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --text: #1f2937;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
+      background-color: var(--bg);
+      color: var(--text);
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 2rem 1rem;
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
-    header h1 {
-      color: var(--primary-color);
-      font-size: 1.8rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .badge-status {
-      display: inline-block;
-      padding: 4px 12px;
-      font-size: 0.8rem;
-      border-radius: 12px;
-      font-weight: bold;
-      margin-top: 5px;
-    }
-
-    .status-online { background: #d1fae5; color: #065f46; }
-    .status-loading { background: #fef3c7; color: #92400e; }
-    .status-error { background: #fee2e2; color: #991b1b; }
-
-    /* Layout do Carrossel */
-    .carousel-wrapper {
-      position: relative;
+    .container {
       max-width: 800px;
       width: 100%;
-      background: var(--card-bg);
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
+    }
+
+    .status-badge {
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      font-weight: bold;
       margin-bottom: 1rem;
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .carousel {
+      position: relative;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
     }
 
     .carousel-track {
@@ -73,65 +57,80 @@
 
     .slide {
       min-width: 100%;
-      padding: 2rem;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 320px;
+      min-height: 450px;
     }
 
-    .category-tag {
+    /* Container da Imagem da Notícia */
+    .news-image-container {
+      width: 100%;
+      height: 220px;
+      background-color: #e5e7eb;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .news-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .news-content {
+      padding: 1.5rem 2rem 1rem 2rem;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .badge {
       align-self: flex-start;
-      background-color: var(--secondary-color);
+      background-color: var(--secondary);
       color: white;
       font-size: 0.75rem;
       font-weight: bold;
-      padding: 4px 10px;
-      border-radius: 15px;
+      padding: 4px 12px;
+      border-radius: 12px;
       text-transform: uppercase;
-      margin-bottom: 1rem;
+      margin-bottom: 0.8rem;
     }
 
-    .news-title {
-      font-size: 1.3rem;
-      color: var(--primary-color);
+    .title {
+      font-size: 1.25rem;
+      color: var(--primary);
       margin-bottom: 0.8rem;
       line-height: 1.4;
     }
 
-    .news-summary {
+    .desc {
       font-size: 0.95rem;
       color: #4b5563;
       line-height: 1.5;
       flex-grow: 1;
     }
 
-    .news-footer {
+    .footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 1.5rem;
-      padding-top: 1rem;
+      padding: 1rem 2rem 1.5rem 2rem;
       border-top: 1px solid #e5e7eb;
     }
 
-    .news-date {
-      font-size: 0.85rem;
-      color: #6b7280;
-    }
+    .date { font-size: 0.85rem; color: #6b7280; }
 
-    .news-link {
-      color: var(--secondary-color);
+    .link {
+      color: var(--secondary);
       text-decoration: none;
       font-weight: 600;
       font-size: 0.9rem;
     }
 
-    .news-link:hover {
-      text-decoration: underline;
-    }
+    .link:hover { text-decoration: underline; }
 
-    /* Controles */
     .controls {
       display: flex;
       justify-content: space-between;
@@ -142,31 +141,21 @@
     }
 
     .btn {
-      background: var(--primary-color);
+      background: var(--primary);
       color: white;
       border: none;
       padding: 8px 16px;
       border-radius: 6px;
       cursor: pointer;
       font-weight: 600;
-      transition: opacity 0.2s;
     }
 
-    .btn:hover { opacity: 0.9; }
-
-    .btn-secondary {
-      background: #6b7280;
-    }
-
-    /* Modal / Fallback manual */
-    .manual-box {
-      max-width: 800px;
-      width: 100%;
+    .input-box {
+      margin-top: 1.5rem;
       background: white;
       padding: 1rem;
       border-radius: 8px;
-      margin-top: 1rem;
-      display: none;
+      border: 1px solid #e5e7eb;
     }
 
     textarea {
@@ -174,7 +163,7 @@
       height: 120px;
       margin-top: 0.5rem;
       padding: 8px;
-      border: 1px solid #ccc;
+      border: 1px solid #d1d5db;
       border-radius: 4px;
       font-family: monospace;
       font-size: 0.8rem;
@@ -183,158 +172,55 @@
 </head>
 <body>
 
-  <header>
-    <h1>Notícias de Campo Largo</h1>
-    <div id="status-badge" class="badge-status status-loading">Buscando área-resultados-consulta...</div>
-  </header>
+  <div class="container">
+    <div id="status" class="status-badge">Aguardando dados da .area-resultados-consulta...</div>
 
-  <main class="carousel-wrapper">
-    <div class="carousel-track" id="track">
-      <div class="slide">
-        <h2 class="news-title">Carregando dados da prefeitura...</h2>
+    <div class="carousel">
+      <div class="carousel-track" id="track"></div>
+      
+      <div class="controls">
+        <button class="btn" id="prevBtn">❮ Anterior</button>
+        <span id="counter" style="font-weight: bold;">0 / 0</span>
+        <button class="btn" id="nextBtn">Próxima ❯</button>
       </div>
     </div>
-    
-    <div class="controls" id="controls">
-      <button class="btn" id="prevBtn">❮ Anterior</button>
-      <span id="counter" style="font-weight: bold; color: #4b5563;">0 / 0</span>
-      <button class="btn" id="nextBtn">Próxima ❯</button>
+
+    <!-- Campo para Inserção do HTML da Tela -->
+    <div class="input-box">
+      <p><strong>Cole abaixo o HTML completo capturado da <code>.area-resultados-consulta</code>:</strong></p>
+      <textarea id="rawHtml" placeholder="Cole o código extraído aqui..."></textarea>
+      <button class="btn" style="margin-top: 8px;" onclick="parseManualInput()">Gerar Carrossel com Fotos</button>
     </div>
-  </main>
-
-  <div style="display: flex; gap: 10px;">
-    <button class="btn" onclick="fetchLiveData()">🔄 Recarregar Tempo Real</button>
-    <button class="btn btn-secondary" onclick="toggleManual()">📋 Inserir HTML Manualmente</button>
-  </div>
-
-  <!-- Painel de Emergência caso proxies CORS falhem no seu navegador -->
-  <div class="manual-box" id="manualBox">
-    <p><strong>Caso a rede bloqueie as chamadas automáticas:</strong></p>
-    <p style="font-size:0.85rem; color:#666;">Copie o elemento <code>&lt;div class="area-resultados-consulta"&gt;...&lt;/div&gt;</code> do site e cole abaixo:</p>
-    <textarea id="rawHtml" placeholder="Cole o código HTML da div .area-resultados-consulta aqui..."></textarea>
-    <button class="btn" style="margin-top: 5px;" onclick="parseManualHTML()">Processar HTML</button>
   </div>
 
   <script>
-    const TARGET_URL = 'https://www.campolargo.pr.gov.br/cidadao/noticia';
-    
-    // Lista de proxies para contornar o CORS em ambiente client-side
-    const PROXIES = [
-      url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-      url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-      url => `https://thingproxy.freeboard.io/fetch/${url}`
-    ];
-
-    let newsItems = [];
+    let newsList = [];
     let currentIndex = 0;
-
-    async function fetchLiveData() {
-      const badge = document.getElementById('status-badge');
-      badge.className = 'badge-status status-loading';
-      badge.textContent = 'Consultando site oficial...';
-
-      let htmlContent = null;
-
-      // Tenta alternar entre os proxies CORS
-      for (const proxyFn of PROXIES) {
-        try {
-          const endpoint = proxyFn(TARGET_URL);
-          const response = await fetch(endpoint);
-          
-          if (!response.ok) continue;
-
-          if (endpoint.includes('allorigins')) {
-            const data = await response.json();
-            htmlContent = data.contents;
-          } else {
-            htmlContent = await response.text();
-          }
-
-          if (htmlContent && htmlContent.includes('area-resultados-consulta')) {
-            break; // Conseguiu obter o HTML contendo a div procurada
-          }
-        } catch (e) {
-          console.warn('Proxy falhou, tentando próximo...', e);
-        }
-      }
-
-      if (htmlContent) {
-        processHTMLContent(htmlContent);
-      } else {
-        badge.className = 'badge-status status-error';
-        badge.textContent = 'Bloqueio de CORS/Rede. Utilize a opção manual abaixo.';
-      }
-    }
-
-    function processHTMLContent(htmlText) {
-      const badge = document.getElementById('status-badge');
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlText, 'text/html');
-
-      // Seleção ESPECÍFICA da div solicitada: area-resultados-consulta
-      const container = doc.querySelector('.area-resultados-consulta');
-
-      if (!container) {
-        badge.className = 'badge-status status-error';
-        badge.textContent = 'Elemento .area-resultados-consulta não encontrado no HTML!';
-        return;
-      }
-
-      // Procura os itens dentro da div de resultados
-      newsItems = [];
-      const cards = container.querySelectorAll('a, .item, article, row, div > div');
-
-      cards.forEach(card => {
-        const titleEl = card.querySelector('h2, h3, h4, strong, .titulo');
-        const descEl = card.querySelector('p, .descricao, .resumo');
-        const dateEl = card.querySelector('.data, time, span');
-        const categoryEl = card.querySelector('.categoria, .badge');
-
-        let title = titleEl ? titleEl.textContent.trim() : '';
-        let description = descEl ? descEl.textContent.trim() : 'Sem descrição disponível.';
-        let date = dateEl ? dateEl.textContent.trim() : '';
-        let category = categoryEl ? categoryEl.textContent.trim() : 'NOTÍCIA';
-        let link = card.tagName === 'A' ? card.getAttribute('href') : (card.querySelector('a')?.getAttribute('href') || TARGET_URL);
-
-        if (title.length > 8 && !newsItems.some(i => i.title === title)) {
-          if (link && !link.startsWith('http')) {
-            link = 'https://www.campolargo.pr.gov.br' + link;
-          }
-
-          newsItems.push({ title, description, date, category, link });
-        }
-      });
-
-      if (newsItems.length > 0) {
-        // Limita a no máximo 10 notícias
-        newsItems = newsItems.slice(0, 10);
-        badge.className = 'badge-status status-online';
-        badge.textContent = `Em Tempo Real: ${newsItems.length} notícias carregadas de .area-resultados-consulta`;
-        currentIndex = 0;
-        renderCarousel();
-        updateCarousel();
-      } else {
-        badge.className = 'badge-status status-error';
-        badge.textContent = 'Não foi possível estruturar as notícias dentro de .area-resultados-consulta';
-      }
-    }
+    const DOMAIN = 'https://www.campolargo.pr.gov.br';
 
     function renderCarousel() {
       const track = document.getElementById('track');
       track.innerHTML = '';
 
-      newsItems.forEach(item => {
+      newsList.forEach(item => {
         const slide = document.createElement('div');
         slide.className = 'slide';
+
+        // Bloco de imagem (exibe placeholder caso não haja foto na matéria)
+        const imageHtml = item.image 
+          ? `<div class="news-image-container"><img src="${item.image}" alt="${item.title}" class="news-image" onerror="this.parentNode.style.display='none'"></div>`
+          : '';
+
         slide.innerHTML = `
-          <div>
-            <span class="category-tag">${item.category}</span>
-            <h2 class="news-title">${item.title}</h2>
-            <p class="news-summary">${item.description}</p>
+          ${imageHtml}
+          <div class="news-content">
+            <span class="badge">${item.category}</span>
+            <h2 class="title">${item.title}</h2>
+            <p class="desc">${item.description}</p>
           </div>
-          <div class="news-footer">
-            <span class="news-date">${item.date}</span>
-            <a href="${item.link}" target="_blank" class="news-link">Acessar no Portal ➔</a>
+          <div class="footer">
+            <span class="date">${item.date}</span>
+            <a href="${item.link}" target="_blank" class="link">Ver matéria ➔</a>
           </div>
         `;
         track.appendChild(slide);
@@ -344,34 +230,96 @@
     function updateCarousel() {
       const track = document.getElementById('track');
       const counter = document.getElementById('counter');
-      if (newsItems.length === 0) return;
-      
+      if (newsList.length === 0) return;
+
       track.style.transform = `translateX(-${currentIndex * 100}%)`;
-      counter.textContent = `${currentIndex + 1} / ${newsItems.length}`;
+      counter.textContent = `${currentIndex + 1} / ${newsList.length}`;
+    }
+
+    function parseHTML(htmlText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+      
+      const container = doc.querySelector('.area-resultados-consulta') || doc.body;
+      const items = [];
+
+      // Procura os blocos da consulta
+      const elements = container.querySelectorAll('a, .item, article, li, div[class*="noticia"]');
+
+      elements.forEach(el => {
+        const titleEl = el.querySelector('h2, h3, h4, strong, .titulo') || el;
+        const descEl = el.querySelector('p, .descricao, .resumo');
+        const dateEl = el.querySelector('.data, time, span');
+        const categoryEl = el.querySelector('.categoria, .badge');
+        
+        // Extração Inteligente de Imagem
+        const imgEl = el.querySelector('img');
+        let imgUrl = '';
+
+        if (imgEl) {
+          // Checa src, data-src ou srcset
+          imgUrl = imgEl.getAttribute('src') || imgEl.getAttribute('data-src') || '';
+        } else {
+          // Checa background-image via atributo style
+          const bgEl = el.querySelector('[style*="background"]');
+          if (bgEl) {
+            const style = bgEl.getAttribute('style');
+            const match = style.match(/url\(['"]?(.*?)['"]?\)/);
+            if (match) imgUrl = match[1];
+          }
+        }
+
+        // Formatação do Link da Imagem para URL Absoluta
+        if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('data:')) {
+          imgUrl = DOMAIN + (imgUrl.startsWith('/') ? '' : '/') + imgUrl;
+        }
+
+        const title = titleEl ? titleEl.textContent.trim() : '';
+        const description = descEl ? descEl.textContent.trim() : 'Clique abaixo para ler os detalhes da matéria no portal oficial.';
+        const date = dateEl ? dateEl.textContent.trim() : '';
+        const category = categoryEl ? categoryEl.textContent.trim() : 'CAMPO LARGO';
+        
+        let link = el.tagName === 'A' ? el.getAttribute('href') : el.querySelector('a')?.getAttribute('href');
+        if (link && !link.startsWith('http')) {
+          link = DOMAIN + (link.startsWith('/') ? '' : '/') + link;
+        }
+
+        if (title.length > 8 && !items.some(i => i.title === title)) {
+          items.push({ 
+            title, 
+            description, 
+            date, 
+            category, 
+            image: imgUrl,
+            link: link || '#' 
+          });
+        }
+      });
+
+      if (items.length > 0) {
+        newsList = items.slice(0, 10);
+        document.getElementById('status').textContent = `${newsList.length} notícias com imagens processadas!`;
+        document.getElementById('status').style.background = '#d1fae5';
+        document.getElementById('status').style.color = '#065f46';
+        currentIndex = 0;
+        renderCarousel();
+        updateCarousel();
+      } else {
+        document.getElementById('status').textContent = 'Nenhuma notícia com imagem foi estruturada.';
+        document.getElementById('status').style.background = '#fee2e2';
+        document.getElementById('status').style.color = '#991b1b';
+      }
+    }
+
+    function parseManualInput() {
+      const raw = document.getElementById('rawHtml').value;
+      if (raw) parseHTML(raw);
     }
 
     document.getElementById('prevBtn').addEventListener('click', () => {
-      currentIndex = (currentIndex > 0) ? currentIndex - 1 : newsItems.length - 1;
+      currentIndex = (currentIndex > 0) ? currentIndex - 1 : newsList.length - 1;
       updateCarousel();
     });
 
     document.getElementById('nextBtn').addEventListener('click', () => {
-      currentIndex = (currentIndex < newsItems.length - 1) ? currentIndex + 1 : 0;
-      updateCarousel();
-    });
-
-    function toggleManual() {
-      const box = document.getElementById('manualBox');
-      box.style.display = box.style.display === 'block' ? 'none' : 'block';
-    }
-
-    function parseManualHTML() {
-      const raw = document.getElementById('rawHtml').value;
-      if (raw) processHTMLContent(raw);
-    }
-
-    // Inicializa a consulta ao abrir a página
-    fetchLiveData();
-  </script>
-</body>
-</html>
+      currentIndex = (currentIndex < newsList.length - 1) ?
