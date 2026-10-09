@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor RGF Anexo 5 · CSV → JSON</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #1155cc;
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 24px;
+        }
+        .sub {
+            color: #666;
+            font-size: 14px;
+            margin-top: 0;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        .file-input-wrapper {
+            margin: 25px 0 15px 0;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn-upload {
+            background-color: #1155cc;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s, border-color 0.2s;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(17, 85, 204, 0.3);
+            border: 2px dashed transparent;
+        }
+        .btn-upload:hover {
+            background-color: #0b3c94;
+        }
+        .btn-upload.over {
+            background-color: #0b3c94;
+            border-color: #ffffff;
+        }
+        .btn-action {
+            background-color: #1155cc;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: background 0.2s;
+            box-shadow: 0 2px 5px rgba(17, 85, 204, 0.3);
+        }
+        .btn-action:hover {
+            background-color: #0b3c94;
+        }
+        .card {
+            background-color: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 18px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .card h2 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0 0 12px 0;
+            color: #1155cc;
+            font-weight: bold;
+        }
+        details summary {
+            cursor: pointer;
+            color: #1155cc;
+            font-weight: bold;
+            font-size: 14px;
+            user-select: none;
+        }
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        label.field-label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            font: inherit;
+            font-size: 13px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+            color: #333;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #1155cc;
+        }
+        dl {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 6px 18px;
+            margin: 0;
+            font-size: 14px;
+        }
+        dt {
+            color: #666;
+            font-weight: 600;
+        }
+        dd {
+            margin: 0;
+            color: #333;
+            word-break: break-word;
+        }
+        .box-success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .box-warn {
+            background-color: #fff3cd;
+            color: #664d03;
+            border: 1px solid #ffecb5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            text-align: left;
+        }
+        .box-warn ul {
+            margin: 5px 0 0 0;
+            padding-left: 20px;
+            font-size: 13px;
+        }
+        .box-err {
+            background-color: #f8d7da;
+            color: #842029;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: left;
+        }
+        [hidden] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Conversor RGF Anexo 5</h1>
+    <p class="sub">Demonstrativo da Disponibilidade de Caixa e dos Restos a Pagar → estrutura Siconfi (JSON)<br>Selecione ou arraste o arquivo CSV original do demonstrativo.</p>
+
+    <div class="file-input-wrapper">
+        <label id="drop" for="file" class="btn-upload">
+            <strong>Selecionar e Converter CSV para JSON</strong>
+        </label>
+        <input type="file" id="file" accept=".csv,text/csv">
+    </div>
+
+    <details class="card">
+        <summary>Metadados do ente (editáveis)</summary>
+        <div class="meta" id="meta"></div>
+    </details>
+
+    <div id="result" hidden>
+        <div class="box-success">
+            <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #0f5132;">Sucesso! O arquivo JSON foi gerado e baixado.</h2>
+            <dl id="summary"></dl>
+            <button id="again" class="btn-action">Baixar JSON novamente</button>
+        </div>
+        
+        <div class="box-warn" id="warnBox" hidden>
+            <strong>Avisos durante o processamento:</strong>
+            <ul id="warns"></ul>
+        </div>
+    </div>
+
+    <div class="box-err" id="errBox" hidden>
+        <span id="errMsg"></span>
+    </div>
+</div>
+
+<script>
+/* ---------- Metadados fixos do RGF Anexo 05 ---------- */
+const META = {
+  periodicidade: 'Q', 
+  instituicao: 'Prefeitura Municipal de Campo Largo - PR', 
+  cod_ibge: 4104204,
+  uf: 'PR', 
+  co_poder: 'E', 
+  populacao: 144165, 
+  anexo: 'RGF-Anexo 05', 
+  esfera: 'M', 
+  rotulo: 'Padrão'
+};
+
+const BASE_URL = 'https://host-5hrds-scan.prosubnet.vcndados.oraclevcn.com/ords/cdwhprd/siconfi';
+
+/* ---------- Mapeamento das Colunas do CSV para o JSON ---------- */
+const COLUMNAS_MAP = [
+  {
+    colIndex: 0,
+    cod_conta: 'DisponibilidadeDeCaixaBruta',
+    coluna: 'DISPONIBILIDADE DE CAIXA BRUTA (a)'
+  },
+  {
+    colIndex: 1,
+    cod_conta: 'RestosAPagarLiquidadosENaoPagosDeExerciciosAnteriores',
+    coluna: 'De Exercícios Anteriores (b)'
+  },
+  {
+    colIndex: 2,
+    cod_conta: 'RestosAPagarLiquidadosENaoPagosDoExercicio',
+    coluna: 'Do Exercício (c)'
+  },
+  {
+    colIndex: 3,
+    cod_conta: 'RestosAPagarEmpenhadosENaoLiquidadosDeExerciciosAnteriores',
+    coluna: 'Restos a Pagar Empenhados e Não Liquidados de Exercícios Anteriores (d)'
+  },
+  {
+    colIndex: 4,
+    cod_conta: 'DemaisObrigacoesFinanceiras',
+    coluna: 'Demais Obrigações Financeiras (e)'
+  },
+  {
+    colIndex: 6,
+    cod_conta: 'DisponibilidadeDeCaixaLiquida',
+    coluna: 'DISPONIBILIDADE DE CAIXA LÍQUIDA (ANTES DA INSCRIÇÃO EM RESTOS A PAGAR NÃO PROCESSADOS DO EXERCÍCIO) (g)=(a-(b+c+d+e)-f)'
+  },
+  {
+    colIndex: 7,
+    cod_conta: 'RestosAPagarEmpenhadosENaoLiquidadosDoExercicio',
+    coluna: 'RESTOS A PAGAR EMPENHADOS E NÃO LIQUIDADOS DO EXERCÍCIO (h)'
+  },
+  {
+    colIndex: 9,
+    cod_conta: 'DisponibilidadeDeCaixaLiquidaAposRP',
+    coluna: 'DISPONIBILIDADE DE CAIXA LÍQUIDA (APÓS A INSCRIÇÃO EM RESTOS A PAGAR NÃO PROCESSADOS DO EXERCÍCIO) (i) = (g - h)'
+  }
+];
+
+/* ---------- Ordens das contas (linhas do CSV) ---------- */
+const ACCOUNTS = [
+  "TOTAL DOS RECURSOS NÃO VINCULADOS (I)",
+  "Recursos Não Vinculados de Impostos",
+  "Outros Recursos não Vinculados",
+  "TOTAL DOS RECURSOS VINCULADOS (EXCETO AO RPPS) (II)",
+  "Recursos Vinculados à Educação",
+  "Transferências do FUNDEB",
+  "Outros Recursos Vinculados à Educação",
+  "Recursos Vinculados à Saúde",
+  "Transferências Fundo a Fundo de Recursos do SUS",
+  "Outros Recursos Vinculados à Saúde",
+  "Recursos Vinculados à Assistência Social",
+  "Recursos Vinculados à Previdência Social",
+  "Demais Vinculações Decorrentes de Transferências",
+  "Transferências de Convênios e Instrumentos Congêneres (exceto Educação, Saúde e Assistência)",
+  "Outras Vinculações Decorrentes de Transferências",
+  "Demais Vinculações Legais",
+  "Recursos de Operações de Crédito (exceto vinculados à Educação e à Saúde)",
+  "Recursos de Alienação de Bens/Ativos",
+  "Recursos Vinculados a Fundos (exceto Educação, Saúde, Assistência e Previdência)",
+  "Outras Vinculações Legais",
+  "Recursos Extraorçamentários",
+  "Outras Vinculações",
+  "TOTAL DOS RECURSOS VINCULADOS AO RPPS (III)",
+  "Recursos Vinculados ao RPPS - Fundo em Capitalização (Plano Previdenciário)",
+  "Recursos Vinculados ao RPPS - Fundo em Repartição (Plano Financeiro)",
+  "Recursos Vinculados ao RPPS - Taxa de Administração",
+  "TOTAL (IV) = (I + II + III)"
+];
+
+/* ---------- Utilitários ---------- */
+function decode(buf){
+  try { return new TextDecoder('utf-8', {fatal: true}).decode(buf); }
+  catch(e){ return new TextDecoder('windows-1252').decode(buf); }
+}
+
+function parseCSV(txt){
+  const rows = []; let row = [], cur = '', q = false;
+  txt = txt.replace(/^\uFEFF/, '');
+  for(let i = 0; i < txt.length; i++){
+    const c = txt[i];
+    if(q){ 
+      if(c === '"'){ 
+        if(txt[i+1] === '"'){ cur += '"'; i++; } else q = false; 
+      } else cur += c; 
+    }
+    else if(c === '"') q = true;
+    else if(c === ';'){ row.push(cur); cur = ''; }
+    else if(c === '\n' || c === '\r'){ 
+      if(c === '\r' && txt[i+1] === '\n') i++; 
+      row.push(cur); rows.push(row); row = []; cur = ''; 
+    }
+    else cur += c;
+  }
+  if(cur !== '' || row.length){ row.push(cur); rows.push(row); }
+  return rows.map(r => {
+    while(r.length && r[r.length-1].trim() === '') r.pop();
+    return r;
+  });
+}
+
+const parseVal = (str) => {
+  if (!str) return 0;
+  let s = str.trim().replace(/"/g, '');
+  if (!s || s === '-' || s === '0,00') return 0;
+  let neg = false;
+  if (s.startsWith('(') && s.endsWith(')')) {
+    neg = true;
+    s = s.substring(1, s.length - 1);
+  } else if (s.startsWith('-')) {
+    neg = true;
+    s = s.substring(1);
+  }
+  s = s.replace(/\./g, '').replace(',', '.');
+  const v = parseFloat(s);
+  if (isNaN(v)) return 0;
+  return neg ? -v : v;
+};
+
+/* ---------- Conversão ---------- */
+function convert(csvText, meta){
+  const rows = parseCSV(csvText);
+  const warns = [];
+
+  // Localização do início das linhas de dados do demonstrativo
+  let startIdx = rows.findIndex(r => r.length > 5 && (r[0].includes('60.418') || /^\d{1,3}(\.\d{3})*,\d{2}$/.test(r[0].trim())));
+  if (startIdx < 0) startIdx = 5; // Índice padrão caso não localize o marcador exato
+
+  const base = {
+    exercicio: 2025,
+    periodo: 3,
+    periodicidade: meta.periodicidade,
+    instituicao: meta.instituicao,
+    cod_ibge: meta.cod_ibge,
+    uf: meta.uf,
+    co_poder: meta.co_poder,
+    populacao: meta.populacao,
+    anexo: meta.anexo,
+    esfera: meta.esfera,
+    rotulo: meta.rotulo
+  };
+
+  const items = [];
+
+  // Varredura por colunas e contas na ordem exigida pelo JSON
+  COLUMNAS_MAP.forEach(colDef => {
+    ACCOUNTS.forEach((contaNome, accIdx) => {
+      const csvRowIndex = startIdx + accIdx;
+      if (csvRowIndex >= rows.length) return;
+
+      const row = rows[csvRowIndex];
+      const rawVal = row[colDef.colIndex];
+      const val = parseVal(rawVal);
+
+      // Regra Siconfi: Omitir valores zerados
+      if (val !== 0) {
+        items.push({
+          ...base,
+          coluna: colDef.coluna,
+          cod_conta: colDef.cod_conta,
+          conta: contaNome,
+          valor: val
+        });
+      }
+    });
+  });
+
+  const q = `an_exercicio=${base.exercicio}&in_periodicidade=${meta.periodicidade}&nr_periodo=${base.periodo}&co_tipo_demonstrativo=RGF&no_anexo=${encodeURIComponent(meta.anexo).replace(/%20/g,'+')}&co_esfera=${meta.esfera}&co_poder=${meta.co_poder}&id_ente=${meta.cod_ibge}`;
+  const href = `${BASE_URL}/tt/rgf?${q}`;
+
+  const json = {
+    items,
+    hasMore: false,
+    limit: 5000,
+    offset: 0,
+    count: items.length,
+    links: [
+      { rel: 'self', href },
+      { rel: 'describedby', href: `${BASE_URL}/metadata-catalog/tt/item` },
+      { rel: 'first', href }
+    ]
+  };
+
+  return { json, warns, exercicio: base.exercicio, periodo: base.periodo };
+}
+
+/* ---------- Interface ---------- */
+const $ = id => document.getElementById(id);
+const metaDefs = [
+  ['instituicao','Instituição','text'],
+  ['cod_ibge','Cód. IBGE','number'],
+  ['uf','UF','text'],
+  ['populacao','População','number'],
+  ['anexo','Anexo','text'],
+  ['co_poder','Poder','text'],
+  ['esfera','Esfera','text'],
+  ['periodicidade','Periodicidade','text']
+];
+
+$('meta').innerHTML = metaDefs.map(([k,l,t]) => 
+  `<div><label class="field-label">${l}</label><input type="${t}" data-k="${k}" value="${META[k]}"></div>`
+).join('');
+
+const readMeta = () => {
+  const m = { ...META }; 
+  document.querySelectorAll('[data-k]').forEach(i => m[i.dataset.k] = i.type === 'number' ? +i.value : i.value); 
+  return m;
+};
+
+let lastBlob = null, lastName = 'rgf_anexo_5.json';
+
+function download(){ 
+  if(!lastBlob) return; 
+  const a = document.createElement('a'); 
+  a.href = URL.createObjectURL(lastBlob); 
+  a.download = lastName; 
+  document.body.appendChild(a); 
+  a.click(); 
+  a.remove(); 
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000); 
+}
+
+async function handle(file){
+  $('errBox').hidden = true; 
+  $('result').hidden = true;
+  try {
+    const txt = decode(await file.arrayBuffer());
+    const r = convert(txt, readMeta());
+    lastBlob = new Blob([JSON.stringify(r.json, null, 2)], { type: 'application/json' });
+    lastName = 'rgf_anexo_5.json';
+    
+    $('summary').innerHTML = `
+      <dt>Arquivo:</dt><dd>${file.name}</dd>
+      <dt>Exercício:</dt><dd>${r.exercicio}</dd>
+      <dt>Período:</dt><dd>${r.periodo}º quadrimestre</dd>
+      <dt>Itens gerados:</dt><dd>${r.json.count}</dd>
+    `;
+    $('warns').innerHTML = r.warns.map(w => `<li>${w}</li>`).join(''); 
+    $('warnBox').hidden = !r.warns.length;
+    $('result').hidden = false; 
+    download();
+  } catch(e) { 
+    $('errMsg').textContent = 'Erro ao processar o arquivo: ' + e.message; 
+    $('errBox').hidden = false; 
+  }
+}
+
+$('file').addEventListener('change', e => { if(e.target.files[0]) handle(e.target.files[0]); e.target.value = ''; });$('again').addEventListener('click', download);
+
+const d = $('drop');
+['dragenter','dragover'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('over'); }));
+d.addEventListener('drop', e => { if(e.dataTransfer.files[0]) handle(e.dataTransfer.files[0]); });
+</script>
+
+</body>
+</html>
