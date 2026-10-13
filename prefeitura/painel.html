@@ -6,85 +6,98 @@
 <title>Painel Geral de Acompanhamento | Secretaria Municipal da Fazenda - Campo Largo</title>
 
 <!-- Bootstrap 5 & Icons (mesmo conjunto do despesas.html) -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+/* ===== Tema minimalista sobre Bootstrap 5 ===== */
 :root{
-  --azul:#0d6efd;
-  --azul-escuro:#073b6f;
-  --fundo:#f4f7fb;
+  --bs-primary:#0b2f57; --bs-primary-rgb:11,47,87;
+  --bs-success:#1f8f5f; --bs-danger:#c0392b; --bs-warning:#d39a1c;
+  --bs-body-font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --azul:#2f6fdb; --navy:#0b2f57; --fundo:#f5f6f8; --linha:#e6e8ec; --txt:#1f2937; --mut:#6b7280;
+  --c-orc:#2f6fdb; --c-emp:#0f8fa3; --c-liq:#d39a1c; --c-pag:#1f8f5f;
 }
-html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; background:var(--fundo); font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; color:#212529; }
-#app { width:1920px; height:1080px; padding:10px 18px; display:flex; flex-direction:column; gap:10px; box-sizing:border-box; }
+html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; background:var(--fundo); font-family:var(--bs-body-font-family); color:var(--txt); -webkit-font-smoothing:antialiased; }
+#app { width:1920px; height:1080px; padding:12px 20px; display:flex; flex-direction:column; gap:12px; box-sizing:border-box; }
+.text-success{ color:#1f8f5f !important; } .text-danger{ color:#c0392b !important; }
 
-.card{ border:0; box-shadow:0 4px 18px rgba(0,0,0,.07); border-radius:12px; background:#fff; }
+.card{ border:1px solid var(--linha); box-shadow:none; border-radius:10px; background:#fff; }
 
-/* HEADER (mesmo gradiente do hero do despesas.html) */
-.hdr { flex:0 0 100px; height:100px; background:linear-gradient(135deg,#073b6f,#0d6efd); color:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.18); display:grid; grid-template-columns:1fr 520px 1fr; align-items:center; padding:0 26px; }
+/* CABEÇALHO */
+.hdr { flex:0 0 88px; height:88px; background:#fff; border:1px solid var(--linha); border-radius:10px; display:grid; grid-template-columns:1fr 440px 1fr; align-items:center; padding:0 28px; position:relative; }
+.hdr::before { content:""; position:absolute; left:0; top:16px; bottom:16px; width:3px; background:var(--navy); border-radius:0 3px 3px 0; }
 .brand { display:flex; align-items:center; gap:18px; }
-.brasao-box { background:#fff; border-radius:12px; padding:4px 8px; height:80px; display:flex; align-items:center; }
-.brasao-svg { height:70px; width:auto; display:block; }
-.brand h1 { font-size:30px; font-weight:700; margin:0; line-height:1.1; }
-.brand p { margin:0; font-size:17px; opacity:.85; letter-spacing:.5px; }
-.brand .cidade { font-size:14px; opacity:.75; }
-.weather { display:flex; align-items:center; justify-content:center; gap:18px; background:rgba(255,255,255,.14); border-radius:12px; padding:8px 20px; height:70px; }
-.weather i { font-size:42px; color:#ffd24d; }
-.weather .temp { font-size:38px; font-weight:700; line-height:1; }
-.weather .desc { font-size:16px; line-height:1.2; opacity:.9; }
-.weather .desc b { font-size:18px; }
+.brasao-box { height:66px; display:flex; align-items:center; }
+.brasao-svg { height:66px; width:auto; display:block; }
+.brand h1 { font-size:25px; font-weight:600; margin:0; line-height:1.15; color:var(--navy); letter-spacing:-.01em; }
+.brand p { margin:2px 0 0; font-size:15px; color:var(--mut); }
+.brand .cidade { display:none; }
+.weather { display:flex; align-items:center; justify-content:center; gap:14px; border-left:1px solid var(--linha); border-right:1px solid var(--linha); height:52px; padding:0 20px; }
+.weather i { font-size:30px; color:#c98a00; }
+.weather .temp { font-size:30px; font-weight:600; line-height:1; color:var(--navy); }
+.weather .desc { font-size:14px; line-height:1.25; color:var(--mut); }
+.weather .desc b { font-size:15px; font-weight:600; color:var(--txt); }
 .clock-box { text-align:right; }
-.clock { font-size:50px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
-.date { font-size:18px; text-transform:capitalize; opacity:.92; }
-.upd { font-size:12px; opacity:.65; }
+.clock { font-size:40px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; color:var(--navy); letter-spacing:-.01em; }
+.date { font-size:15px; text-transform:capitalize; color:var(--mut); margin-top:2px; }
+.upd { font-size:12px; color:#9ca3af; }
 
 /* SEÇÕES */
-.sec-title { font-size:14px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#6c757d; margin:0 0 6px 4px; display:flex; align-items:center; gap:10px; }
-.tag-sim { font-size:11px; letter-spacing:.5px; background:#fff3cd; color:#8a6d00; border:1px solid #ffe08a; border-radius:20px; padding:1px 9px; text-transform:none; font-weight:600; }
-.tag-live { font-size:11px; letter-spacing:.5px; background:#d1e7dd; color:#0f5132; border:1px solid #a3cfbb; border-radius:20px; padding:1px 9px; text-transform:none; font-weight:600; }
-.row-budget { flex:0 0 160px; }
-.row-kpi { flex:0 0 138px; }
+.sec-title { font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--mut); margin:0 0 8px 2px; display:flex; align-items:center; gap:10px; }
+.sec-title > i { font-size:14px; }
+.tag-sim, .tag-live { font-size:11px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--mut); background:#fff; border:1px solid var(--linha); border-radius:999px; padding:1px 10px 1px 8px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.tag-sim::before, .tag-live::before { content:""; width:6px; height:6px; border-radius:50%; background:#d39a1c; }
+.tag-live::before { background:#1f8f5f; }
+.tag-org::before { background:var(--navy) !important; }
+.row-budget { flex:0 0 156px; }
+.row-kpi { flex:0 0 140px; }
 .row-center { flex:1 1 0; min-height:0; display:grid; grid-template-columns:60fr 40fr; gap:12px; }
 .row-foot { flex:0 0 232px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-.pad { padding:12px 18px; position:relative; }
+.pad { padding:14px 20px; position:relative; }
 
-/* Orçamento */
-.stage { display:flex; flex-direction:column; justify-content:space-between; height:128px; }
-.stage .lbl { font-size:16px; font-weight:600; color:#6c757d; display:flex; justify-content:space-between; align-items:center; }
-.stage .val { font-size:34px; font-weight:800; line-height:1.05; font-variant-numeric:tabular-nums; color:var(--azul-escuro); }
-.stage .badge { font-size:15px; padding:6px 10px; }
-.stage .progress { height:12px; border-radius:6px; }
-.stage .sub { font-size:13px; color:#6c757d; }
-.stage::after { content:"\F285"; font-family:"bootstrap-icons"; position:absolute; right:-15px; top:50%; transform:translateY(-50%); color:#adb5bd; font-size:18px; z-index:2; }
-.grid4 .stage:last-child::after { display:none; }
+/* Execução da despesa */
+.stage { display:flex; flex-direction:column; justify-content:space-between; height:126px; }
+.stage .lbl { font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); display:flex; justify-content:space-between; align-items:center; }
+.stage .lbl > span:first-child::before { content:""; display:inline-block; width:8px; height:8px; border-radius:2px; background:var(--c); margin-right:8px; vertical-align:1px; }
+.stage .val { font-size:36px; font-weight:600; line-height:1.05; font-variant-numeric:tabular-nums; color:var(--navy); letter-spacing:-.02em; }
+.pill { font-size:12px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--c); background:color-mix(in srgb, var(--c) 10%, #fff); border-radius:6px; padding:3px 8px; }
+.progress { height:4px; background:#eef0f3; border-radius:2px; }
+.progress-bar { background-color:var(--c); border-radius:2px; }
+.stage .sub { font-size:13px; color:var(--mut); }
 
-/* KPIs */
-.kpi { border-left:8px solid var(--azul); display:flex; flex-direction:row; align-items:center; gap:16px; height:130px; }
-.kpi .ic { font-size:40px; width:56px; text-align:center; }
-.kpi .t { font-size:15px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.4px; }
-.kpi .v { font-size:32px; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; color:var(--azul-escuro); }
-.kpi .s { font-size:15px; color:#495057; }
-.kpi .progress { height:10px; margin-top:6px; }
+/* Indicadores de receita */
+.kpi { display:flex; flex-direction:row; align-items:center; gap:16px; height:116px; }
+.kpi .ic { font-size:20px; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:#f1f4f9; color:var(--navy); flex:none; }
+.kpi .t { font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); }
+.kpi .v { font-size:32px; font-weight:600; line-height:1.15; font-variant-numeric:tabular-nums; color:var(--navy); letter-spacing:-.02em; }
+.kpi .s { font-size:13px; color:var(--mut); }
+.kpi .progress { margin:6px 0 4px; }
 .kpi-body { flex:1; min-width:0; }
 
 /* Gráficos */
-.chart-card { display:flex; flex-direction:column; min-height:0; padding:12px 18px 10px; }
-.chart-card h3 { font-size:20px; font-weight:700; margin:0 0 4px; color:var(--azul-escuro); display:flex; align-items:center; gap:10px; }
+.chart-card { display:flex; flex-direction:column; min-height:0; padding:14px 20px 12px; }
+.chart-card h3, .foot-card h3 { font-size:16px; font-weight:600; margin:0 0 6px; color:var(--navy); display:flex; align-items:center; gap:10px; }
+.chart-card h3 i, .foot-card h3 i { color:var(--mut) !important; font-size:16px; }
 .chart-wrap { position:relative; flex:1; min-height:0; }
 
 /* Rodapé */
-.foot-card { padding:10px 18px; overflow:hidden; }
-.foot-card h3 { font-size:19px; font-weight:700; margin:0 0 6px; color:var(--azul-escuro); display:flex; align-items:center; gap:10px; }
-table.tbl { font-size:16px; margin:0; }
-table.tbl th { font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:#6c757d; padding:4px 8px; }
-table.tbl td { padding:5px 8px; vertical-align:middle; }
-.alert-item { display:flex; align-items:center; gap:12px; padding:6px 12px; border-left:6px solid; border-radius:6px; background:#f8f9fa; margin-bottom:6px; font-size:16px; }
-.alert-item i { font-size:22px; width:28px; text-align:center; }
-.alert-item .d { margin-left:auto; font-weight:700; white-space:nowrap; }
-.alert-item small { display:block; color:#6c757d; font-size:13px; line-height:1.1; }
+.foot-card { padding:12px 20px; overflow:hidden; }
+table.tbl { --bs-table-bg:transparent; --bs-table-striped-bg:transparent; font-size:15px; margin:0; }
+table.tbl th { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--mut); padding:4px 8px; border-bottom:1px solid var(--linha); }
+table.tbl td { padding:6px 8px; vertical-align:middle; border-bottom:1px solid #f0f1f4; font-variant-numeric:tabular-nums; }
+table.tbl tr:last-child td { border-bottom:0; }
+.st { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--txt); }
+.st i { width:7px; height:7px; border-radius:50%; background:var(--c); display:inline-block; }
+.alert-item { display:flex; align-items:center; gap:12px; padding:7px 4px; border-bottom:1px solid #f0f1f4; font-size:15px; }
+.alert-item:last-child { border-bottom:0; }
+.alert-item i { font-size:18px; width:26px; text-align:center; }
+.alert-item .d { margin-left:auto; font-weight:600; font-size:14px; white-space:nowrap; }
+.alert-item small { display:block; color:var(--mut); font-size:12.5px; line-height:1.15; }
 </style>
 </head>
 <body>
@@ -103,8 +116,8 @@ table.tbl td { padding:5px 8px; vertical-align:middle; }
 </svg></div>
       <div>
         <h1>Secretaria Municipal da Fazenda</h1>
-        <p>Painel Geral de Acompanhamento</p>
-        <div class="cidade"><i class="bi bi-geo-alt-fill me-1"></i>Campo Largo - PR</div>
+        <p>Painel Geral de Acompanhamento · Campo Largo – PR</p>
+        <div class="cidade">Campo Largo - PR</div>
       </div>
     </div>
     <div class="weather">
@@ -124,28 +137,28 @@ table.tbl td { padding:5px 8px; vertical-align:middle; }
     <div class="sec-title"><i class="bi bi-bank2"></i>Execução da Despesa Pública · Exercício <span id="ano"></span>
       <span id="tagDespesa" class="tag-sim">carregando...</span>
       <span id="tagOrcado" class="tag-sim">Orçado: carregando...</span>
-      <span class="tag-live" style="background:#e7f1ff;color:#073b6f;border-color:#b6d4fe">Órgão: Poder Executivo Municipal</span>
+      <span class="tag-sim tag-org">Órgão: Poder Executivo Municipal</span>
     </div>
     <div class="grid4">
-      <div class="card pad stage" style="border-top:6px solid #0d6efd">
-        <div class="lbl"><span>ORÇADO (Dotação Atualizada)</span><i class="bi bi-file-earmark-text text-primary fs-4"></i></div>
+      <div class="card pad stage" style="--c:var(--c-orc)">
+        <div class="lbl"><span>Orçado · dotação atualizada</span></div>
         <div class="val" id="orcado"></div>
-        <div class="sub">Base de cálculo do ciclo</div>
+        <div class="sub">Base de cálculo do exercício</div>
       </div>
-      <div class="card pad stage" style="border-top:6px solid #0dcaf0">
-        <div class="lbl"><span>EMPENHADO</span><span class="badge bg-info text-dark" id="bEmp"></span></div>
+      <div class="card pad stage" style="--c:var(--c-emp)">
+        <div class="lbl"><span>Empenhado</span><span class="pill" id="bEmp"></span></div>
         <div class="val" id="empenhado"></div>
-        <div><div class="progress"><div class="progress-bar bg-info" id="pEmp"></div></div><div class="sub mt-1">Anulado: <span id="anulado"></span></div></div>
+        <div><div class="progress"><div class="progress-bar" id="pEmp"></div></div><div class="sub mt-1">Anulado: <span id="anulado"></span></div></div>
       </div>
-      <div class="card pad stage" style="border-top:6px solid #ffc107">
-        <div class="lbl"><span>LIQUIDADO</span><span class="badge bg-warning text-dark" id="bLiq"></span></div>
+      <div class="card pad stage" style="--c:var(--c-liq)">
+        <div class="lbl"><span>Liquidado</span><span class="pill" id="bLiq"></span></div>
         <div class="val" id="liquidado"></div>
-        <div><div class="progress"><div class="progress-bar bg-warning" id="pLiq"></div></div><div class="sub mt-1">Retido: <span id="retido"></span></div></div>
+        <div><div class="progress"><div class="progress-bar" id="pLiq"></div></div><div class="sub mt-1">Retido: <span id="retido"></span></div></div>
       </div>
-      <div class="card pad stage" style="border-top:6px solid #198754">
-        <div class="lbl"><span>PAGO</span><span class="badge bg-success" id="bPag"></span></div>
+      <div class="card pad stage" style="--c:var(--c-pag)">
+        <div class="lbl"><span>Pago</span><span class="pill" id="bPag"></span></div>
         <div class="val" id="pago"></div>
-        <div><div class="progress"><div class="progress-bar bg-success" id="pPag"></div></div><div class="sub mt-1"><span id="qtd"></span> registros · <span id="credores"></span> credores</div></div>
+        <div><div class="progress"><div class="progress-bar" id="pPag"></div></div><div class="sub mt-1"><span id="qtd"></span> registros · <span id="credores"></span> credores</div></div>
       </div>
     </div>
   </section>
@@ -154,22 +167,22 @@ table.tbl td { padding:5px 8px; vertical-align:middle; }
   <section class="row-kpi">
     <div class="sec-title"><i class="bi bi-graph-up"></i>Indicadores Tributários e de Receita · Exercício <span id="ano2"></span> <span class="tag-sim" id="tagKpi">carregando...</span></div>
     <div class="grid4">
-      <div class="card pad kpi" style="border-left-color:#0d6efd">
-        <i class="bi bi-calendar-check ic text-primary"></i>
+      <div class="card pad kpi">
+        <i class="bi bi-calendar-check ic"></i>
         <div class="kpi-body"><div class="t">Receita do Mês</div><div class="v" id="kMes"></div>
           <div class="s"><span class="fw-bold" id="kMesVar"></span> <span id="kMesSub">vs mês anterior</span></div></div>
       </div>
-      <div class="card pad kpi" style="border-left-color:#0dcaf0">
-        <i class="bi bi-cash-stack ic" style="color:#0aa2c0"></i>
+      <div class="card pad kpi">
+        <i class="bi bi-cash-stack ic"></i>
         <div class="kpi-body"><div class="t">Receita Anual</div><div class="v" id="kAno"></div>
           <div class="s" id="kAnoSub">Acumulado no exercício</div></div>
       </div>
-      <div class="card pad kpi" style="border-left-color:#6f42c1">
-        <i class="bi bi-file-earmark-bar-graph ic" style="color:#6f42c1"></i>
+      <div class="card pad kpi">
+        <i class="bi bi-file-earmark-bar-graph ic"></i>
         <div class="kpi-body"><div class="t">Orçamento da Receita</div><div class="v" id="kOrc"></div>
           <div class="s">Receitas brutas − deduções</div></div>
       </div>
-      <div class="card pad kpi" id="cardMeta" style="border-left-color:#198754">
+      <div class="card pad kpi" id="cardMeta">
         <i class="bi bi-bullseye ic" id="icMeta"></i>
         <div class="kpi-body"><div class="t">Meta Orçamentária de Receita</div><div class="v" id="kMeta"></div>
           <div class="progress"><div class="progress-bar" id="kMetaBar"></div></div>
@@ -181,12 +194,12 @@ table.tbl td { padding:5px 8px; vertical-align:middle; }
   <!-- 4. GRÁFICOS -->
   <section class="row-center">
     <div class="card chart-card">
-      <h3><i class="bi bi-bar-chart-line text-primary"></i>Arrecadação × Execução Orçamentária (R$ milhões)
+      <h3><i class="bi bi-bar-chart-line"></i>Arrecadação × Execução Orçamentária (R$ milhões)
         <span class="tag-live" id="tagGraf">Empenhado/Pago: API</span><span class="tag-sim" id="tagArrec">Receita: carregando...</span></h3>
       <div class="chart-wrap"><canvas id="chartMain"></canvas></div>
     </div>
     <div class="card chart-card">
-      <h3><i class="bi bi-pie-chart text-primary"></i>Composição da Receita por Fonte <span class="tag-sim" id="tagFonte">carregando...</span></h3>
+      <h3><i class="bi bi-pie-chart"></i>Composição da Receita por Fonte <span class="tag-sim" id="tagFonte">carregando...</span></h3>
       <div class="chart-wrap"><canvas id="chartPie"></canvas></div>
     </div>
   </section>
@@ -194,14 +207,14 @@ table.tbl td { padding:5px 8px; vertical-align:middle; }
   <!-- 5. RODAPÉ -->
   <section class="row-foot">
     <div class="card foot-card">
-      <h3><i class="bi bi-table text-primary"></i>Status dos Serviços da Secretaria <span class="tag-sim">simulado</span></h3>
-      <table class="table table-sm table-striped tbl">
+      <h3><i class="bi bi-table"></i>Status dos Serviços da Secretaria <span class="tag-sim">simulado</span></h3>
+      <table class="table table-sm tbl">
         <thead><tr><th>Serviço</th><th class="text-end">Hoje</th><th class="text-end">Mês</th><th class="text-center">Status</th></tr></thead>
         <tbody id="tbServ"></tbody>
       </table>
     </div>
     <div class="card foot-card">
-      <h3><i class="bi bi-bell-fill text-danger"></i>Alertas Regulatórios · LRF / SICONFI <span class="tag-sim">simulado</span></h3>
+      <h3><i class="bi bi-bell"></i>Alertas Regulatórios · LRF / SICONFI <span class="tag-sim">simulado</span></h3>
       <div id="alertas"></div>
     </div>
   </section>
@@ -287,28 +300,56 @@ function marcarAtualizacao(){
    API DE DESPESAS (mesmo endpoint e parâmetros do despesas.html)
    ===================================================== */
 /* Requisição com limite de simultâneas, tempo limite e novas tentativas */
-let _ativas = 0; const _fila = [];
-const _slot = () => new Promise(ok => { const t=()=>{ if(_ativas<4){ _ativas++; ok(); } else _fila.push(t); }; t(); });
+const API_MAX_SIMULTANEAS = 2;    // requisições em paralelo
+const API_INTERVALO_MS    = 500;  // intervalo mínimo entre o início de duas requisições
+const API_TENTATIVAS      = 5;    // tentativas por consulta (429/5xx/rede)
+let _ativas = 0, _pausaAte = 0, _ultimoInicio = 0; const _fila = [];
+const _dorme = ms => new Promise(r => setTimeout(r, ms));
+const _slot = () => new Promise(ok => { const t=()=>{ if(_ativas<API_MAX_SIMULTANEAS){ _ativas++; ok(); } else _fila.push(t); }; t(); });
 const _free = () => { _ativas--; const n=_fila.shift(); if(n) n(); };
-async function apiGet(url, tentativas=2){
+async function apiGet(url, tentativas=API_TENTATIVAS){
   let ultimo;
   for(let t=0; t<tentativas; t++){
     await _slot();
     const ctl = new AbortController(), to = setTimeout(()=>ctl.abort(), 60000);
+    let fatal = false;
     try{
+      /* respeita a pausa global (após HTTP 429) e o intervalo entre requisições */
+      const esp = Math.max(_pausaAte-Date.now(), _ultimoInicio+API_INTERVALO_MS-Date.now(), 0);
+      if(esp>0) await _dorme(esp);
+      _ultimoInicio = Date.now();
       const resp = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" }, signal:ctl.signal });
-      if(!resp.ok) throw new Error("HTTP "+resp.status);
+      if(resp.status === 429 || resp.status === 503){
+        const ra = parseFloat(resp.headers.get('Retry-After'));
+        const espera = (isFinite(ra) ? ra*1000 : Math.min(4000*Math.pow(2,t), 30000)) + Math.random()*1000;
+        _pausaAte = Math.max(_pausaAte, Date.now()+espera);   // todas as requisições aguardam
+        const e = new Error(resp.status===429 ? 'limite de requisições (HTTP 429)' : 'servidor ocupado (HTTP 503)'); e.status = resp.status; throw e;
+      }
+      if(!resp.ok){ const e = new Error("HTTP "+resp.status); e.status = resp.status; fatal = (resp.status>=400 && resp.status<500); throw e; }
       const json = await resp.json();
       if(json.status !== "ok" || !Array.isArray(json.retorno)) throw new Error(json.mensagem || "Resposta inválida");
       return json.retorno;
     }catch(e){
       ultimo = (e.name==='AbortError') ? new Error('tempo esgotado') : (e instanceof TypeError ? new Error('rede/CORS bloqueado') : e);
       console.warn('apiGet falhou ('+(t+1)+'/'+tentativas+'):', url, e);
+      if(fatal) throw ultimo;
     }finally{ clearTimeout(to); _free(); }
-    await new Promise(r=>setTimeout(r, 1000*(t+1)));
+    if(!(ultimo && (ultimo.status===429 || ultimo.status===503))) await _dorme(1500*(t+1));
   }
   throw ultimo;
 }
+
+/* Cache local (localStorage): meses encerrados não mudam a cada atualização → evita novas requisições e o HTTP 429 */
+const CACHE_PREFIXO = 'fzcl1:';
+function cacheGet(k, ttl, ignoraTtl){ try{ const o = JSON.parse(localStorage.getItem(CACHE_PREFIXO+k)); if(o && (ignoraTtl || Date.now()-o.t < ttl)) return o.v; }catch(e){} return null; }
+function cacheSet(k, v){ try{ localStorage.setItem(CACHE_PREFIXO+k, JSON.stringify({ t:Date.now(), v })); }catch(e){} }
+async function comCache(k, ttl, fn){
+  const c = cacheGet(k, ttl); if(c !== null) return c;
+  try{ const v = await fn(); cacheSet(k, v); return v; }
+  catch(e){ const velho = cacheGet(k, 0, true); if(velho !== null){ console.warn('usando cache antigo de', k, e); return velho; } throw e; }
+}
+const TTL_MES_FECHADO = 6*3600*1000, TTL_ORCADO = 3600*1000;
+const ttlMes = (ano, m) => { const h=new Date(); return (ano<h.getFullYear() || m<h.getMonth()) ? TTL_MES_FECHADO : 0; };  // mês atual: sempre consulta
 const _msg = e => String(e && e.message || e).slice(0,70);
 
 const limitaHoje = d => { const t=new Date(); t.setHours(0,0,0,0); return d>t ? t : d; };  // algumas consultas recusam dataFinal futura
@@ -321,12 +362,14 @@ async function consultarDespesas(ini, fim){
 /* Despesas orçadas (mesmo endpoint do despesasorcadas.html), filtradas pelo Poder Executivo */
 async function consultarOrcado(){
   const ano = new Date().getFullYear();
-  const tenta = d => apiGet(`${API_ORCADAS}?dataFinal=${dataBR(d)}`, 2);
+  return comCache('orcDesp:'+ano, TTL_ORCADO, async () => {
+  const tenta = d => apiGet(`${API_ORCADAS}?dataFinal=${dataBR(d)}`);
   let retorno;
   try{ retorno = await tenta(new Date(ano,11,31)); }
   catch(e){ console.warn('despesasOrcadas com 31/12 falhou; tentando a data de hoje', e); retorno = await tenta(limitaHoje(new Date(ano,11,31))); }
   const json = { retorno };
   return soExecutivo(json.retorno).reduce((s,i)=>s+numero(i.valorOrcado),0);
+  });
 }
 
 /* Receita líquida = contas iniciadas com 4 (brutas) − contas iniciadas com 9 (deduções), como no receitasorcadas.html */
@@ -340,12 +383,14 @@ function liquida(lista, campo){
 /* Receita orçada do exercício (receitasOrcadas), somente Poder Executivo */
 async function consultarReceitaOrcada(){
   const ano = new Date().getFullYear();
-  const tenta = d => apiGet(`${API_RECEITAS_ORC}?dataFinal=${dataBR(d)}`, 2);
+  return comCache('orcRec:'+ano, TTL_ORCADO, async () => {
+  const tenta = d => apiGet(`${API_RECEITAS_ORC}?dataFinal=${dataBR(d)}`);
   let retorno;
   try{ retorno = await tenta(new Date(ano,11,31)); }
   catch(e){ console.warn('receitasOrcadas com 31/12 falhou; tentando a data de hoje', e); retorno = await tenta(limitaHoje(new Date(ano,11,31))); }
   const json = { retorno };
   return liquida(json.retorno.filter(i => !CONTAS_FAPEN.has(String(i.contaCodigo ?? "").trim())), 'valorOrcado');
+  });
 }
 
 /* Receitas (mesmo endpoint do receitas.html), somente Poder Executivo */
@@ -356,27 +401,37 @@ async function consultarReceitas(ini, fim){
 }
 
 /* Busca mês a mês (Jan..mês atual): total do mês + composição por código de conta */
-async function carregarReceitas(){
-  const hoje = new Date(), ano = hoje.getFullYear(), mAtual = hoje.getMonth();
-  const reqs = [];
-  for(let m=0; m<=mAtual; m++){
-    reqs.push(consultarReceitas(new Date(ano,m,1), new Date(ano,m+1,0)));
-  }
-  const res = await Promise.allSettled(reqs);
-  const falhas = res.filter(x=>x.status==='rejected');
-  if(falhas.length === res.length) throw falhas[0].reason;
-  const listas = res.map(x => x.status==='fulfilled' ? x.value : []);
-  const meses = listas.map(l => liquida(l, 'valorArrecadado'));
-  /* composição: agrupa pelo prefixo do código da conta */
+/* Resumo de um mês de receita: valor líquido (4 − 9) + grupos por prefixo do código (só contas 4) */
+function resumoReceita(lista){
   const grupos = {};
-  const temQuatro = listas.some(l => l.some(i => String(i.contaCodigo ?? '').trim()[0] === '4'));
-  listas.flat().forEach(i=>{
-    const cod = String(i.contaCodigo ?? "").trim(); if(!cod || (temQuatro && cod[0] !== '4')) return;
+  lista.forEach(i=>{
+    const cod = String(i.contaCodigo ?? "").trim(); if(!cod || cod[0] !== '4') return;
     const k = cod.slice(0, FONTE_DIGITOS), v = numero(i.valorArrecadado);
     const g = grupos[k] || (grupos[k] = { cod:k, total:0, maior:0, desc:"" });
     g.total += v;
     if(v > g.maior){ g.maior = v; g.desc = i.contaDescricao || ""; }
   });
+  return { liq: liquida(lista, 'valorArrecadado'), grupos };
+}
+
+async function carregarReceitas(){
+  const hoje = new Date(), ano = hoje.getFullYear(), mAtual = hoje.getMonth();
+  const reqs = [];
+  for(let m=0; m<=mAtual; m++){
+    reqs.push(comCache(`rec:${ano}-${m}`, ttlMes(ano,m), async () => resumoReceita(await consultarReceitas(new Date(ano,m,1), new Date(ano,m+1,0)))));
+  }
+  const res = await Promise.allSettled(reqs);
+  const falhas = res.filter(x=>x.status==='rejected');
+  if(falhas.length === res.length) throw falhas[0].reason;
+  const resumos = res.map(x => x.status==='fulfilled' ? x.value : { liq:0, grupos:{} });
+  const meses = resumos.map(r => r.liq);
+  /* composição: junta os grupos de todos os meses */
+  const grupos = {};
+  resumos.forEach(r => Object.values(r.grupos).forEach(g=>{
+    const a = grupos[g.cod] || (grupos[g.cod] = { cod:g.cod, total:0, maior:0, desc:"" });
+    a.total += g.total;
+    if(g.maior > a.maior){ a.maior = g.maior; a.desc = g.desc; }
+  }));
   const ord = Object.values(grupos).filter(g=>g.total>0).sort((a,b)=>b.total-a.total);
   const top = ord.slice(0, FONTE_TOP).map(g=>({ label:(g.desc||g.cod).replace(/\s+-\s+principal$/i,'').trim()+' ('+g.cod+')', valor:g.total }));
   const resto = ord.slice(FONTE_TOP).reduce((s,g)=>s+g.total,0);
@@ -405,7 +460,7 @@ async function carregarDespesas(){
   const hoje = new Date(), ano = hoje.getFullYear(), mAtual = hoje.getMonth();
   const reqs = [];
   for(let m=0; m<=mAtual; m++){
-    reqs.push(consultarDespesas(new Date(ano,m,1), new Date(ano,m+1,0)).then(somar));
+    reqs.push(comCache(`desp:${ano}-${m}`, ttlMes(ano,m), async () => somar(await consultarDespesas(new Date(ano,m,1), new Date(ano,m+1,0)))));
   }
   const res = await Promise.allSettled(reqs);
   const falhas = res.filter(x=>x.status==='rejected');
@@ -522,7 +577,7 @@ function renderTagsReceita(r){
   k.textContent = vivo ? 'Receita e Orçamento: API ao vivo · Poder Executivo' : (r.ao_vivo ? 'Receita: API ao vivo · Orçamento: API indisponível · '+(r.erroOrc||'0') : 'API indisponível · exibindo R$ 0,00');
 }
 
-function corMeta(p){ const hue = Math.max(0,Math.min(p,100))*1.2; return `hsl(${hue.toFixed(0)},72%,36%)`; }
+function corMeta(p){ const hue = Math.max(0,Math.min(p,100))*1.2; return `hsl(${hue.toFixed(0)},60%,38%)`; }
 function renderKpis(r){
   const n = r.meses.length, mes = r.meses[n-1] ?? 0, ant = r.meses[n-2];
   const anual = r.meses.reduce((a,b)=>a+b,0), orc = r.orcada;
@@ -541,7 +596,7 @@ function renderKpis(r){
   const cor = corMeta(meta);
   $('kMeta').textContent = pct(meta); $('kMeta').style.color = cor;
   $('kMetaBar').style.width = Math.min(meta,100)+'%'; $('kMetaBar').style.backgroundColor = cor;
-  $('cardMeta').style.borderLeftColor = cor; $('icMeta').style.color = cor;
+  $('icMeta').style.color = cor;
   const hoje=new Date(), dec = ((hoje - new Date(hoje.getFullYear(),0,1)) / (new Date(hoje.getFullYear()+1,0,1) - new Date(hoje.getFullYear(),0,1)))*100;
   $('kMetaSub').textContent = `Ano decorrido: ${pct(dec)}`;
 
@@ -549,23 +604,22 @@ function renderKpis(r){
 }
 
 function renderRodape(){
-  const badge = { ok:'<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Normal</span>',
-                  warn:'<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle-fill me-1"></i>Atenção</span>',
-                  crit:'<span class="badge bg-danger"><i class="bi bi-x-circle-fill me-1"></i>Crítico</span>' };
+  const st = { ok:['#1f8f5f','Normal'], warn:['#d39a1c','Atenção'], crit:['#c2410c','Crítico'] };
   $('tbServ').innerHTML = SIM.servicos.map(s =>
-    `<tr><td class="fw-semibold">${s.nome}</td><td class="text-end">${s.hoje}</td><td class="text-end">${s.mes}</td><td class="text-center">${badge[s.status]}</td></tr>`).join('');
-  const cor = { danger:'#dc3545', warning:'#ffc107', info:'#0dcaf0' };
+    `<tr><td class="fw-medium">${s.nome}</td><td class="text-end">${s.hoje}</td><td class="text-end">${s.mes}</td><td class="text-center"><span class="st" style="--c:${st[s.status][0]}"><i></i>${st[s.status][1]}</span></td></tr>`).join('');
+  const cor = { danger:'#c0392b', warning:'#b7791f', info:'#2b6cb0' };
   $('alertas').innerHTML = SIM.alertas.map(a =>
-    `<div class="alert-item" style="border-left-color:${cor[a.nivel]}">
+    `<div class="alert-item">
        <i class="bi ${a.icone}" style="color:${cor[a.nivel]}"></i>
-       <div><b>${a.titulo}</b><small>${a.sub}</small></div>
-       <span class="d" style="color:${a.nivel==='warning'?'#b58100':cor[a.nivel]}">${a.prazo}</span>
+       <div><b class="fw-semibold">${a.titulo}</b><small>${a.sub}</small></div>
+       <span class="d" style="color:${cor[a.nivel]}">${a.prazo}</span>
      </div>`).join('');
 }
 
 function renderGraficos(d, r){
-  Chart.defaults.font.size = 15;
-  Chart.defaults.font.family = "system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif";
+  Chart.defaults.font.size = 14;
+  Chart.defaults.color = '#6b7280';
+  Chart.defaults.font.family = "Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif";
   Chart.defaults.animation = false;
   const n = Math.max(d.meses.length, r.meses.length);
   const labels = MESES.slice(0,n);
@@ -573,15 +627,15 @@ function renderGraficos(d, r){
   if(chartMain) chartMain.destroy();
   chartMain = new Chart($('chartMain'),{
     data:{ labels, datasets:[
-      { type:'bar',  label:'Receita Arrecadada'+(r.ao_vivo?'':' (API indisponível)'), data:r.meses.map(mi), backgroundColor:'rgba(13,110,253,.78)', borderRadius:5, order:4 },
-      { type:'line', label:'Empenhado', data:d.meses.map(m=>mi(m.emp)), borderColor:'#0dcaf0', backgroundColor:'#0dcaf0', borderWidth:4, tension:.3, pointRadius:5, order:3 },
-      { type:'line', label:'Liquidado', data:d.meses.map(m=>mi(m.liq ?? m.emp*0.86)), borderColor:'#ffc107', backgroundColor:'#ffc107', borderWidth:4, tension:.3, pointRadius:5, order:2 },
-      { type:'line', label:'Pago',      data:d.meses.map(m=>mi(m.pago)), borderColor:'#198754', backgroundColor:'#198754', borderWidth:4, tension:.3, pointRadius:5, order:1 }
+      { type:'bar',  label:'Receita Arrecadada'+(r.ao_vivo?'':' (API indisponível)'), data:r.meses.map(mi), backgroundColor:'#c9d9f5', borderRadius:4, maxBarThickness:46, order:4 },
+      { type:'line', label:'Empenhado', data:d.meses.map(m=>mi(m.emp)), borderColor:'#0f8fa3', backgroundColor:'#0f8fa3', borderWidth:2.5, tension:.25, pointRadius:3.5, order:3 },
+      { type:'line', label:'Liquidado', data:d.meses.map(m=>mi(m.liq ?? m.emp*0.86)), borderColor:'#d39a1c', backgroundColor:'#d39a1c', borderWidth:2.5, tension:.25, pointRadius:3.5, order:2 },
+      { type:'line', label:'Pago',      data:d.meses.map(m=>mi(m.pago)), borderColor:'#1f8f5f', backgroundColor:'#1f8f5f', borderWidth:2.5, tension:.25, pointRadius:3.5, order:1 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'top', labels:{ usePointStyle:true, padding:18, font:{size:16} } },
+      plugins:{ legend:{ position:'top', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, padding:18, font:{size:14} } },
         tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: R$ ${c.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:2})} mi` } } },
-      scales:{ y:{ beginAtZero:true, grid:{color:'#e9ecef'} }, x:{ grid:{display:false} } } }
+      scales:{ y:{ beginAtZero:true, grid:{color:'#eef0f3'}, border:{display:false} }, x:{ grid:{display:false}, border:{color:'#e6e8ec'} } } }
   });
 
   const vazio = !r.fontes.length;
@@ -592,9 +646,9 @@ function renderGraficos(d, r){
   chartPie = new Chart($('chartPie'),{
     type:'doughnut',
     data:{ labels:r.fontes.map(f=>cur(f.label)), datasets:[{ data:r.fontes.map(f=>f.valor),
-      backgroundColor: vazio ? ['#dee2e6'] : ['#0d6efd','#198754','#ffc107','#0dcaf0','#fd7e14','#6c757d'], borderWidth:3, borderColor:'#fff' }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'58%',
-      plugins:{ legend:{ position:'right', labels:{ usePointStyle:true, padding:14, font:{size:15} } },
+      backgroundColor: vazio ? ['#e6e8ec'] : ['#0b2f57','#2f6fdb','#7fa6ea','#0f8fa3','#d39a1c','#b8bec9'], borderWidth:2, borderColor:'#fff' }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{ position:'right', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, padding:14, font:{size:14} } },
         tooltip:{ callbacks:{ label:c=>` ${r.fontes[c.dataIndex].label}: ${brlCompacto(c.parsed)} (${(c.parsed/tot*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%)` } } } }
   });
 }
