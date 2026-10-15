@@ -56,6 +56,19 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
 .row-budget { flex:0 0 156px; }
 .row-kpi { flex:0 0 140px; }
 .row-center { flex:1 1 0; min-height:0; display:grid; grid-template-columns:60fr 40fr; gap:12px; }
+.row-news { flex:0 0 56px; }
+.news { height:56px; display:flex; flex-direction:row; align-items:center; overflow:hidden; }
+.news-lab { flex:none; height:100%; display:flex; align-items:center; gap:10px; padding:0 20px; border-right:1px solid var(--linha); font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--navy); }
+.news-lab i { font-size:16px; color:var(--mut); }
+.news-win { flex:1; min-width:0; height:100%; overflow:hidden; display:flex; align-items:center; -webkit-mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent); mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent); }
+.news-track { display:inline-flex; white-space:nowrap; will-change:transform; animation:news-scroll var(--dur,60s) linear infinite; }
+.news-track.parado { animation:none; padding-left:16px; }
+.news-item { display:inline-flex; align-items:baseline; gap:10px; font-size:19px; }
+.news-item .dt { font-size:14px; color:var(--mut); font-variant-numeric:tabular-nums; }
+.news-item .tt { font-weight:500; color:var(--txt); }
+.news-item::after { content:""; width:5px; height:5px; border-radius:50%; background:#c4c9d2; margin:0 32px; align-self:center; }
+.news-msg { font-size:15px; color:var(--mut); }
+@keyframes news-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
 .row-foot { flex:0 0 232px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
 .pad { padding:14px 20px; position:relative; }
@@ -204,6 +217,14 @@ table.tbl tr:last-child td { border-bottom:0; }
     </div>
   </section>
 
+  <!-- 4b. NOTÍCIAS (faixa rolante) -->
+  <section class="row-news">
+    <div class="card news">
+      <div class="news-lab"><i class="bi bi-newspaper"></i>Notícias <span class="tag-sim" id="tagNews">carregando...</span></div>
+      <div class="news-win"><div class="news-track parado" id="newsTrack"><span class="news-msg">Carregando notícias…</span></div></div>
+    </div>
+  </section>
+
   <!-- 5. RODAPÉ -->
   <section class="row-foot">
     <div class="card foot-card">
@@ -226,6 +247,11 @@ table.tbl tr:last-child td { border-bottom:0; }
    ===================================================== */
 const API_DESPESAS = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
 const API_ORCADAS  = "https://campolargo.atende.net/api/WCPDadosAbertos/despesasOrcadas";
+/* Notícias do portal (div .area-resultados-consulta de /cidadao/noticia) */
+const NOTICIAS_URL        = "https://www.campolargo.pr.gov.br/cidadao/noticia";
+const NOTICIAS_URL_DADOS  = "";   // opcional: endpoint AJAX que devolve a lista (HTML ou JSON), se o portal carregar as notícias via JavaScript
+const NOTICIAS_PROXIES    = ["https://api.allorigins.win/raw?url="];   // usados só se a busca direta for bloqueada (CORS); use [] para desativar
+const NOTICIAS_REFRESH_MIN = 10, NOTICIAS_MAX = 20, NOTICIAS_PX_S = 70;
 const API_RECEITAS_ORC = "https://campolargo.atende.net/api/WCPDadosAbertos/receitasOrcadas";
 const API_RECEITAS = "https://campolargo.atende.net/api/WCPDadosAbertos/receitas";
 /* Contas do FAPEN (mesma lista do receitas.html): o Poder Executivo = todas as contas FORA desta lista */
@@ -567,6 +593,98 @@ function setExtPct(elId, p){ const c=$(elId).closest('.card'); c.dataset.num = p
   document.addEventListener('mouseout', e=>{ if(!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('[data-extenso]')) tip.style.display='none'; });
 })();
 
+/* =====================================================
+   NOTÍCIAS (faixa rolante)
+   ===================================================== */
+const escN = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+async function buscarTexto(url){
+  const ctl = new AbortController(), to = setTimeout(()=>ctl.abort(), 25000);
+  try{
+    const resp = await fetch(url, { signal:ctl.signal, cache:'no-store' });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    return await resp.text();
+  } finally { clearTimeout(to); }
+}
+const _ehHtmlLink = a => { const t=(a.textContent||'').replace(/\s+/g,' ').trim(); return t.length>=8; };
+function parseNoticias(txt, fragmento){
+  const lista = [];
+  const t = txt.trim();
+  /* JSON */
+  if(t[0]==='[' || t[0]==='{'){
+    try{
+      const j = JSON.parse(t), arr = Array.isArray(j) ? j : (j.retorno || j.noticias || j.dados || j.items || []);
+      arr.forEach(n => { const titulo = n.titulo || n.title || n.nome || n.descricao || ''; if(titulo) lista.push({ titulo:String(titulo).trim(), data:String(n.data || n.dataPublicacao || n.date || '').slice(0,10), link:n.link || n.url || '' }); });
+      return lista.slice(0, NOTICIAS_MAX);
+    }catch(e){ /* segue como HTML */ }
+  }
+  /* HTML */
+  const doc = new DOMParser().parseFromString(txt, 'text/html');
+  const box = doc.querySelector('#area-resultados-consulta, .area-resultados-consulta') || (fragmento ? doc.body : null);
+  if(!box) return [];
+  /* desce enquanto houver um único filho "embrulhando" a lista */
+  let nivel = box;
+  for(let k=0;k<6;k++){ const fs=[...nivel.children].filter(e=>!/^(script|style)$/i.test(e.tagName)); if(fs.length===1 && fs[0].querySelector('a')) nivel=fs[0]; else break; }
+  let itens = [...nivel.children].filter(e => e.querySelector('a[href]') || e.matches('a[href]'));
+  if(itens.length < 2){ itens = [...box.querySelectorAll('article, li, .card, [class*="noticia"], [class*="item"], [class*="resultado"]')].filter(e => e.querySelector('a[href]')); }
+  if(!itens.length){ itens = [...box.querySelectorAll('a[href]')].filter(_ehHtmlLink); }
+  const vistos = new Set();
+  itens.forEach(el => {
+    const h = el.querySelector('h1,h2,h3,h4,h5,h6,[class*="titulo"],[class*="title"],strong');
+    const links = el.matches('a[href]') ? [el] : [...el.querySelectorAll('a[href]')];
+    const a = links.sort((x,y)=>(y.textContent||'').length-(x.textContent||'').length)[0];
+    let titulo = ((h && h.textContent) || (a && a.textContent) || '').replace(/\s+/g,' ').trim();
+    if(titulo.length < 8) return;
+    const m = (el.textContent||'').match(/\d{2}\/\d{2}\/\d{4}/);
+    let link = ''; try{ link = new URL(a.getAttribute('href'), NOTICIAS_URL).href; }catch(e){}
+    if(vistos.has(titulo)) return; vistos.add(titulo);
+    lista.push({ titulo, data: m ? m[0] : '', link });
+  });
+  return lista.slice(0, NOTICIAS_MAX);
+}
+
+let _newsSig = '';
+function renderNoticias(lista, estado, motivo){
+  const tag = $('tagNews'), tr = $('newsTrack');
+  tag.className = estado==='ao vivo' ? 'tag-live' : 'tag-sim';
+  tag.textContent = estado==='ao vivo' ? 'ao vivo' : (estado==='cache' ? 'cache · '+motivo : 'indisponível · '+motivo);
+  if(!lista.length){
+    _newsSig = '';
+    tr.className = 'news-track parado';
+    tr.innerHTML = '<span class="news-msg">Notícias indisponíveis no momento · nova tentativa automática em '+NOTICIAS_REFRESH_MIN+' min</span>';
+    return;
+  }
+  const sig = JSON.stringify(lista);
+  if(sig === _newsSig) return;           // sem mudança: não reinicia a rolagem
+  _newsSig = sig;
+  const un = lista.map(n => `<span class="news-item">${n.data?`<span class="dt">${escN(n.data)}</span>`:''}<span class="tt">${escN(n.titulo)}</span></span>`).join('');
+  const largura = $('newsTrack').parentElement.clientWidth || 1500;
+  tr.className = 'news-track'; tr.style.animation = 'none';
+  tr.innerHTML = '<span class="news-meia">'+un+'</span>';
+  let w = tr.firstChild.getBoundingClientRect().width || 1, k = Math.max(1, Math.ceil(largura / w));
+  const meia = un.repeat(k);
+  tr.innerHTML = '<span class="news-meia">'+meia+'</span><span class="news-meia">'+meia+'</span>';
+  w = tr.firstChild.getBoundingClientRect().width || w;
+  tr.style.setProperty('--dur', Math.max(20, w / NOTICIAS_PX_S).toFixed(0)+'s');
+  void tr.offsetWidth; tr.style.animation = '';
+}
+
+async function carregarNoticias(){
+  const alvo = NOTICIAS_URL_DADOS || NOTICIAS_URL;
+  const urls = [alvo, ...NOTICIAS_PROXIES.map(p => p + encodeURIComponent(alvo))];
+  let lista = [], erro = null;
+  for(const u of urls){
+    try{
+      lista = parseNoticias(await buscarTexto(u), !!NOTICIAS_URL_DADOS);
+      if(lista.length) break;
+      erro = new Error('nenhuma notícia no conteúdo (carregado por JavaScript?)');
+    }catch(e){ erro = (e.name==='AbortError') ? new Error('tempo esgotado') : (e instanceof TypeError ? new Error('bloqueio CORS/rede') : e); }
+  }
+  if(lista.length){ cacheSet('noticias', lista); renderNoticias(lista, 'ao vivo'); return; }
+  console.warn('Notícias:', erro);
+  const c = cacheGet('noticias', 0, true);
+  if(c && c.length) renderNoticias(c, 'cache', _msg(erro)); else renderNoticias([], 'erro', _msg(erro));
+}
+
 function renderTagsReceita(r){
   const a=$('tagArrec'), b=$('tagFonte');
   a.className=b.className = r.ao_vivo ? 'tag-live' : 'tag-sim';
@@ -700,6 +818,7 @@ async function carregar(){
 }
 carregar();           setInterval(carregar, REFRESH_DADOS_MIN*60*1000);
 carregarClima();      setInterval(carregarClima, REFRESH_CLIMA_MIN*60*1000);
+carregarNoticias();   setInterval(carregarNoticias, NOTICIAS_REFRESH_MIN*60*1000);
 </script>
 </body>
 </html>
