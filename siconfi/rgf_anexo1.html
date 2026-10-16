@@ -889,7 +889,7 @@ const NOME_QUADRIMESTRE = {
 
 function atualizarCabecalho(){
   const nomeInst = metaConsulta.instituicao || `Ente ${metaConsulta.cod_ibge || "-"} (sem dados)`;
-  $("navInstituicao").textContent = metaConsulta.uf ? `${nomeInst} — ${metaConsulta.uf}` : nomeInst;
+  $("navInstituicao").textContent = nomeInst;
 
   const quad = NOME_QUADRIMESTRE[metaConsulta.periodo] || NOME_QUADRIMESTRE[1];
   const poder = NOME_PODER[metaConsulta.co_poder] || metaConsulta.co_poder || "-";
