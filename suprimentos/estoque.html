@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transparência - Estoque Almoxarifado</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+  --cor-primaria: #1f2a44;
+  --cor-entrada: #611f69;
+  --cor-saida: #00897b;
+  --cor-neutra: #34415f;
+  --fundo: #f3f5f9;
+  --texto-escuro: #1d2433;
+}
+body { background: var(--fundo); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--texto-escuro); }
+.navbar { background-color: var(--cor-primaria) !important; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+.hero { background: linear-gradient(135deg, var(--cor-primaria), #0e1424); color: #fff; }
+.card { border: 0; box-shadow: 0 4px 18px rgba(0,0,0,.07); }
+.kpi { border-left: 5px solid var(--cor-neutra); }
+.kpi.k-ent { border-left-color: var(--cor-entrada); }
+.kpi.k-sai { border-left-color: var(--cor-saida); }
+.kpi .valor { font-size: 1.3rem; font-weight: 700; color: var(--cor-primaria); }
+.chart-box { height: 300px; position: relative; }
+.small-muted { font-size: .82rem; color: #6c757d; }
+.status { font-size: .92rem; }
+.btn-tema { background-color: var(--cor-entrada); color: #fff; font-weight: 600; border: none; }
+.btn-tema:hover { background-color: #4a154b; color: #fff; }
+.tabela-wrap { max-height: 620px; overflow: auto; }
+table.est { font-size: .85rem; white-space: nowrap; border-collapse: separate; border-spacing: 0; }
+table.est th, table.est td { padding: .3rem .55rem; border-bottom: 1px solid #e3e6ee; }
+table.est thead th { position: sticky; z-index: 3; color: #fff; text-align: center; font-weight: 600; }
+table.est thead tr:first-child th { top: 0; }
+table.est thead tr:nth-child(2) th { top: 31px; }
+table.est th.g-data, table.est th.g-calc { background: var(--cor-primaria); }
+table.est th.g-ent { background: var(--cor-entrada); }
+table.est th.g-sai { background: var(--cor-saida); }
+table.est td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.est td.col-data, table.est th.col-data { position: sticky; left: 0; background: #fff; z-index: 2; font-weight: 600; }
+table.est thead th.col-data { background: var(--cor-primaria); z-index: 4; }
+table.est tbody tr:hover td, table.est tbody tr:hover td.col-data { background: #f6f1f8; }
+.sub-ent { background: #f7f0f9; }
+.sub-sai { background: #eaf7f5; }
+.neg { color: #c62828; }
+.tr-sem td { color: #9aa1b2; }
+.progress-bar-custom { background-color: var(--cor-entrada); }
+#selTipos { font-size: .88rem; }
+#selTipos optgroup { font-weight: 700; color: var(--cor-primaria); }
+#selTipos option { font-weight: 400; padding: .2rem .5rem; cursor: pointer; }
+#selTipos option:checked { background: linear-gradient(0deg, #611f69, #611f69); color: #fff; }
+.tr-fora td { color: #9aa1b2; font-style: italic; }
+.obs-cel { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.lista-wrap { max-height: 560px; overflow: auto; }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+<div class="container-fluid px-4">
+<a class="navbar-brand fw-bold" href="#"><i class="bi bi-boxes"></i> Estoque do Almoxarifado — Movimento e Saldo (SE)</a>
+<div class="text-white small">Campo Largo - PR</div>
+</div>
+</nav>
+
+<header class="hero py-4">
+<div class="container-fluid px-4">
+<span class="badge bg-light text-dark mb-2">DADOS ABERTOS · ALMOXARIFADO</span>
+<h1 class="h2 fw-bold">Movimento diário e Saldo de Estoque (SE)</h1>
+<p class="lead mb-0 small">
+Lê as entradas e saídas do almoxarifado no período escolhido (por padrão, ontem e hoje), soma por dia e por tipo e calcula o saldo de estoque a partir do saldo inicial informado.
+</p>
+</div>
+</header>
+
+<main class="container-fluid px-4 py-4">
+
+<div id="status" class="alert alert-info status">Informe o saldo inicial e clique em "Consultar movimentos".</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<div class="row g-3 align-items-end">
+<div class="col-md-2">
+<label class="form-label fw-semibold">Data inicial</label>
+<input type="date" id="dataInicio" class="form-control">
+</div>
+<div class="col-md-2">
+<label class="form-label fw-semibold">Data final</label>
+<input type="date" id="dataFim" class="form-control">
+</div>
+<div class="col-md-3">
+<label class="form-label fw-semibold">Saldo inicial do estoque (R$)</label>
+<input type="text" id="saldoInicial" class="form-control" placeholder="Ex: 4.052.654,93" inputmode="decimal">
+</div>
+<div class="col-md-3">
+<label class="form-label fw-semibold">Depósito(s)</label>
+<input type="text" id="filtroDeposito" class="form-control" placeholder="Todos ou: 5, 9, 47">
+</div>
+<div class="col-md-2 d-grid">
+<button id="btnConsultar" class="btn btn-tema"><i class="bi bi-cloud-download"></i> Consultar movimentos</button>
+</div>
+</div>
+<div class="small-muted mt-2">
+Por padrão, a data inicial é ontem e a final é hoje, mas você pode alterar. O saldo inicial é o SE no fechamento do dia anterior à data inicial. Se filtrar por depósitos, informe o saldo inicial só desses depósitos.
+</div>
+
+<div class="d-flex gap-2 flex-wrap mt-3 align-items-center">
+<button id="btnParar" class="btn btn-outline-danger btn-sm d-none"><i class="bi bi-stop-circle"></i> Parar</button>
+<button id="btnSalvarJson" class="btn btn-outline-secondary btn-sm"><i class="bi bi-save"></i> Salvar movimentos (JSON)</button>
+<label class="btn btn-outline-secondary btn-sm mb-0"><i class="bi bi-folder2-open"></i> Carregar JSON
+<input type="file" id="arquivoJson" accept=".json,application/json" class="d-none"></label>
+<button id="btnLimparDados" class="btn btn-outline-secondary btn-sm"><i class="bi bi-eraser"></i> Limpar movimentos</button>
+<button id="btnGraficos" class="btn btn-outline-primary btn-sm ms-auto" aria-expanded="true" aria-controls="painelGraficos"><i class="bi bi-bar-chart-line"></i> <span id="txtGraficos">Ocultar gráficos</span></button>
+</div>
+</div>
+</div>
+
+<div id="loading" class="card mb-4 d-none">
+<div class="card-body text-center py-4">
+<div class="spinner-border mb-3" role="status" style="color: var(--cor-entrada);"></div>
+<h6 id="loadingTexto" class="fw-semibold mb-2">Processando consulta...</h6>
+<div class="progress w-75 mx-auto" style="height: 16px;">
+<div class="progress-bar progress-bar-striped progress-bar-animated progress-bar-custom" style="width:100%"></div>
+</div>
+</div>
+</div>
+
+<section class="row g-3 mb-4" id="kpis"></section>
+
+<!-- GRÁFICOS (podem ser ocultados) -->
+<section id="painelGraficos" class="mb-4">
+<div class="row g-4">
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">Saldo de estoque (SE) por dia</h5>
+<div class="small-muted mb-2">Saldo inicial no ponto de partida e fechamento calculado de cada dia.</div>
+<div class="chart-box"><canvas id="gSaldo"></canvas></div>
+</div></div></div>
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">Entradas x saídas por dia</h5>
+<div class="small-muted mb-2">Valor total movimentado, tipos marcados.</div>
+<div class="chart-box"><canvas id="gMov"></canvas></div>
+</div></div></div>
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">Entradas por tipo</h5>
+<div class="small-muted mb-2">Participação de cada tipo no valor das entradas.</div>
+<div class="chart-box"><canvas id="gTipoE"></canvas></div>
+</div></div></div>
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">Saídas por tipo</h5>
+<div class="small-muted mb-2">Participação de cada tipo no valor das saídas.</div>
+<div class="chart-box"><canvas id="gTipoS"></canvas></div>
+</div></div></div>
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">Maiores depósitos em movimento</h5>
+<div class="small-muted mb-2">Top 10 pelo valor de entradas + saídas no período.</div>
+<div class="chart-box"><canvas id="gDep"></canvas></div>
+</div></div></div>
+<div class="col-lg-6"><div class="card h-100"><div class="card-body">
+<h5 class="card-title mb-1">Movimento por hora do lançamento</h5>
+<div class="small-muted mb-2">Mostra em que horário os lançamentos acontecem (útil para definir um horário de corte).</div>
+<div class="chart-box"><canvas id="gHora"></canvas></div>
+</div></div></div>
+</div>
+</section>
+
+<div class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+<h5 class="mb-0">Tipos de movimento que alteram o saldo</h5>
+<div class="d-flex gap-2">
+<button id="btnTodosTipos" class="btn btn-outline-secondary btn-sm">Selecionar todos</button>
+<button id="btnNenhumTipo" class="btn btn-outline-secondary btn-sm">Limpar seleção</button>
+</div>
+</div>
+<div class="small-muted mb-2">Os tipos selecionados (destacados) entram no saldo. Clique em um tipo para selecionar ou desmarcar. Todos entram por padrão; desmarque os que não movimentam o estoque físico (por exemplo, Ordem de Compra ou Empenho, se forem só reservas). O valor ao lado é o total do tipo no período.</div>
+<select id="selTipos" class="form-select" multiple size="6" aria-label="Tipos de movimento que alteram o saldo"><option value="" disabled>Os tipos aparecem depois da consulta.</option></select>
+<div class="small-muted mt-1" id="resumoTipos"></div>
+</div>
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+<div>
+<h5 class="mb-1">Movimento diário</h5>
+<div class="small-muted">SE = saldo do dia anterior + entradas − saídas.</div>
+</div>
+<div class="d-flex gap-3 flex-wrap align-items-center">
+<div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chkTipos" checked><label class="form-check-label small" for="chkTipos">Colunas por tipo</label></div>
+<button id="btnCsv" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> CSV diário</button>
+</div>
+</div>
+<div class="tabela-wrap">
+<table class="est">
+<thead id="thead"></thead>
+<tbody id="tbody"></tbody>
+<tfoot id="tfoot"></tfoot>
+</table>
+</div>
+</div>
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+<div>
+<h5 class="mb-1">Movimento por depósito</h5>
+<div class="small-muted">Entradas, saídas e variação líquida de cada depósito no período.</div>
+</div>
+<button id="btnCsvDep" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> CSV depósitos</button>
+</div>
+<div class="tabela-wrap" style="max-height:480px">
+<table class="est w-100">
+<thead><tr><th class="g-data col-data">Depósito</th><th class="g-ent">Entradas</th><th class="g-sai">Saídas</th><th class="g-calc">Variação líquida</th></tr></thead>
+<tbody id="tbodyDep"></tbody>
+<tfoot id="tfootDep"></tfoot>
+</table>
+</div>
+</div>
+</div>
+
+<div class="card mb-4">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+<div>
+<h5 class="mb-1">Lista de movimentação (produtos)</h5>
+<div class="small-muted" id="resumoLista">Itens de cada entrada e saída do período.</div>
+</div>
+<div class="d-flex gap-2 flex-wrap align-items-center">
+<button id="btnCsvLista" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> CSV movimentos</button>
+<button id="btnLista" class="btn btn-outline-primary btn-sm" aria-expanded="true" aria-controls="painelLista"><i class="bi bi-list-ul"></i> <span id="txtLista">Ocultar lista</span></button>
+</div>
+</div>
+<div id="painelLista">
+<div class="row g-2 mb-3 align-items-center">
+<div class="col-md-5"><input type="text" id="filtroLista" class="form-control form-control-sm" placeholder="Filtrar por produto, código, documento, CNPJ, centro de custo, observação..."></div>
+<div class="col-md-2"><select id="selMov" class="form-select form-select-sm"><option value="">Entradas e saídas</option><option value="E">Só entradas</option><option value="S">Só saídas</option></select></div>
+<div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chkSoMarcados"><label class="form-check-label small" for="chkSoMarcados">Só tipos selecionados no saldo</label></div></div>
+</div>
+<div class="lista-wrap">
+<table class="est w-100">
+<thead><tr>
+<th class="g-data">Mov.</th><th class="g-data">Nº</th><th class="g-data">Data / Hora</th><th class="g-data">Tipo</th><th class="g-data">Estado</th><th class="g-data">Depósito</th>
+<th class="g-data">Cód.</th><th class="g-data">Produto</th><th class="g-data">Un.</th><th class="g-data">Qtd.</th><th class="g-data">Vlr. unit.</th><th class="g-data">Vlr. total</th>
+<th class="g-data">Documento</th><th class="g-data">CNPJ / C. Custo</th><th class="g-data">Observação</th>
+</tr></thead>
+<tbody id="tbodyLista"></tbody>
+</table>
+</div>
+<div class="text-center mt-2"><button id="btnMaisLista" class="btn btn-outline-secondary btn-sm d-none"></button></div>
+</div>
+</div>
+</div>
+
+</main>
+
+<footer class="bg-dark text-white py-4">
+<div class="container text-center small">Dashboard de Almoxarifado — Campo Largo/PR | Estoque diário</div>
+</footer>
+
+<script>
+const ENTIDADE_FIXA = "2848";
+const API_BASE = "https://campolargo.atende.net/api/transparencia/dados-abertos/v1/wax";
+
+const TIPOS_E = { 1:"Nota Fiscal", 2:"Doação", 3:"Transferência", 4:"Ordem de Compra", 5:"Tipo 5 (entrada)", 6:"Devolução", 7:"Empenho", 8:"Estorno de saída", 9:"Fabricação Própria", 10:"Fracionamento" };
+const TIPOS_S = { 1:"Requisição", 2:"Centro de Custo", 3:"Baixa", 4:"Transferência", 5:"Saída Total", 6:"Devolução N.F.", 7:"Transf. Saúde", 8:"Estorno de entrada", 9:"Fracionamento" };
+const CORES = ["#611f69","#00897b","#f4a261","#0d3b66","#e76f51","#8b2fc9","#2a9d8f","#e9c46a","#264653","#b052de","#adb5bd"];
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+let docMap = new Map();     // chave -> movimento (entrada ou saída)
+let tiposExcl = new Set();  // "E4", "S8"... fora do cálculo
+let abortar = false, falhas = 0;
+let mostrarGraf = true;
+let listaVisivel = true;
+const LIM_LISTA = 500;
+let limiteLista = LIM_LISTA;
+let graficos = {};
+let ultimo = null;
+
+// ---------------- utilidades ----------------
+function escapeHtml(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+const moeda = v => Number(v || 0).toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
+const numBR = v => Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits:2, maximumFractionDigits:2 });
+const cls = v => v < -0.005 ? "neg" : "";
+const normDep = x => { const s = String(x ?? "").trim(); return /^\d+(\.0+)?$/.test(s) ? String(parseInt(s, 10)) : s; };
+
+function parseValor(txt){
+  if (txt === null || txt === undefined) return NaN;
+  let s = String(txt).trim().replace(/R\$/gi,"").replace(/\s/g,"");
+  if (!s) return NaN;
+  if (/e/i.test(s) && !s.includes(",")) return Number(s);
+  const virg = s.includes(","), pontos = (s.match(/\./g) || []).length;
+  if (virg) s = s.replace(/\./g,"").replace(",",".");
+  else if (pontos > 1) s = s.replace(/\./g,"");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function dataLocalIso(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function isoValido(iso){ const d = new Date(iso + "T12:00:00"); return !isNaN(d) && dataLocalIso(d) === iso; }
+function brParaIso(br){
+  if (!br) return null;
+  const p = String(br).split("/");
+  if (p.length !== 3) return null;
+  return `${p[2].padStart(4,"0")}-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`;
+}
+function isoParaBr(iso){ const [a,m,d] = iso.split("-"); return `${d}/${m}/${a}`; }
+function parseDataBR(str){ const iso = brParaIso(str); return iso && isoValido(iso) ? new Date(iso + "T00:00:00") : null; }
+function diaAnterior(iso){ const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate()-1); return dataLocalIso(d); }
+function proximoDia(iso){ const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate()+1); return dataLocalIso(d); }
+
+// Datas padrão: inicial = ontem, final = hoje (o usuário pode alterar)
+function definirDatas(){
+  const hoje = new Date(), ontem = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1);
+  $("dataInicio").value = dataLocalIso(ontem);
+  $("dataFim").value = dataLocalIso(hoje);
+}
+
+function mostrarStatus(texto, tipo = "info"){ const el = $("status"); el.className = "alert alert-" + tipo + " status"; el.textContent = texto; }
+function mostrarLoading(sim){
+  $("loading").classList.toggle("d-none", !sim);
+  $("btnParar").classList.toggle("d-none", !sim);
+  $("btnConsultar").disabled = sim;
+}
+
+function salvarLocal(){
+  try {
+    localStorage.setItem("est3_excl", JSON.stringify([...tiposExcl]));
+    localStorage.setItem("est3_saldoIni", $("saldoInicial").value);
+    localStorage.setItem("est3_graf", mostrarGraf ? "1" : "0");
+    localStorage.setItem("est3_lista", listaVisivel ? "1" : "0");
+  } catch (e) {}
+}
+function carregarLocal(){
+  try {
+    tiposExcl = new Set(JSON.parse(localStorage.getItem("est3_excl") || "[]"));
+    const s = localStorage.getItem("est3_saldoIni"); if (s) $("saldoInicial").value = s;
+    mostrarGraf = localStorage.getItem("est3_graf") !== "0";
+    listaVisivel = localStorage.getItem("est3_lista") !== "0";
+  } catch (e) {}
+}
+
+// ---------------- consulta à API ----------------
+function extrairLista(tp, json){
+  if (!json) return [];
+  const no = tp === "E" ? (json.entrada || json.Entrada) : (json.saida || json.Saida);
+  if (!no) return [];
+  if (Array.isArray(no)) return no.filter(i => i && !Array.isArray(i) && typeof i === "object");
+  return typeof no === "object" ? [no] : [];
+}
+
+async function buscarDoc(tp, ano, cod){
+  const url = `${API_BASE}/${tp === "E" ? "entrada" : "saida"}/${ENTIDADE_FIXA}/${ano}/${cod}`;
+  for (let t = 0; t < 5; t++) {
+    if (abortar) return { lista:[], json:null };
+    try {
+      const r = await fetch(url, { headers:{ "Accept":"application/json" } });
+      if (r.status === 429) { await sleep(1500 * (t + 1)); continue; }
+      if (r.ok) { const json = await r.json(); return { json, lista: extrairLista(tp, json) }; }
+      if (r.status >= 500) { await sleep(600 * (t + 1)); continue; }
+      return { lista:[], json:null };
+    } catch (e) { await sleep(600 * (t + 1)); }
+  }
+  falhas++;
+  return { lista:[], json:null };
+}
+
+function criarRegistro(tp, ano, json, info){
+  const itens = json.Itens || json.itens || info.Itens || info.itens || [];
+  const tipoId = Number(info.Tipo || info.tipo || 0);
+  const mapa = tp === "E" ? TIPOS_E : TIPOS_S;
+  return {
+    k: tp, ano: Number(ano),
+    cod: Number(info.Codigo || info.codigo),
+    data: info.Data || info.data,
+    hora: info.Hora || info.hora || "",
+    tipoId, tipo: mapa[tipoId] || `Tipo ${tipoId}`,
+    estado: Number(info.Estado || info.estado || 1),
+    terceiro: info.pessoa?.cpfCnpj || info.Pessoa?.cpfCnpj || info.cpfCnpj || "",
+    docNum: String(info.DocumentoNumero || info.documentoNumero || info.NotaFiscal || ""),
+    cc: (() => { const c = info.CentroCusto || info.centroCusto; if (!c) return ""; return c.descricao ? `${c.codigo} - ${c.descricao}` : String(c.codigo ?? ""); })(),
+    obs: String(info.Observacao || info.observacao || info.Observacoes || ""),
+    itens: (Array.isArray(itens) ? itens : []).map(it => {
+      const dep = it.Deposito?.codigo ?? it.deposito?.codigo ?? it.Estoque?.Deposito?.codigo ?? it.estoque?.deposito?.codigo ?? "";
+      const pr = it.ProdutoUnidade?.Produto || it.produtoUnidade?.produto || {};
+      const un = it.ProdutoUnidade?.Unidade || it.produtoUnidade?.unidade || {};
+      const qtd = Number(it.Quantidade || it.quantidade || 0);
+      const unit = Number(it.ValorUnitario || it.valorUnitario || it.PrecoEntrada || it.PrecoSaida || it.precoSaida || it.PresoSaida || 0);
+      const vt = Number(it.ValorTotal || it.valorTotal || 0) || qtd * unit;
+      return { dep:normDep(dep), vt, cod:String(pr.codigo ?? ""), desc:pr.descricao || it.descricao || "Sem descrição", un:un.descricao || "UN", qtd, vu:unit };
+    })
+  };
+}
+// Itens salvos em versões antigas eram pares [depósito, valor]; converte para o formato atual.
+function normItem(x){
+  if (Array.isArray(x)) return { dep:normDep(x[0]), vt:Number(x[1]) || 0, cod:"", desc:"(produto não registrado)", un:"", qtd:0, vu:0 };
+  return { dep:normDep(x.dep), vt:Number(x.vt) || 0, cod:String(x.cod ?? ""), desc:x.desc || "", un:x.un || "", qtd:Number(x.qtd) || 0, vu:Number(x.vu) || 0 };
+}
+function guardarRegistro(reg){ docMap.set(`${reg.k}|${reg.ano}|${reg.cod}`, reg); }
+
+// Salto binário até a faixa de datas, recuo até o início real e leitura sequencial.
+async function varrer(tp, ano, dtIni, dtFim, st){
+  const rotulo = tp === "E" ? "Entradas" : "Saídas";
+  const dataDe = lista => parseDataBR(lista[0].Data || lista[0].data);
+  let cod = 1, salto = 1000, dir = 1, achado = null, vazios = 0;
+
+  while (salto >= 1 && !abortar) {
+    st.msg = `${rotulo} ${ano}: localizando a faixa de datas (código ${cod}, passo ${salto})...`;
+    const res = await buscarDoc(tp, ano, cod);
+    if (res.lista.length > 0) {
+      vazios = 0;
+      const d = dataDe(res.lista);
+      if (d) {
+        if (d < dtIni) { if (dir === -1) salto = Math.floor(salto / 2); dir = 1; }
+        else if (d > dtFim) { if (dir === 1) salto = Math.floor(salto / 2); dir = -1; }
+        else { achado = cod; if (salto === 1) break; dir = -1; salto = Math.floor(salto / 2); }
+      }
+    } else {
+      vazios++;
+      if (vazios >= 2) { dir = -1; salto = Math.floor(salto / 2); vazios = 0; }
+    }
+    if (salto < 1) break;
+    cod += salto * dir;
+    if (cod < 1) cod = 1;
+    await sleep(30);
+  }
+  if (abortar) return;
+  if (!achado) achado = cod;
+
+  let c = achado, v = 0, inicio = 1;
+  while (c > 1 && !abortar) {
+    c--;
+    st.msg = `${rotulo} ${ano}: confirmando o início do período (código ${c})...`;
+    const res = await buscarDoc(tp, ano, c);
+    if (res.lista.length > 0) {
+      v = 0;
+      const d = dataDe(res.lista);
+      if (d && d < dtIni) { inicio = c + 1; break; }
+    } else if (++v >= 15) { inicio = c + v; break; }
+    await sleep(30);
+  }
+
+  let cur = inicio, vaz = 0;
+  while (!abortar) {
+    st.msg = `${rotulo} ${ano}: lendo código ${cur} (${st.n} no período)...`;
+    const res = await buscarDoc(tp, ano, cur);
+    if (res.lista.length > 0) {
+      vaz = 0;
+      const info = res.lista[0];
+      const d = parseDataBR(info.Data || info.data);
+      if (d) {
+        if (d > dtFim) break;
+        if (d >= dtIni && d <= dtFim) { st.n++; guardarRegistro(criarRegistro(tp, ano, res.json, info)); }
+      }
+    } else if (++vaz >= 15) break;
+    cur++;
+    await sleep(40);
+  }
+}
+
+async function consultar(){
+  const ini = $("dataInicio").value, fim = $("dataFim").value;
+  if (!ini || !fim) { mostrarStatus("Informe a data inicial e a data final.", "danger"); return; }
+  if (ini > fim) { mostrarStatus("A data inicial não pode ser maior que a final.", "danger"); return; }
+  if ((new Date(fim) - new Date(ini)) / 86400000 > 366) { mostrarStatus("O período máximo é de 1 ano.", "danger"); return; }
+  abortar = false; falhas = 0;
+
+  // ontem e hoje podem estar em anos diferentes (31/12 e 01/01): consulta um ano por vez
+  const faixas = [];
+  for (let a = Number(ini.slice(0,4)); a <= Number(fim.slice(0,4)); a++) {
+    const de = ini > `${a}-01-01` ? ini : `${a}-01-01`, ate = fim < `${a}-12-31` ? fim : `${a}-12-31`;
+    faixas.push({ ano:String(a), dtIni:new Date(de + "T00:00:00"), dtFim:new Date(ate + "T23:59:59") });
+  }
+  const st = { E:{ msg:"Entradas: iniciando...", n:0 }, S:{ msg:"Saídas: iniciando...", n:0 } };
+  mostrarLoading(true);
+  mostrarStatus("Consultando entradas e saídas na API...", "info");
+  const timer = setInterval(() => { $("loadingTexto").innerHTML = escapeHtml(st.E.msg) + "<br>" + escapeHtml(st.S.msg); }, 300);
+
+  try {
+    for (const f of faixas) await Promise.all([ varrer("E", f.ano, f.dtIni, f.dtFim, st.E), varrer("S", f.ano, f.dtIni, f.dtFim, st.S) ]);
+  } finally { clearInterval(timer); mostrarLoading(false); }
+
+  renderTudo();
+  const est3 = [...docMap.values()].filter(d => d.k === "E" && d.estado === 3).length;
+  const extra = (falhas ? ` Atenção: ${falhas} consulta(s) falharam após novas tentativas; o resultado pode estar incompleto.` : "")
+              + (est3 ? ` Há ${est3} entrada(s) com estado "Est. Total" (estornadas): confira se o estorno correspondente também entrou.` : "");
+  if (abortar) mostrarStatus("Consulta interrompida. O que foi lido até aqui está na tabela.", "warning");
+  else mostrarStatus(`Consulta concluída (${isoParaBr(ini)} a ${isoParaBr(fim)}): ${st.E.n} entradas e ${st.S.n} saídas.${extra}`, (falhas || est3) ? "warning" : "success");
+}
+
+// ---------------- cálculo ----------------
+function depositosFiltro(){
+  const t = $("filtroDeposito").value.trim();
+  if (!t || /^todos?$/i.test(t)) return null;
+  return new Set(t.split(/[,;\s]+/).filter(Boolean).map(normDep));
+}
+const horaDe = h => { const m = String(h || "").match(/^(\d{1,2})/); return m ? Math.min(23, Number(m[1])) : null; };
+
+function calcular(){
+  const ini = $("dataInicio").value, fim = $("dataFim").value;
+  const dep = depositosFiltro();
+  const si = parseValor($("saldoInicial").value);
+  const temSaldo = Number.isFinite(si);
+  const initTotal = temSaldo ? si : 0;
+
+  const tiposE = {}, tiposS = {}, totTipo = {};
+  const dias = {}, porDep = {};
+  const horaE = Array(24).fill(0), horaS = Array(24).fill(0);
+  docMap.forEach(d => {
+    const iso = brParaIso(d.data);
+    if (!iso || iso < ini || iso > fim) return;
+    let soma = 0, usou = false;
+    const pd = {};
+    d.itens.forEach(it => {
+      if (dep && !dep.has(String(it.dep))) return;
+      usou = true; soma += it.vt;
+      const k = it.dep || "(sem depósito)";
+      pd[k] = (pd[k] || 0) + it.vt;
+    });
+    if (!usou) return;
+    const chave = d.k + d.tipoId;
+    (d.k === "E" ? tiposE : tiposS)[d.tipoId] = d.tipo;
+    totTipo[chave] = (totTipo[chave] || 0) + soma;
+    if (tiposExcl.has(chave)) return;
+    const dia = dias[iso] || (dias[iso] = { E:{}, S:{}, totE:0, totS:0 });
+    dia[d.k][d.tipoId] = (dia[d.k][d.tipoId] || 0) + soma;
+    if (d.k === "E") dia.totE += soma; else dia.totS += soma;
+    Object.entries(pd).forEach(([k, v]) => { (porDep[k] = porDep[k] || { E:0, S:0 })[d.k] += v; });
+    const h = horaDe(d.hora);
+    if (h !== null) (d.k === "E" ? horaE : horaS)[h] += soma;
+  });
+
+  const linhas = [];
+  let saldo = initTotal, totE = 0, totS = 0;
+  if (ini && fim && ini <= fim) {
+    for (let iso = ini, g = 0; iso <= fim && g < 800; iso = proximoDia(iso), g++) {
+      const d = dias[iso] || null;
+      const e = d ? d.totE : 0, s = d ? d.totS : 0;
+      saldo += e - s; totE += e; totS += s;
+      linhas.push({ iso, d, e, s, liquido: e - s, se: saldo });
+    }
+  }
+  return { linhas, tiposE, tiposS, totTipo, porDep, horaE, horaS, totE, totS, saldoFinal: saldo, initTotal, temSaldo, ini, fim };
+}
+
+// ---------------- renderização ----------------
+function renderTudo(pularTipos){
+  const r = calcular();
+  ultimo = r;
+  if (!pularTipos) renderTipos(r);
+  renderKpis(r); renderTabela(r); renderDep(r);
+  limiteLista = LIM_LISTA;
+  aplicarVisibilidadeGraficos();
+  aplicarVisibilidadeLista();
+}
+
+function renderTipos(r){
+  const ids = o => Object.keys(o).map(Number).sort((a, b) => a - b);
+  const opt = (k, id, nome) => {
+    const ch = k + id;
+    return `<option value="${ch}" ${tiposExcl.has(ch) ? "" : "selected"}>${escapeHtml(nome)} — ${moeda(r.totTipo[ch] || 0)}</option>`;
+  };
+  const iE = ids(r.tiposE), iS = ids(r.tiposS), sel = $("selTipos");
+  if (!iE.length && !iS.length) {
+    sel.innerHTML = `<option value="" disabled>Os tipos aparecem depois da consulta.</option>`;
+    sel.size = 3;
+  } else {
+    sel.innerHTML = (iE.length ? `<optgroup label="Entradas">${iE.map(i => opt("E", i, r.tiposE[i])).join("")}</optgroup>` : "")
+                  + (iS.length ? `<optgroup label="Saídas">${iS.map(i => opt("S", i, r.tiposS[i])).join("")}</optgroup>` : "");
+    sel.size = Math.min(12, iE.length + iS.length + (iE.length ? 1 : 0) + (iS.length ? 1 : 0));
+  }
+  resumoTipos(r);
+}
+function resumoTipos(r){
+  const total = Object.keys(r.tiposE).length + Object.keys(r.tiposS).length;
+  const fora = [...tiposExcl].filter(k => (k[0] === "E" ? r.tiposE : r.tiposS)[Number(k.slice(1))] !== undefined).length;
+  $("resumoTipos").textContent = total ? `${total - fora} de ${total} tipos selecionados no saldo.` : "";
+}
+// Lê o que está selecionado no select múltiplo e recalcula (sem reconstruir o select)
+function aplicarSelecaoTipos(){
+  [...$("selTipos").options].forEach(o => { if (!o.value) return; if (o.selected) tiposExcl.delete(o.value); else tiposExcl.add(o.value); });
+  salvarLocal(); renderTudo(true);
+  if (ultimo) resumoTipos(ultimo);
+}
+function marcarTodosTipos(marcar){
+  [...$("selTipos").options].forEach(o => { if (o.value) o.selected = marcar; });
+  aplicarSelecaoTipos();
+}
+
+function kpi(titulo, valor, extra = "", classe = ""){
+  return `<div class="col-6 col-xl"><div class="card kpi ${classe} h-100"><div class="card-body">
+    <div class="text-muted small">${titulo}</div><div class="valor">${valor}</div><div class="small-muted">${extra}</div></div></div></div>`;
+}
+
+function renderKpis(r){
+  const liq = r.totE - r.totS;
+  $("kpis").innerHTML =
+    kpi("Saldo inicial", r.temSaldo ? moeda(r.initTotal) : "—", r.temSaldo ? `Fechamento de ${isoParaBr(diaAnterior(r.ini))}` : "Não informado") +
+    kpi("Entradas no período", moeda(r.totE), "Tipos marcados", "k-ent") +
+    kpi("Saídas no período", moeda(r.totS), "Tipos marcados", "k-sai") +
+    kpi("Variação líquida", `<span class="${cls(liq)}">${moeda(liq)}</span>`, "Entradas − saídas") +
+    kpi("SE final calculado", moeda(r.saldoFinal), r.temSaldo ? "Saldo inicial + variação líquida" : "Sem saldo inicial: mostra só a variação");
+}
+
+function renderTabela(r){
+  const mostrarTipos = $("chkTipos").checked;
+  const ids = o => Object.keys(o).map(Number).sort((a, b) => a - b);
+  const colsE = mostrarTipos ? ids(r.tiposE).filter(i => !tiposExcl.has("E" + i)) : [];
+  const colsS = mostrarTipos ? ids(r.tiposS).filter(i => !tiposExcl.has("S" + i)) : [];
+
+  let h1 = `<tr><th class="g-data col-data" rowspan="2">Data</th>`;
+  h1 += colsE.length ? `<th class="g-ent" colspan="${colsE.length + 1}">ENTRADAS</th>` : `<th class="g-ent" rowspan="2">Entradas</th>`;
+  h1 += colsS.length ? `<th class="g-sai" colspan="${colsS.length + 1}">SAÍDAS</th>` : `<th class="g-sai" rowspan="2">Saídas</th>`;
+  h1 += `<th class="g-calc" rowspan="2">Líquido</th><th class="g-calc" rowspan="2">SE calculado</th></tr>`;
+  let h2 = "<tr>";
+  if (colsE.length) h2 += colsE.map(id => `<th class="g-ent">${escapeHtml(r.tiposE[id])}</th>`).join("") + `<th class="g-ent">Σ Entradas</th>`;
+  if (colsS.length) h2 += colsS.map(id => `<th class="g-sai">${escapeHtml(r.tiposS[id])}</th>`).join("") + `<th class="g-sai">Σ Saídas</th>`;
+  h2 += "</tr>";
+  $("thead").innerHTML = h1 + h2;
+
+  $("tbody").innerHTML = r.linhas.map(l => {
+    const d = l.d;
+    let tr = `<tr class="${!d ? "tr-sem" : ""}"><td class="col-data">${isoParaBr(l.iso)}</td>`;
+    colsE.forEach(id => { tr += `<td class="num sub-ent">${d && d.E[id] ? numBR(d.E[id]) : "-"}</td>`; });
+    tr += `<td class="num ${colsE.length ? "sub-ent" : ""}"><strong>${l.e ? numBR(l.e) : "-"}</strong></td>`;
+    colsS.forEach(id => { tr += `<td class="num sub-sai">${d && d.S[id] ? numBR(d.S[id]) : "-"}</td>`; });
+    tr += `<td class="num ${colsS.length ? "sub-sai" : ""}"><strong>${l.s ? numBR(l.s) : "-"}</strong></td>`;
+    tr += `<td class="num ${cls(l.liquido)}">${l.liquido ? numBR(l.liquido) : "-"}</td>`;
+    tr += `<td class="num"><strong>${numBR(l.se)}</strong></td></tr>`;
+    return tr;
+  }).join("");
+
+  const somaTipo = (k, id) => r.linhas.reduce((a, l) => a + (l.d && l.d[k][id] ? l.d[k][id] : 0), 0);
+  let tf = `<tr style="font-weight:700;background:#eef0f6"><td class="col-data" style="background:#eef0f6">Total</td>`;
+  colsE.forEach(id => { tf += `<td class="num">${numBR(somaTipo("E", id))}</td>`; });
+  tf += `<td class="num">${numBR(r.totE)}</td>`;
+  colsS.forEach(id => { tf += `<td class="num">${numBR(somaTipo("S", id))}</td>`; });
+  tf += `<td class="num">${numBR(r.totS)}</td><td class="num">${numBR(r.totE - r.totS)}</td><td></td></tr>`;
+  $("tfoot").innerHTML = r.linhas.length ? tf : "";
+}
+
+function listaDep(r){
+  return Object.entries(r.porDep).map(([d, v]) => ({ dep:d, E:v.E, S:v.S, liq:v.E - v.S }))
+    .sort((a, b) => (Math.abs(b.E) + Math.abs(b.S)) - (Math.abs(a.E) + Math.abs(a.S)));
+}
+function renderDep(r){
+  const lista = listaDep(r);
+  $("tbodyDep").innerHTML = lista.length ? lista.map(x => `<tr><td class="col-data">${escapeHtml(x.dep)}</td>
+    <td class="num sub-ent">${numBR(x.E)}</td><td class="num sub-sai">${numBR(x.S)}</td><td class="num ${cls(x.liq)}">${numBR(x.liq)}</td></tr>`).join("")
+    : `<tr><td colspan="4" class="text-center py-3 text-muted">Sem dados. Clique em "Consultar movimentos" ou carregue um JSON.</td></tr>`;
+  $("tfootDep").innerHTML = lista.length ? `<tr style="font-weight:700;background:#eef0f6"><td class="col-data" style="background:#eef0f6">Total</td>
+    <td class="num">${numBR(r.totE)}</td><td class="num">${numBR(r.totS)}</td><td class="num ${cls(r.totE - r.totS)}">${numBR(r.totE - r.totS)}</td></tr>` : "";
+}
+
+// ---------------- lista de movimentação (produtos) ----------------
+function linhasMov(r){
+  const dep = depositosFiltro(), out = [];
+  docMap.forEach(d => {
+    const iso = brParaIso(d.data);
+    if (!iso || iso < r.ini || iso > r.fim) return;
+    const fora = tiposExcl.has(d.k + d.tipoId);
+    d.itens.forEach((it, ix) => {
+      if (dep && !dep.has(String(it.dep))) return;
+      out.push({ iso, hora:d.hora || "", k:d.k, cod:d.cod, tipo:d.tipo, estado:d.estado, fora, dep:it.dep, pc:it.cod, prod:it.desc, un:it.un, qtd:it.qtd, vu:it.vu, vt:it.vt,
+        doc:d.docNum || "", terc:d.k === "E" ? (d.terceiro || "") : (d.cc ? "CC: " + d.cc : ""), obs:d.obs || "", ix });
+    });
+  });
+  out.sort((a, b) => { const x = a.iso + a.hora, y = b.iso + b.hora; return x < y ? 1 : x > y ? -1 : (b.cod - a.cod) || (a.ix - b.ix); });
+  return out;
+}
+function filtrarLista(r){
+  const q = $("filtroLista").value.trim().toLowerCase(), mov = $("selMov").value, soMarc = $("chkSoMarcados").checked;
+  return linhasMov(r).filter(x => {
+    if (mov && x.k !== mov) return false;
+    if (soMarc && x.fora) return false;
+    if (q && ![x.prod, x.pc, x.doc, x.terc, x.obs, x.tipo, x.dep].join(" ").toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+const ESTADOS = { 1:["Normal","bg-success"], 2:["Est. Parcial","bg-warning text-dark"], 3:["Est. Total","bg-danger"] };
+function renderLista(){
+  const r = ultimo; if (!r) return;
+  const rows = filtrarLista(r), mostrar = rows.slice(0, limiteLista);
+  const totE = rows.filter(x => x.k === "E").reduce((a, x) => a + x.vt, 0), totS = rows.filter(x => x.k === "S").reduce((a, x) => a + x.vt, 0);
+  $("resumoLista").textContent = rows.length
+    ? `${rows.length.toLocaleString("pt-BR")} item(ns) · entradas ${moeda(totE)} · saídas ${moeda(totS)}` + (rows.length > mostrar.length ? ` · mostrando os ${mostrar.length.toLocaleString("pt-BR")} mais recentes` : "")
+    : "Itens de cada entrada e saída do período.";
+  $("tbodyLista").innerHTML = mostrar.length ? mostrar.map(x => {
+    const est = x.k === "E" ? (ESTADOS[x.estado] || ["Outro", "bg-secondary"]) : null;
+    return `<tr class="${x.fora ? "tr-fora" : ""}">
+      <td><span class="badge ${x.k === "E" ? "" : "bg-info text-dark"}" ${x.k === "E" ? 'style="background:var(--cor-entrada)"' : ""}>${x.k === "E" ? "Entrada" : "Saída"}</span></td>
+      <td><strong>${x.cod}</strong></td>
+      <td>${isoParaBr(x.iso)} <span class="small-muted">${escapeHtml(x.hora)}</span></td>
+      <td>${escapeHtml(x.tipo)}${x.fora ? ' <span class="badge text-bg-light border">fora do saldo</span>' : ""}</td>
+      <td>${est ? `<span class="badge ${est[1]}">${est[0]}</span>` : "-"}</td>
+      <td><span class="badge bg-secondary">${escapeHtml(x.dep || "-")}</span></td>
+      <td><code>${escapeHtml(x.pc || "-")}</code></td>
+      <td>${escapeHtml(x.prod)}</td>
+      <td>${escapeHtml(x.un)}</td>
+      <td class="num">${x.qtd ? Number(x.qtd).toLocaleString("pt-BR", { minimumFractionDigits:2, maximumFractionDigits:5 }) : "-"}</td>
+      <td class="num">${x.vu ? numBR(x.vu) : "-"}</td>
+      <td class="num"><strong>${numBR(x.vt)}</strong></td>
+      <td>${escapeHtml(x.doc || "-")}</td>
+      <td>${escapeHtml(x.terc || "-")}</td>
+      <td class="obs-cel" title="${escapeHtml(x.obs)}">${escapeHtml(x.obs || "-")}</td></tr>`;
+  }).join("") : `<tr><td colspan="15" class="text-center py-3 text-muted">Sem movimentos para os filtros atuais. Clique em "Consultar movimentos" ou carregue um JSON.</td></tr>`;
+  const mais = $("btnMaisLista"), resta = rows.length - mostrar.length;
+  mais.classList.toggle("d-none", resta <= 0);
+  if (resta > 0) mais.textContent = `Mostrar mais ${Math.min(LIM_LISTA, resta)} (restam ${resta.toLocaleString("pt-BR")})`;
+}
+function aplicarVisibilidadeLista(){
+  $("painelLista").classList.toggle("d-none", !listaVisivel);
+  $("txtLista").textContent = listaVisivel ? "Ocultar lista" : "Mostrar lista";
+  $("btnLista").setAttribute("aria-expanded", listaVisivel ? "true" : "false");
+  if (listaVisivel) renderLista();
+}
+
+// ---------------- gráficos (painel que pode ser ocultado) ----------------
+function aplicarVisibilidadeGraficos(){
+  $("painelGraficos").classList.toggle("d-none", !mostrarGraf);
+  $("txtGraficos").textContent = mostrarGraf ? "Ocultar gráficos" : "Mostrar gráficos";
+  $("btnGraficos").setAttribute("aria-expanded", mostrarGraf ? "true" : "false");
+  if (mostrarGraf) renderGraficos(ultimo);
+  else Object.keys(graficos).forEach(destruir);
+}
+function destruir(id){ if (graficos[id]) { graficos[id].destroy(); delete graficos[id]; } }
+function mk(id, cfg){ destruir(id); const c = $(id); if (c && typeof Chart !== "undefined") graficos[id] = new Chart(c, cfg); }
+
+function renderGraficos(r){
+  if (!r) return;
+  const tipMoeda = { callbacks:{ label: ctx => `${ctx.dataset.label ? ctx.dataset.label + ": " : ""}${moeda(ctx.raw)}` } };
+  const eixoMoeda = { y:{ ticks:{ callback: v => Number(v).toLocaleString("pt-BR", { notation:"compact" }) } } };
+  const base = { responsive:true, maintainAspectRatio:false };
+  const rot = r.linhas.map(l => isoParaBr(l.iso).slice(0, 5));
+
+  const pontos = [{ rot:"Saldo inicial", v:r.temSaldo ? r.initTotal : null }, ...r.linhas.map((l, i) => ({ rot:rot[i], v:l.se }))];
+  mk("gSaldo", { type:"line", data:{ labels:pontos.map(p => p.rot), datasets:[{ label:"SE", data:pontos.map(p => p.v), borderColor:CORES[0], backgroundColor:CORES[0], tension:.2, pointRadius:5 }] },
+    options:{ ...base, plugins:{ legend:{ display:false }, tooltip:tipMoeda }, scales:eixoMoeda } });
+
+  mk("gMov", { type:"bar", data:{ labels:rot, datasets:[
+      { label:"Entradas", data:r.linhas.map(l => l.e), backgroundColor:CORES[0] },
+      { label:"Saídas", data:r.linhas.map(l => l.s), backgroundColor:CORES[1] } ] },
+    options:{ ...base, plugins:{ legend:{ position:"bottom" }, tooltip:tipMoeda }, scales:eixoMoeda } });
+
+  const rosca = (id, k, tipos) => {
+    const ids = Object.keys(tipos).map(Number).filter(i => !tiposExcl.has(k + i) && (r.totTipo[k + i] || 0) > 0);
+    mk(id, { type:"doughnut", data:{ labels:ids.map(i => tipos[i]), datasets:[{ data:ids.map(i => r.totTipo[k + i]), backgroundColor:CORES }] },
+      options:{ ...base, plugins:{ legend:{ position:"right" }, tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${moeda(ctx.raw)}` } } } } });
+  };
+  rosca("gTipoE", "E", r.tiposE); rosca("gTipoS", "S", r.tiposS);
+
+  const top = listaDep(r).slice(0, 10);
+  mk("gDep", { type:"bar", data:{ labels:top.map(x => "Dep. " + x.dep), datasets:[
+      { label:"Entradas", data:top.map(x => x.E), backgroundColor:CORES[0] },
+      { label:"Saídas", data:top.map(x => x.S), backgroundColor:CORES[1] } ] },
+    options:{ ...base, indexAxis:"y", plugins:{ legend:{ position:"bottom" }, tooltip:tipMoeda }, scales:{ x:{ ticks:{ callback: v => Number(v).toLocaleString("pt-BR", { notation:"compact" }) } } } } });
+
+  const horas = [...Array(24).keys()];
+  mk("gHora", { type:"bar", data:{ labels:horas.map(h => String(h).padStart(2, "0") + "h"), datasets:[
+      { label:"Entradas", data:r.horaE, backgroundColor:CORES[0] },
+      { label:"Saídas", data:r.horaS, backgroundColor:CORES[1] } ] },
+    options:{ ...base, plugins:{ legend:{ position:"bottom" }, tooltip:tipMoeda }, scales:eixoMoeda } });
+}
+
+// ---------------- arquivos ----------------
+function baixar(nome, conteudo, tipo){
+  const blob = new Blob([conteudo], { type: tipo });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function salvarJson(){
+  if (!docMap.size) { alert("Não há movimentos para salvar."); return; }
+  baixar("estoque_movimentos.json", JSON.stringify({ versao:3, entidade:ENTIDADE_FIXA, docs:Array.from(docMap.values()) }), "application/json");
+}
+function carregarJson(arquivo){
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const j = JSON.parse(rd.result);
+      const docs = Array.isArray(j) ? j : j.docs;
+      if (!Array.isArray(docs)) throw new Error("formato não reconhecido");
+      docs.forEach(d => { if (d && d.k && d.cod && d.data && Array.isArray(d.itens)) { d.itens = d.itens.map(normItem); guardarRegistro(d); } });
+      renderTudo();
+      mostrarStatus(`JSON carregado: ${docMap.size} movimentos em memória. Só os dias do período selecionado (${isoParaBr($("dataInicio").value)} a ${isoParaBr($("dataFim").value)}) entram na tabela.`, "success");
+    } catch (e) { mostrarStatus("Não foi possível ler o JSON: " + e.message, "danger"); }
+  };
+  rd.readAsText(arquivo);
+}
+const csvN = v => (v === undefined || v === null) ? "" : String(Number(v).toFixed(2)).replace(".", ",");
+const csvTexto = linhas => "﻿" + linhas.map(l => l.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
+
+function exportarCsv(){
+  const r = ultimo;
+  if (!r || !r.linhas.length) { alert("Não existem dados para exportar."); return; }
+  const ids = o => Object.keys(o).map(Number).sort((a, b) => a - b);
+  const iE = ids(r.tiposE).filter(i => !tiposExcl.has("E" + i)), iS = ids(r.tiposS).filter(i => !tiposExcl.has("S" + i));
+  const cab = ["Data", ...iE.map(i => "Entrada: " + r.tiposE[i]), "Total Entradas", ...iS.map(i => "Saída: " + r.tiposS[i]), "Total Saídas", "Líquido", "SE calculado"];
+  const lin = r.linhas.map(l => [isoParaBr(l.iso), ...iE.map(i => csvN(l.d && l.d.E[i] || 0)), csvN(l.e), ...iS.map(i => csvN(l.d && l.d.S[i] || 0)), csvN(l.s), csvN(l.liquido), csvN(l.se)]);
+  baixar("estoque_diario.csv", csvTexto([cab, ...lin]), "text/csv;charset=utf-8;");
+}
+function exportarCsvLista(){
+  if (!ultimo) return;
+  const rows = filtrarLista(ultimo);
+  if (!rows.length) { alert("Não existem dados para exportar."); return; }
+  const cab = ["Movimento", "Número", "Data", "Hora", "Tipo", "Fora do saldo", "Depósito", "Código produto", "Produto", "Unidade", "Quantidade", "Valor unitário", "Valor total", "Documento", "CNPJ / Centro de custo", "Observação"];
+  baixar("estoque_movimentacao.csv", csvTexto([cab, ...rows.map(x => [x.k === "E" ? "Entrada" : "Saída", x.cod, isoParaBr(x.iso), x.hora, x.tipo, x.fora ? "Sim" : "Não", x.dep, x.pc, x.prod, x.un, csvN(x.qtd), csvN(x.vu), csvN(x.vt), x.doc, x.terc, x.obs])]), "text/csv;charset=utf-8;");
+}
+function exportarCsvDep(){
+  if (!ultimo) return;
+  const lista = listaDep(ultimo);
+  if (!lista.length) { alert("Não existem dados para exportar."); return; }
+  baixar("estoque_por_deposito.csv", csvTexto([["Depósito", "Entradas", "Saídas", "Variação líquida"], ...lista.map(x => [x.dep, csvN(x.E), csvN(x.S), csvN(x.liq)])]), "text/csv;charset=utf-8;");
+}
+
+// ---------------- eventos ----------------
+function iniciar(){
+  definirDatas();
+  carregarLocal();
+  renderTudo();
+}
+
+$("btnConsultar").addEventListener("click", consultar);
+$("btnParar").addEventListener("click", () => { abortar = true; });
+$("btnSalvarJson").addEventListener("click", salvarJson);
+$("arquivoJson").addEventListener("change", ev => { if (ev.target.files[0]) carregarJson(ev.target.files[0]); ev.target.value = ""; });
+$("btnCsv").addEventListener("click", exportarCsv);
+$("btnCsvDep").addEventListener("click", exportarCsvDep);
+$("btnLimparDados").addEventListener("click", () => { docMap.clear(); renderTudo(); mostrarStatus("Movimentos limpos da memória.", "info"); });
+$("btnGraficos").addEventListener("click", () => { mostrarGraf = !mostrarGraf; salvarLocal(); aplicarVisibilidadeGraficos(); });
+["dataInicio","dataFim","saldoInicial","filtroDeposito","chkTipos"].forEach(id => {
+  $(id).addEventListener("change", () => { salvarLocal(); renderTudo(); });
+});
+// Select múltiplo: um clique alterna a opção (sem precisar de Ctrl); o teclado continua funcionando pelo "change"
+$("selTipos").addEventListener("mousedown", ev => {
+  if (ev.target.tagName !== "OPTION" || !ev.target.value) return;
+  ev.preventDefault();
+  ev.target.selected = !ev.target.selected;
+  $("selTipos").focus();
+  aplicarSelecaoTipos();
+});
+$("selTipos").addEventListener("change", aplicarSelecaoTipos);
+$("btnTodosTipos").addEventListener("click", () => marcarTodosTipos(true));
+$("btnNenhumTipo").addEventListener("click", () => marcarTodosTipos(false));
+
+$("btnLista").addEventListener("click", () => { listaVisivel = !listaVisivel; salvarLocal(); aplicarVisibilidadeLista(); });
+$("btnMaisLista").addEventListener("click", () => { limiteLista += LIM_LISTA; renderLista(); });
+$("btnCsvLista").addEventListener("click", exportarCsvLista);
+["filtroLista","selMov","chkSoMarcados"].forEach(id => {
+  $(id).addEventListener(id === "filtroLista" ? "input" : "change", () => { limiteLista = LIM_LISTA; renderLista(); });
+});
+
+iniciar();
+</script>
+</body>
+</html>
