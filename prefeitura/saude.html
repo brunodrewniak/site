@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Interativo - Rota Centro (Campo Largo)</title>
+    <title>Sistema de Rotas de Saúde - Campo Largo</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -22,7 +22,7 @@
         }
 
         #sidebar {
-            width: 380px;
+            width: 400px;
             background: #ffffff;
             display: flex;
             flex-direction: column;
@@ -37,7 +37,7 @@
         }
 
         .header h1 {
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             margin-bottom: 5px;
             font-weight: 600;
         }
@@ -45,6 +45,34 @@
         .header p {
             font-size: 0.85rem;
             opacity: 0.9;
+        }
+
+        .route-selector {
+            padding: 15px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .route-selector label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #475569;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .route-selector select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e293b;
+            cursor: pointer;
+            outline: none;
         }
 
         .stops-container {
@@ -159,70 +187,24 @@
 
     <div id="sidebar">
         <div class="header">
-            <h1>Rota 1: Centro e Região Urbana</h1>
-            <p>Campo Largo - PR | Trajeto Otimizado</p>
+            <h1>Sistema de Rotas de Saúde</h1>
+            <p>Prefeitura Municipal de Campo Largo - PR</p>
+        </div>
+
+        <div class="route-selector">
+            <label for="routeSelect">Selecione a Rota:</label>
+            <select id="routeSelect" onchange="switchRoute(this.value)">
+                <option value="rota1">Rota 1: Centro e Região Urbana</option>
+                <option value="rota2">Rota 2: Leste e Distrito de Ferraria</option>
+                <option value="rota3">Rota 3: Norte Urbano, Oeste e Itambezinho</option>
+                <option value="rota4">Rota 4: Bateias e Distrito Rural / Interior</option>
+            </select>
         </div>
         
-        <div class="stops-container">
-            <div class="stop-card active" onclick="highlightPoint(0)">
-                <div class="badge start">P</div>
-                <div class="stop-info">
-                    <h3>Prefeitura Municipal de Campo Largo</h3>
-                    <p>Av. Padre Natal Pigato, 925 - Vila Elizabeth</p>
-                </div>
-            </div>
-
-            <div class="stop-card" onclick="highlightPoint(1)">
-                <div class="badge">1</div>
-                <div class="stop-info">
-                    <h3>UBS Dante Portugal Castagnolli</h3>
-                    <p>Rua Joanin Stroparo, 119 - Vila Bancária</p>
-                </div>
-            </div>
-
-            <div class="stop-card" onclick="highlightPoint(2)">
-                <div class="badge">2</div>
-                <div class="stop-info">
-                    <h3>UPA 24h Campo Largo</h3>
-                    <p>Rua Francisco Xavier de Almeida Garret, 385 - Abranches Guimarães</p>
-                </div>
-            </div>
-
-            <div class="stop-card" onclick="highlightPoint(3)">
-                <div class="badge">3</div>
-                <div class="stop-info">
-                    <h3>Centro da Juventude / UBS Bom Jesus</h3>
-                    <p>Rua Ademar de Barros, 196 - Bom Jesus</p>
-                </div>
-            </div>
-
-            <div class="stop-card" onclick="highlightPoint(4)">
-                <div class="badge">4</div>
-                <div class="stop-info">
-                    <h3>Unidade de Saúde Vila Glória</h3>
-                    <p>Rua Belo Horizonte, 165 - Vila Glória</p>
-                </div>
-            </div>
-
-            <div class="stop-card" onclick="highlightPoint(5)">
-                <div class="badge">5</div>
-                <div class="stop-info">
-                    <h3>Unidade de Saúde Águas Claras</h3>
-                    <p>Rua José de Paiva Vidal, 2800 - São Marcos</p>
-                </div>
-            </div>
-
-            <div class="stop-card" onclick="highlightPoint(6)">
-                <div class="badge">6</div>
-                <div class="stop-info">
-                    <h3>UBS Ari Fior</h3>
-                    <p>Rua Salmão, 513 - Jardim Três Rios</p>
-                </div>
-            </div>
-        </div>
+        <div class="stops-container" id="stopsList"></div>
 
         <div class="footer-action">
-            <a href="https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/UBS+Dante+Portugal+Castagnolli+(Postinho+de+sa%C3%BAde),+R.+Joanim+Stroparo,+119+-+Vila+Bancaria,+Campo+Largo+-+PR,+83601-460/UPA+Unidade+de+Pronto+Atendimento+de+Campo+Largo,+R.+Francisco+Xavier+de+Almeida+Garret,+385+-+Abranche+Guimaraes,+Campo+Largo+-+PR,+83601-230/Centro+da+Juventude+Bom+Jesus,+Rua+Ademar+de+Barros,+196+-+Bom+Jesus,+Campo+Largo+-+PR,+83601-390/Unidade+de+Sa%C3%BAde+Vila+Gl%C3%B3ria,+r,+R.+Belo+Horizonte,+165,+Campo+Largo+-+PR/Unidade+De+Sa%C3%BAde+%C3%81guas+Claras,+R.+Jos%C3%A9+de+Paiva+Vidal,+2800+-+S%C3%A3o+Marcos,+Campo+Largo+-+PR,+83602-160/R.+Salm%C3%A3o,+513+-+Jardim+Tr%C3%AAs+Rios,+Campo+Largo+-+PR,+83603-265/" target="_blank" class="btn-google">
+            <a id="googleMapsBtn" href="#" target="_blank" class="btn-google">
                 Abrir Rota no Google Maps 🗺️
             </a>
         </div>
@@ -233,25 +215,70 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const points = [
-            { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
-            { title: "UBS Dante Portugal Castagnolli", address: "Rua Joanin Stroparo, 119 - Vila Bancária", lat: -25.4693083, lng: -49.524695, label: "1" },
-            { title: "UPA 24h Campo Largo", address: "Rua Francisco Xavier de Almeida Garret, 385", lat: -25.4695108, lng: -49.5230378, label: "2" },
-            { title: "Centro da Juventude / UBS Bom Jesus", address: "Rua Ademar de Barros, 196 - Bom Jesus", lat: -25.4545707, lng: -49.5414852, label: "3" },
-            { title: "Unidade de Saúde Vila Glória", address: "Rua Belo Horizonte, 165 - Vila Glória", lat: -25.473676, lng: -49.5700388, label: "4" },
-            { title: "Unidade de Saúde Águas Claras", address: "Rua José de Paiva Vidal, 2800 - São Marcos", lat: -25.4744128, lng: -49.5500468, label: "5" },
-            { title: "UBS Ari Fior", address: "Rua Salmão, 513 - Jardim Três Rios", lat: -25.4958212, lng: -49.5454653, label: "6" }
-        ];
+        const routesData = {
+            rota1: {
+                title: "Rota 1: Centro e Região Urbana",
+                googleUrl: "https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/UBS+Dante+Portugal+Castagnolli+(Postinho+de+sa%C3%BAde),+R.+Joanim+Stroparo,+119+-+Vila+Bancaria,+Campo+Largo+-+PR,+83601-460/UPA+Unidade+de+Pronto+Atendimento+de+Campo+Largo,+R.+Francisco+Xavier+de+Almeida+Garret,+385+-+Abranche+Guimaraes,+Campo+Largo+-+PR,+83601-230/Centro+da+Juventude+Bom+Jesus,+Rua+Ademar+de+Barros,+196+-+Bom+Jesus,+Campo+Largo+-+PR,+83601-390/Unidade+de+Sa%C3%BAde+Vila+Gl%C3%B3ria,+r,+R.+Belo+Horizonte,+165,+Campo+Largo+-+PR/Unidade+De+Sa%C3%BAde+%C3%81guas+Claras,+R.+Jos%C3%A9+de+Paiva+Vidal,+2800+-+S%C3%A3o+Marcos,+Campo+Largo+-+PR,+83602-160/R.+Salm%C3%A3o,+513+-+Jardim+Tr%C3%AAs+Rios,+Campo+Largo+-+PR,+83603-265/",
+                points: [
+                    { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
+                    { title: "UBS Dante Portugal Castagnolli", address: "Rua Joanin Stroparo, 119 - Vila Bancária", lat: -25.4693083, lng: -49.524695, label: "1" },
+                    { title: "UPA 24h Campo Largo", address: "Rua Francisco Xavier de Almeida Garret, 385", lat: -25.4695108, lng: -49.5230378, label: "2" },
+                    { title: "Centro da Juventude / UBS Bom Jesus", address: "Rua Ademar de Barros, 196 - Bom Jesus", lat: -25.4545707, lng: -49.5414852, label: "3" },
+                    { title: "Unidade de Saúde Vila Glória", address: "Rua Belo Horizonte, 165 - Vila Glória", lat: -25.473676, lng: -49.5700388, label: "4" },
+                    { title: "Unidade de Saúde Águas Claras", address: "Rua José de Paiva Vidal, 2800 - São Marcos", lat: -25.4744128, lng: -49.5500468, label: "5" },
+                    { title: "UBS Ari Fior", address: "Rua Salmão, 513 - Jardim Três Rios", lat: -25.4958212, lng: -49.5454653, label: "6" }
+                ]
+            },
+            rota2: {
+                title: "Rota 2: Leste e Distrito de Ferraria",
+                googleUrl: "https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/Posto+de+Sa%C3%BAde+Jardim+Rondinha+-+Rondinha,+Campo+Largo+-+PR/Unidade+B%C3%A1sica+De+Sa%C3%BAde+Cercadinho,+R.+Nossa+Sra.+da+Aparecida+-+Cercadinho,+Campo+Largo+-+PR,+83602-140/Unidade+de+Sa%C3%BAde+Caratuva,+640,+R.+Mato+Grosso,+1558+-+Ferraria,+Campo+Largo+-+PR,+83608-640/Unidade+de+Sa%C3%BAde+Jardim+Guarany,+R.+Ip%C3%AA+-+Jardim+Guarany,+Campo+Largo+-+PR,+83608-390/Unidade+B%C3%A1sica+de+Sa%C3%BAde+Ferraria,+1830,+R.+Iz%C3%ADdio+Santo+Cruzara,+1750+-+Jardim+Boa+Vista,+Campo+Largo+-+PR,+83609-235/",
+                points: [
+                    { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
+                    { title: "UBS Rondinha", address: "Estrada da Sereia, 15 - Rondinha", lat: -25.4480348, lng: -49.4800238, label: "1" },
+                    { title: "UBS Cercadinho", address: "Rua Nossa Senhora Aparecida, s/n - Cercadinho", lat: -25.4423407, lng: -49.4549416, label: "2" },
+                    { title: "UBS Caratuva", address: "Avenida Mato Grosso, 1558 - Ferraria", lat: -25.448855, lng: -49.4552043, label: "3" },
+                    { title: "UBS Jardim Guarany", address: "Rua Ipê, s/n - Jardim Guarani", lat: -25.4308063, lng: -49.4053287, label: "4" },
+                    { title: "UBS Ferraria", address: "Rua Izídio Santos Cruzara, 1750 - Ferraria", lat: -25.4588726, lng: -49.3966462, label: "5" }
+                ]
+            },
+            rota3: {
+                title: "Rota 3: Norte Urbano, Oeste e Itambezinho",
+                googleUrl: "https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/UBS+Fazendinha,+Rod.+Eng.+Raul+Azevedo+Macedo,+4603+-+Centro,+Campo+Largo+-+PR,+83606-482/USF+Jardim+Rivabem,+R+Medianeira,+s%2Fn+-+Vila+Andreassa+Miranda,+Campo+Largo+-+PR,+83605-550/Unidade+de+Sa%C3%BAde+Itaboa,+-203,+R.+Epaminondas+B%C3%BClow,+113+-+Lot.+Itaboa,+Campo+Largo+-+PR,+83605-190/Unidade+B%C3%A1sica+de+Sa%C3%BAde+(UBS)+Itambezinho,+Rua+Cassimiro+Karman,+S%2FN%C2%BA+-+Campo+Largo,+PR,+83602-665/",
+                points: [
+                    { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
+                    { title: "UBS Fazendinha", address: "Rod. Eng. Raul Azevedo Macedo, 4603", lat: -25.4170851, lng: -49.5037877, label: "1" },
+                    { title: "UBS Jardim Rivabem", address: "Rua Medianeira, s/n - Vila Rivabem", lat: -25.4491017, lng: -49.5553523, label: "2" },
+                    { title: "UBS Itaboa", address: "Rua Epaminondas Bülow, 113 - Itaboa", lat: -25.4541949, lng: -49.5655377, label: "3" },
+                    { title: "UBS Itambezinho", address: "Rua Cassemiro Karman, s/n - Itambezinho", lat: -25.3244461, lng: -49.6856269, label: "4" }
+                ]
+            },
+            rota4: {
+                title: "Rota 4: Bateias e Distrito Rural / Interior",
+                googleUrl: "https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/Unidade+B%C3%A1sica+De+Sa%C3%BAde+Bateias,+Rua+Joil+Antonio+Basso+-+Bateias,+Campo+Largo+-+PR/Unidade+B%C3%A1sica+de+Sa%C3%BAde+Santa+Cruz+-+Tr%C3%AAs+C%C3%B3rregos,+Campo+Largo+-+PR/Unidade+B%C3%A1sica+de+Sa%C3%BAde+Santa+Cruz+-+Tr%C3%AAs+C%C3%B3rregos,+Campo+Largo+-+PR/Estr.+principal+de+S%C3%A3o+Silvestre+-+S%C3%A3o+Silvestre,+Campo+Largo+-+PR/Estr.+Principal+de+S%C3%A3o+Pedro+-+Abap%C3%A3,+Castro+-+PR/",
+                points: [
+                    { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
+                    { title: "UBS Bateias", address: "Rua Joil Antonio Basso, s/n - Bateias", lat: -25.3610408, lng: -49.5105371, label: "1" },
+                    { title: "UBS Três Córregos", address: "Estrada Principal de Três Córregos, s/n", lat: -25.2194316, lng: -49.6941699, label: "2" },
+                    { title: "UBS Santa Cruz", address: "Estrada Principal de Santa Cruz, s/n", lat: -25.2194316, lng: -49.6941699, label: "3" },
+                    { title: "UBS São Silvestre", address: "Estrada Principal de São Silvestre, s/n", lat: -25.1744275, lng: -49.6376628, label: "4" },
+                    { title: "UBS São Pedro", address: "Estrada Principal de São Pedro - Abapã", lat: -24.9677118, lng: -49.6142294, label: "5" }
+                ]
+            }
+        };
 
-        const map = L.map('map').setView([-25.472, -49.538], 13);
+        let map, currentMarkers = [], currentPolyline = null;
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        function initMap() {
+            map = L.map('map').setView([-25.4558, -49.5176], 12);
 
-        const markers = [];
-        const routeCoordinates = points.map(p => [p.lat, p.lng]);
+            // Tiles do CARTO Voyager (OpenStreetMap)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+            }).addTo(map);
+
+            switchRoute('rota1');
+        }
 
         function createCustomIcon(label, isActive = false) {
             return L.divIcon({
@@ -274,35 +301,67 @@
             });
         }
 
-        points.forEach((point, index) => {
-            const marker = L.marker([point.lat, point.lng], {
-                icon: createCustomIcon(point.label)
+        function switchRoute(routeKey) {
+            const route = routesData[routeKey];
+            if (!route) return;
+
+            currentMarkers.forEach(m => map.removeLayer(m));
+            currentMarkers = [];
+            if (currentPolyline) map.removeLayer(currentPolyline);
+
+            document.getElementById('googleMapsBtn').href = route.googleUrl;
+
+            const stopsContainer = document.getElementById('stopsList');
+            stopsContainer.innerHTML = '';
+
+            const routeCoordinates = [];
+
+            route.points.forEach((point, index) => {
+                routeCoordinates.push([point.lat, point.lng]);
+
+                const card = document.createElement('div');
+                card.className = `stop-card ${index === 0 ? 'active' : ''}`;
+                card.onclick = () => highlightPoint(index);
+                card.innerHTML = `
+                    <div class="badge ${point.label === 'P' ? 'start' : ''}">${point.label}</div>
+                    <div class="stop-info">
+                        <h3>${point.title}</h3>
+                        <p>${point.address}</p>
+                    </div>
+                `;
+                stopsContainer.appendChild(card);
+
+                const marker = L.marker([point.lat, point.lng], {
+                    icon: createCustomIcon(point.label)
+                }).addTo(map);
+
+                marker.bindPopup(`
+                    <div style="font-family: sans-serif;">
+                        <strong style="color: #1a5f7a;">${point.label === 'P' ? 'Partida' : 'Ponto ' + point.label}: ${point.title}</strong><br>
+                        <small style="color: #555;">${point.address}</small>
+                    </div>
+                `);
+
+                marker.on('click', () => highlightPoint(index));
+                currentMarkers.push(marker);
+            });
+
+            currentPolyline = L.polyline(routeCoordinates, {
+                color: '#1a5f7a',
+                weight: 4,
+                opacity: 0.75,
+                dashArray: '8, 8'
             }).addTo(map);
 
-            marker.bindPopup(`
-                <div style="font-family: sans-serif;">
-                    <strong style="color: #1a5f7a;">${point.label === 'P' ? 'Partida' : 'Ponto ' + point.label}: ${point.title}</strong><br>
-                    <small style="color: #555;">${point.address}</small>
-                </div>
-            `);
-
-            marker.on('click', () => highlightPoint(index));
-            markers.push(marker);
-        });
-
-        const polyline = L.polyline(routeCoordinates, {
-            color: '#1a5f7a',
-            weight: 4,
-            opacity: 0.7,
-            dashArray: '8, 8'
-        }).addTo(map);
-
-        map.fitBounds(polyline.getBounds(), { padding: [40, 40] });
+            map.fitBounds(currentPolyline.getBounds(), { padding: [40, 40] });
+        }
 
         function highlightPoint(index) {
-            const point = points[index];
-            map.flyTo([point.lat, point.lng], 15, { duration: 1.2 });
-            markers[index].openPopup();
+            const currentRouteKey = document.getElementById('routeSelect').value;
+            const point = routesData[currentRouteKey].points[index];
+
+            map.flyTo([point.lat, point.lng], 15, { duration: 1.0 });
+            currentMarkers[index].openPopup();
 
             const cards = document.querySelectorAll('.stop-card');
             cards.forEach((card, i) => {
@@ -314,6 +373,8 @@
                 }
             });
         }
+
+        window.onload = initMap;
     </script>
 </body>
 </html>
