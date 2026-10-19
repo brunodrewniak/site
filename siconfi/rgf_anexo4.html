@@ -28,11 +28,13 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .kpi.kpi-amarelo{border-left-color:var(--amarelo)}
 .kpi.kpi-laranja{border-left-color:var(--laranja)}
 .kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi.kpi-secondary{border-left-color:#6c757d}
 .kpi .valor{font-size:1.25rem;font-weight:700;color:var(--azul-escuro)}
 .kpi .valor.cor-verde{color:var(--verde)}
 .kpi .valor.cor-amarelo{color:var(--amarelo)}
 .kpi .valor.cor-laranja{color:var(--laranja)}
 .kpi .valor.cor-vermelho{color:var(--vermelho)}
+.kpi .valor.cor-secondary{color:#6c757d}
 .chart-box{height:320px;position:relative;}
 .chart-box.chart-box-sm{height:260px;}
 .chart-box.chart-box-lg{height:400px;}
@@ -620,9 +622,25 @@ function existeConta(cod){
   return !!dadosPorConta[cod];
 }
 
-function montarUrl(){
-  const exercicio = $("filtroExercicio").value.trim();
-  const periodo = $("filtroPeriodo").value.trim();
+const temDados = () => Object.keys(dadosPorConta).length > 0;
+
+// Último quadrimestre já encerrado em relação à data de hoje
+function ultimoPeriodoFechado(hoje = new Date()){
+  const mes = hoje.getMonth() + 1, ano = hoje.getFullYear();
+  if(mes >= 9) return { exercicio: ano,     periodo: 2 }; // Set-Dez: 2º quad. (Mai-Ago) já fechou
+  if(mes >= 5) return { exercicio: ano,     periodo: 1 }; // Mai-Ago: 1º quad. (Jan-Abr) já fechou
+  return            { exercicio: ano - 1, periodo: 3 };    // Jan-Abr: 3º quad. do ano anterior
+}
+function periodoAnterior({ exercicio, periodo }){
+  return periodo > 1 ? { exercicio, periodo: periodo - 1 } : { exercicio: exercicio - 1, periodo: 3 };
+}
+function aplicarFiltros({ exercicio, periodo }){
+  $("filtroExercicio").value = exercicio;
+  $("filtroPeriodo").value = String(periodo);
+}
+
+function montarUrl(exercicio = $("filtroExercicio").value.trim(),
+                   periodo = $("filtroPeriodo").value.trim()){
   const periodicidade = $("filtroPeriodicidade").value.trim();
   const tipo = $("filtroTipo").value.trim();
   const anexo = $("filtroAnexo").value.trim();
@@ -643,26 +661,72 @@ function montarUrl(){
   return `${API_BASE}?${params.toString()}`;
 }
 
-async function consultarAPI(){
-  const url = montarUrl();
+async function buscarLista(url){
+  const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+  if(!response.ok) throw new Error(`HTTP ${response.status}`);
+  const json = await response.json();
+  const lista = Array.isArray(json) ? json : json.items;
+  if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+  return lista;
+}
+
+const MSG_ERRO_API = err => `Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`;
+
+// Consulta manual (botão de busca): usa exatamente o que foi escolhido; sem dados => zera o relatório
+async function consultarManual(){
+  const exercicio = $("filtroExercicio").value.trim();
+  const periodo = $("filtroPeriodo").value.trim();
+  const url = montarUrl(exercicio, periodo);
   $("urlApiTexto").textContent = url;
 
   mostrarLoading(true);
   mostrarStatus(`Buscando URL: ${url}`);
+  try{
+    const lista = await buscarLista(url);
+    processarDados(lista); // lista vazia => relatório zerado
+    if(lista.length){
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+    }else{
+      mostrarStatus(`Nenhum dado encontrado para o ${periodo}º Quadrimestre/${exercicio} e o ente informado.`, "warning");
+    }
+  }catch(err){
+    mostrarStatus(MSG_ERRO_API(err), "warning");
+  }finally{
+    mostrarLoading(false);
+  }
+}
 
-  try {
-    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
-    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+// Consulta automática ao abrir: começa no último período fechado e volta até achar dados.
+// Obs.: no Anexo 3 a API só retorna contas com valor diferente de zero; se nada for
+// encontrado, o relatório volta ao último período fechado, com tudo zerado.
+async function consultarAutomatica(){
+  const LIMITE_TENTATIVAS = 12; // até 4 anos para trás
+  const inicial = ultimoPeriodoFechado();
+  let alvo = inicial;
 
-    const json = await response.json();
-    const lista = Array.isArray(json) ? json : json.items;
-    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+  mostrarLoading(true);
+  try{
+    for(let i = 0; i < LIMITE_TENTATIVAS; i++){
+      aplicarFiltros(alvo);
+      const url = montarUrl(alvo.exercicio, alvo.periodo);
+      $("urlApiTexto").textContent = url;
+      mostrarStatus(`Buscando ${alvo.periodo}º Quadrimestre/${alvo.exercicio}...`);
 
-    processarDados(lista);
-    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
-  } catch (err) {
-    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
-  } finally {
+      const lista = await buscarLista(url);
+      if(lista.length){
+        processarDados(lista);
+        mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados — ${alvo.periodo}º Quadrimestre/${alvo.exercicio} (período mais recente com dados).`, "success");
+        return;
+      }
+      alvo = periodoAnterior(alvo);
+    }
+    aplicarFiltros(inicial);
+    $("urlApiTexto").textContent = montarUrl(inicial.exercicio, inicial.periodo);
+    processarDados([]);
+    mostrarStatus(`Nenhum dado encontrado nos últimos períodos consultados. Exibindo o ${inicial.periodo}º Quadrimestre/${inicial.exercicio} zerado.`, "warning");
+  }catch(err){
+    mostrarStatus(MSG_ERRO_API(err), "warning");
+  }finally{
     mostrarLoading(false);
   }
 }
@@ -691,6 +755,17 @@ function processarDados(lista){
     }
   });
 
+  if(!metaConsulta.instituicao){
+    metaConsulta = {
+      instituicao: null,
+      exercicio: Number($("filtroExercicio").value),
+      periodo: Number($("filtroPeriodo").value),
+      cod_ibge: $("filtroEnte").value.trim(),
+      co_poder: "E",
+      uf: ""
+    };
+  }
+
   atualizarCabecalho();
   atualizarKPIs();
   renderizarTabelas();
@@ -710,22 +785,23 @@ function atualizarRotulosQuadrimestre(periodo){
 }
 
 function atualizarCabecalho(){
-  if(!metaConsulta.instituicao) return;
+  const nomeInst = metaConsulta.instituicao || `Ente ${metaConsulta.cod_ibge || "-"} (sem dados)`;
 
   const quad = NOME_QUADRIMESTRE[metaConsulta.periodo] || NOME_QUADRIMESTRE[1];
   const poder = NOME_PODER[metaConsulta.co_poder] || metaConsulta.co_poder || "-";
 
   atualizarRotulosQuadrimestre(metaConsulta.periodo);
 
-  $("navInstituicao").textContent = `${metaConsulta.instituicao}`;
-  $("kpiEnte").textContent = `${metaConsulta.instituicao} — Poder ${poder} — ${quad.ordinal} Quadrimestre/${metaConsulta.exercicio}`;
+  $("navInstituicao").textContent = nomeInst;
+  $("kpiEnte").textContent = `${nomeInst} — Poder ${poder} — ${quad.ordinal} Quadrimestre/${metaConsulta.exercicio}`;
 
-  $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
-  $("printEntidade").textContent = `Entidade: ${metaConsulta.instituicao} — Código IBGE: ${metaConsulta.cod_ibge || "-"}`;
+  $("printInstituicao").textContent = String(nomeInst).toUpperCase();
+  $("printEntidade").textContent = `Entidade: ${nomeInst} — Código IBGE: ${metaConsulta.cod_ibge || "-"}`;
   $("printPeriodo").textContent = `Período de Referência: ${quad.inicio} a ${quad.fim} de ${metaConsulta.exercicio} / Quadrimestre ${quad.meses}`;
 }
 
 function situacaoOperacoes(perc, alertaPerc, maximoPerc){
+  if(!temDados()) return {texto:"Sem dados", classe:"secondary"};
   if(maximoPerc && perc >= maximoPerc) return {texto:"Acima do Limite Geral", classe:"vermelho"};
   if(alertaPerc && perc >= alertaPerc) return {texto:"Acima do Limite de Alerta", classe:"amarelo"};
   return {texto:"Dentro do Limite da LRF", classe:"verde"};
@@ -1025,11 +1101,11 @@ function prepararEImprimir(){
 }
 
 $("btnImprimir").addEventListener("click", prepararEImprimir);
-$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnConsultar").addEventListener("click", consultarManual);
 $("btnCsv").addEventListener("click", exportarCSV);
 
-// Inicia consulta ao carregar a página
-consultarAPI();
+// Inicia consulta ao carregar a página (último período fechado, recuando se necessário)
+consultarAutomatica();
 </script>
 
 </body>
