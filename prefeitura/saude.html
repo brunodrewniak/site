@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Interativo - Rota Centro (Campo Largo)</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        #sidebar {
+            width: 380px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+
+        .header {
+            padding: 20px;
+            background: #1a5f7a;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .stops-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .stop-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .stop-card:hover {
+            border-color: #1a5f7a;
+            box-shadow: 0 4px 12px rgba(26, 95, 122, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .stop-card.active {
+            border-color: #1a5f7a;
+            background-color: #f0f7fa;
+            border-left: 4px solid #1a5f7a;
+        }
+
+        .badge {
+            background: #1a5f7a;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .badge.start {
+            background: #e74c3c;
+        }
+
+        .stop-info {
+            flex: 1;
+        }
+
+        .stop-info h3 {
+            font-size: 0.95rem;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+
+        .stop-info p {
+            font-size: 0.8rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        .footer-action {
+            padding: 15px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn-google {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #27ae60;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.2s ease;
+        }
+
+        .btn-google:hover {
+            background: #219653;
+        }
+
+        #map {
+            flex: 1;
+            height: 100%;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column-reverse;
+            }
+            #sidebar {
+                width: 100%;
+                height: 45vh;
+            }
+            #map {
+                height: 55vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div class="header">
+            <h1>Rota 1: Centro e Região Urbana</h1>
+            <p>Campo Largo - PR | Trajeto Otimizado</p>
+        </div>
+        
+        <div class="stops-container">
+            <div class="stop-card active" onclick="highlightPoint(0)">
+                <div class="badge start">P</div>
+                <div class="stop-info">
+                    <h3>Prefeitura Municipal de Campo Largo</h3>
+                    <p>Av. Padre Natal Pigato, 925 - Vila Elizabeth</p>
+                </div>
+            </div>
+
+            <div class="stop-card" onclick="highlightPoint(1)">
+                <div class="badge">1</div>
+                <div class="stop-info">
+                    <h3>UBS Dante Portugal Castagnolli</h3>
+                    <p>Rua Joanin Stroparo, 119 - Vila Bancária</p>
+                </div>
+            </div>
+
+            <div class="stop-card" onclick="highlightPoint(2)">
+                <div class="badge">2</div>
+                <div class="stop-info">
+                    <h3>UPA 24h Campo Largo</h3>
+                    <p>Rua Francisco Xavier de Almeida Garret, 385 - Abranches Guimarães</p>
+                </div>
+            </div>
+
+            <div class="stop-card" onclick="highlightPoint(3)">
+                <div class="badge">3</div>
+                <div class="stop-info">
+                    <h3>Centro da Juventude / UBS Bom Jesus</h3>
+                    <p>Rua Ademar de Barros, 196 - Bom Jesus</p>
+                </div>
+            </div>
+
+            <div class="stop-card" onclick="highlightPoint(4)">
+                <div class="badge">4</div>
+                <div class="stop-info">
+                    <h3>Unidade de Saúde Vila Glória</h3>
+                    <p>Rua Belo Horizonte, 165 - Vila Glória</p>
+                </div>
+            </div>
+
+            <div class="stop-card" onclick="highlightPoint(5)">
+                <div class="badge">5</div>
+                <div class="stop-info">
+                    <h3>Unidade de Saúde Águas Claras</h3>
+                    <p>Rua José de Paiva Vidal, 2800 - São Marcos</p>
+                </div>
+            </div>
+
+            <div class="stop-card" onclick="highlightPoint(6)">
+                <div class="badge">6</div>
+                <div class="stop-info">
+                    <h3>UBS Ari Fior</h3>
+                    <p>Rua Salmão, 513 - Jardim Três Rios</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-action">
+            <a href="https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/UBS+Dante+Portugal+Castagnolli+(Postinho+de+sa%C3%BAde),+R.+Joanim+Stroparo,+119+-+Vila+Bancaria,+Campo+Largo+-+PR,+83601-460/UPA+Unidade+de+Pronto+Atendimento+de+Campo+Largo,+R.+Francisco+Xavier+de+Almeida+Garret,+385+-+Abranche+Guimaraes,+Campo+Largo+-+PR,+83601-230/Centro+da+Juventude+Bom+Jesus,+Rua+Ademar+de+Barros,+196+-+Bom+Jesus,+Campo+Largo+-+PR,+83601-390/Unidade+de+Sa%C3%BAde+Vila+Gl%C3%B3ria,+r,+R.+Belo+Horizonte,+165,+Campo+Largo+-+PR/Unidade+De+Sa%C3%BAde+%C3%81guas+Claras,+R.+Jos%C3%A9+de+Paiva+Vidal,+2800+-+S%C3%A3o+Marcos,+Campo+Largo+-+PR,+83602-160/R.+Salm%C3%A3o,+513+-+Jardim+Tr%C3%AAs+Rios,+Campo+Largo+-+PR,+83603-265/" target="_blank" class="btn-google">
+                Abrir Rota no Google Maps 🗺️
+            </a>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const points = [
+            { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
+            { title: "UBS Dante Portugal Castagnolli", address: "Rua Joanin Stroparo, 119 - Vila Bancária", lat: -25.4693083, lng: -49.524695, label: "1" },
+            { title: "UPA 24h Campo Largo", address: "Rua Francisco Xavier de Almeida Garret, 385", lat: -25.4695108, lng: -49.5230378, label: "2" },
+            { title: "Centro da Juventude / UBS Bom Jesus", address: "Rua Ademar de Barros, 196 - Bom Jesus", lat: -25.4545707, lng: -49.5414852, label: "3" },
+            { title: "Unidade de Saúde Vila Glória", address: "Rua Belo Horizonte, 165 - Vila Glória", lat: -25.473676, lng: -49.5700388, label: "4" },
+            { title: "Unidade de Saúde Águas Claras", address: "Rua José de Paiva Vidal, 2800 - São Marcos", lat: -25.4744128, lng: -49.5500468, label: "5" },
+            { title: "UBS Ari Fior", address: "Rua Salmão, 513 - Jardim Três Rios", lat: -25.4958212, lng: -49.5454653, label: "6" }
+        ];
+
+        const map = L.map('map').setView([-25.472, -49.538], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        const markers = [];
+        const routeCoordinates = points.map(p => [p.lat, p.lng]);
+
+        function createCustomIcon(label, isActive = false) {
+            return L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="
+                    background-color: ${label === 'P' ? '#e74c3c' : (isActive ? '#27ae60' : '#1a5f7a')};
+                    color: white;
+                    border-radius: 50%;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                ">${label}</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
+
+        points.forEach((point, index) => {
+            const marker = L.marker([point.lat, point.lng], {
+                icon: createCustomIcon(point.label)
+            }).addTo(map);
+
+            marker.bindPopup(`
+                <div style="font-family: sans-serif;">
+                    <strong style="color: #1a5f7a;">${point.label === 'P' ? 'Partida' : 'Ponto ' + point.label}: ${point.title}</strong><br>
+                    <small style="color: #555;">${point.address}</small>
+                </div>
+            `);
+
+            marker.on('click', () => highlightPoint(index));
+            markers.push(marker);
+        });
+
+        const polyline = L.polyline(routeCoordinates, {
+            color: '#1a5f7a',
+            weight: 4,
+            opacity: 0.7,
+            dashArray: '8, 8'
+        }).addTo(map);
+
+        map.fitBounds(polyline.getBounds(), { padding: [40, 40] });
+
+        function highlightPoint(index) {
+            const point = points[index];
+            map.flyTo([point.lat, point.lng], 15, { duration: 1.2 });
+            markers[index].openPopup();
+
+            const cards = document.querySelectorAll('.stop-card');
+            cards.forEach((card, i) => {
+                if (i === index) {
+                    card.classList.add('active');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
