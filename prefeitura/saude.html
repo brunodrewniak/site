@@ -1,381 +1,582 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="referrer" content="no-referrer">
-    <title>Sistema de Rotas de Saúde - Campo Largo</title>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Rota Campo Largo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: seletor de rotas no topo; mapa esquemático com zoom/arraste à esquerda, lista de paradas com detalhe à direita; empilha no celular. */
+:root {
+  --bg: #edf1f2;
+  --panel: #fbfcfc;
+  --map: #e3ebed;
+  --grid: #d3dee1;
+  --ink: #12262b;
+  --muted: #57696e;
+  --line: #cbd8db;
+  --accent: #0b6b6e;
+  --on-accent: #ffffff;
+  --start: #b4530a;
+  --on-start: #ffffff;
+  --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1a1d; --panel: #142226; --map: #101d21; --grid: #1c2e34;
+    --ink: #e3eef0; --muted: #8ea4a9; --line: #263a40;
+    --accent: #3cc4bd; --on-accent: #06181a; --start: #f2a43c; --on-start: #1a1004;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1a1d; --panel: #142226; --map: #101d21; --grid: #1c2e34;
+  --ink: #e3eef0; --muted: #8ea4a9; --line: #263a40;
+  --accent: #3cc4bd; --on-accent: #06181a; --start: #f2a43c; --on-start: #1a1004;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.5;
+  padding-block: 20px 36px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 34px); line-height: 1.1; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 66ch; }
+.eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 
-        body {
-            display: flex;
-            height: 100vh;
-            background-color: #f4f6f9;
-            color: #333;
-        }
+.routes { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: 500 13px var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 999px; padding: 7px 14px; cursor: pointer; line-height: 1.2; display: inline-flex; gap: 8px; align-items: baseline;
+}
+.chip small { font: 400 11px var(--mono); color: var(--muted); }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.chip[aria-pressed="true"] small { color: inherit; opacity: 0.85; }
+.chip:focus-visible, .btn:focus-visible, .stop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-        #sidebar {
-            width: 400px;
-            background: #ffffff;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-        }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
 
-        .header {
-            padding: 20px;
-            background: #1a5f7a;
-            color: white;
-        }
+.mapcard { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border-bottom: 1px solid var(--line); align-items: center; }
+.bar .spacer { flex: 1; }
+.btn {
+  font: 500 13px var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; padding: 7px 12px; cursor: pointer; line-height: 1.2;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.stage { position: relative; height: clamp(380px, 64vh, 700px); background: var(--map); }
+#map { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.dragging #map { cursor: grabbing; }
+.zoom { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; }
+.zoom .btn { width: 36px; height: 36px; padding: 0; font-size: 18px; }
+.scale { position: absolute; left: 12px; bottom: 12px; font: 500 11px var(--mono); color: var(--muted); }
+.scale i { display: block; height: 6px; border: 1.5px solid var(--ink); border-top: 0; margin-bottom: 3px; }
+.badge { position: absolute; right: 12px; bottom: 12px; font: 400 11px var(--mono); color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 3px 7px; }
 
-        .header h1 {
-            font-size: 1.25rem;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
+.grid-l { stroke: var(--grid); stroke-width: 1; fill: none; }
+.leg { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; fill: none; }
+.leg.todo { stroke-dasharray: 2 7; stroke-opacity: 0.6; }
+.chev { fill: var(--accent); }
+.mk { cursor: pointer; outline: none; }
+.mk .c { fill: var(--accent); stroke: var(--map); stroke-width: 2.5; }
+.mk.start .c { fill: var(--start); }
+.mk .n { font: 600 12px var(--mono); fill: var(--on-accent); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.mk.start .n { fill: var(--on-start); }
+.mk .ring { fill: none; stroke: var(--accent); stroke-width: 2; opacity: 0; }
+.mk.start .ring { stroke: var(--start); }
+.mk.sel .ring, .mk:focus-visible .ring { opacity: 1; }
+.mk .lbl { font: 500 13px var(--body); fill: var(--ink); paint-order: stroke; stroke: var(--map); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+.mk.sel .lbl { font-weight: 600; }
 
-        .header p {
-            font-size: 0.85rem;
-            opacity: 0.9;
-        }
+.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.summary { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.summary h2 { font: 700 20px/1.15 var(--display); margin: 0; text-wrap: balance; }
+.summary p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat b { display: block; font: 500 20px var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.stat span { font-size: 12px; color: var(--muted); line-height: 1.3; display: block; }
+.link { color: var(--accent); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+.stops { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.stops li + li { border-top: 1px solid var(--line); }
+.stop { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; text-align: left; background: transparent; border: 0; color: inherit; font: inherit; padding: 11px 14px; cursor: pointer; }
+.stop:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font: 600 12px var(--mono); display: grid; place-items: center; }
+.start .num { background: var(--start); color: var(--on-start); }
+.sel > .stop { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.nm { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.kind { display: block; font: 400 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.d { font: 500 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.detail { padding: 2px 14px 14px 52px; display: flex; flex-direction: column; gap: 8px; }
+.detail dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; }
+.detail dt { color: var(--muted); font-size: 12px; }
+.detail dd { margin: 0; overflow-wrap: anywhere; }
+.detail .mono { font: 400 12.5px var(--mono); }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.acts a.btn { text-decoration: none; display: inline-block; }
+.note { color: var(--muted); font-size: 12px; max-width: 90ch; margin: 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
 
-        .route-selector {
-            padding: 15px;
-            background: #f1f5f9;
-            border-bottom: 1px solid #e2e8f0;
-        }
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Campo Largo · PR</div>
+    <h1>Rotas a partir da Prefeitura</h1>
+    <p class="sub">Escolha uma rota para ver as paradas no mapa. Clique numa parada para abrir endereço, distância e link do Google Maps.</p>
+  </header>
 
-        .route-selector label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: bold;
-            color: #475569;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
+  <div class="routes" id="routes" role="group" aria-label="Rotas"></div>
 
-        .route-selector select {
-            width: 100%;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #cbd5e1;
-            background: white;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #1e293b;
-            cursor: pointer;
-            outline: none;
-        }
-
-        .stops-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-        }
-
-        .stop-card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 12px 15px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-        }
-
-        .stop-card:hover {
-            border-color: #1a5f7a;
-            box-shadow: 0 4px 12px rgba(26, 95, 122, 0.12);
-            transform: translateY(-2px);
-        }
-
-        .stop-card.active {
-            border-color: #1a5f7a;
-            background-color: #f0f7fa;
-            border-left: 4px solid #1a5f7a;
-        }
-
-        .badge {
-            background: #1a5f7a;
-            color: white;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.85rem;
-            flex-shrink: 0;
-        }
-
-        .badge.start {
-            background: #e74c3c;
-        }
-
-        .stop-info {
-            flex: 1;
-        }
-
-        .stop-info h3 {
-            font-size: 0.95rem;
-            color: #2c3e50;
-            margin-bottom: 4px;
-        }
-
-        .stop-info p {
-            font-size: 0.8rem;
-            color: #64748b;
-            line-height: 1.3;
-        }
-
-        .footer-action {
-            padding: 15px;
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .btn-google {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background: #27ae60;
-            color: white;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: background 0.2s ease;
-        }
-
-        .btn-google:hover {
-            background: #219653;
-        }
-
-        #map {
-            flex: 1;
-            height: 100%;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column-reverse;
-            }
-            #sidebar {
-                width: 100%;
-                height: 45vh;
-            }
-            #map {
-                height: 55vh;
-            }
-        }
-    </style>
-</head>
-<body>
-
-    <div id="sidebar">
-        <div class="header">
-            <h1>Sistema de Rotas de Saúde</h1>
-            <p>Prefeitura Municipal de Campo Largo - PR</p>
+  <div class="layout">
+    <section class="mapcard" aria-label="Mapa da rota">
+      <div class="bar">
+        <button class="btn" id="prev" type="button">‹ Anterior</button>
+        <button class="btn" id="next" type="button">Próxima ›</button>
+        <span class="spacer"></span>
+        <button class="btn primary" id="play" type="button">Percorrer rota</button>
+      </div>
+      <div class="stage" id="stage">
+        <svg id="map" role="img" aria-label="Mapa esquemático com as paradas da rota ligadas em ordem" xmlns="http://www.w3.org/2000/svg">
+          <g id="grid"></g>
+          <g id="legs"></g>
+          <g id="chevs"></g>
+          <g id="marks"></g>
+        </svg>
+        <div class="zoom">
+          <button class="btn" id="zin" type="button" aria-label="Aproximar">+</button>
+          <button class="btn" id="zout" type="button" aria-label="Afastar">−</button>
+          <button class="btn" id="zfit" type="button" aria-label="Ajustar à rota" style="font-size:11px">Tudo</button>
         </div>
+        <div class="scale"><i id="scalebar"></i><span id="scalelbl"></span></div>
+        <div class="badge" id="gridlbl">Mapa esquemático · sem ruas</div>
+      </div>
+    </section>
 
-        <div class="route-selector">
-            <label for="routeSelect">Selecione a Rota:</label>
-            <select id="routeSelect" onchange="switchRoute(this.value)">
-                <option value="rota1">Rota 1: Centro e Região Urbana</option>
-                <option value="rota2">Rota 2: Leste e Distrito de Ferraria</option>
-                <option value="rota3">Rota 3: Norte Urbano, Oeste e Itambezinho</option>
-                <option value="rota4">Rota 4: Bateias e Distrito Rural / Interior</option>
-            </select>
+    <aside class="side">
+      <div class="summary">
+        <div>
+          <h2 id="rt-name"></h2>
+          <p id="rt-desc"></p>
         </div>
-        
-        <div class="stops-container" id="stopsList"></div>
-
-        <div class="footer-action">
-            <a id="googleMapsBtn" href="#" target="_blank" class="btn-google">
-                Abrir Rota no Google Maps 🗺️
-            </a>
+        <div class="stats">
+          <div class="stat"><b id="st-n"></b><span>paradas</span></div>
+          <div class="stat"><b id="st-t"></b><span>em linha reta, no total</span></div>
+          <div class="stat"><b id="st-m"></b><span>maior trecho</span></div>
         </div>
-    </div>
+        <a class="link" id="gmaps" href="#" target="_blank" rel="noopener">Abrir esta rota no Google Maps</a>
+      </div>
+      <ol class="stops" id="stops"></ol>
+    </aside>
+  </div>
 
-    <div id="map"></div>
+  <p class="note">As posições vêm das coordenadas dos links das rotas. Os trechos são linhas retas entre as paradas, então as distâncias mostradas são menores que o percurso de carro. Arraste para mover o mapa e use a roda do mouse, os botões ou a pinça para aproximar.</p>
+</div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const routesData = {
-            rota1: {
-                title: "Rota 1: Centro e Região Urbana",
-                googleUrl: "https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/UBS+Dante+Portugal+Castagnolli+(Postinho+de+sa%C3%BAde),+R.+Joanim+Stroparo,+119+-+Vila+Bancaria,+Campo+Largo+-+PR,+83601-460/UPA+Unidade+de+Pronto+Atendimento+de+Campo+Largo,+R.+Francisco+Xavier+de+Almeida+Garret,+385+-+Abranche+Guimaraes,+Campo+Largo+-+PR,+83601-230/Centro+da+Juventude+Bom+Jesus,+Rua+Ademar+de+Barros,+196+-+Bom+Jesus,+Campo+Largo+-+PR,+83601-390/Unidade+de+Sa%C3%BAde+Vila+Gl%C3%B3ria,+r,+R.+Belo+Horizonte,+165,+Campo+Largo+-+PR/Unidade+De+Sa%C3%BAde+%C3%81guas+Claras,+R.+Jos%C3%A9+de+Paiva+Vidal,+2800+-+S%C3%A3o+Marcos,+Campo+Largo+-+PR,+83602-160/R.+Salm%C3%A3o,+513+-+Jardim+Tr%C3%AAs+Rios,+Campo+Largo+-+PR,+83603-265/",
-                points: [
-                    { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
-                    { title: "UBS Dante Portugal Castagnolli", address: "Rua Joanin Stroparo, 119 - Vila Bancária", lat: -25.4693083, lng: -49.524695, label: "1" },
-                    { title: "UPA 24h Campo Largo", address: "Rua Francisco Xavier de Almeida Garret, 385", lat: -25.4695108, lng: -49.5230378, label: "2" },
-                    { title: "Centro da Juventude / UBS Bom Jesus", address: "Rua Ademar de Barros, 196 - Bom Jesus", lat: -25.4545707, lng: -49.5414852, label: "3" },
-                    { title: "Unidade de Saúde Vila Glória", address: "Rua Belo Horizonte, 165 - Vila Glória", lat: -25.473676, lng: -49.5700388, label: "4" },
-                    { title: "Unidade de Saúde Águas Claras", address: "Rua José de Paiva Vidal, 2800 - São Marcos", lat: -25.4744128, lng: -49.5500468, label: "5" },
-                    { title: "UBS Ari Fior", address: "Rua Salmão, 513 - Jardim Três Rios", lat: -25.4958212, lng: -49.5454653, label: "6" }
-                ]
-            },
-            rota2: {
-                title: "Rota 2: Leste e Distrito de Ferraria",
-                googleUrl: "https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/Posto+de+Sa%C3%BAde+Jardim+Rondinha+-+Rondinha,+Campo+Largo+-+PR/Unidade+B%C3%A1sica+De+Sa%C3%BAde+Cercadinho,+R.+Nossa+Sra.+da+Aparecida+-+Cercadinho,+Campo+Largo+-+PR,+83602-140/Unidade+de+Sa%C3%BAde+Caratuva,+640,+R.+Mato+Grosso,+1558+-+Ferraria,+Campo+Largo+-+PR,+83608-640/Unidade+de+Sa%C3%BAde+Jardim+Guarany,+R.+Ip%C3%AA+-+Jardim+Guarany,+Campo+Largo+-+PR,+83608-390/Unidade+B%C3%A1sica+de+Sa%C3%BAde+Ferraria,+1830,+R.+Iz%C3%ADdio+Santo+Cruzara,+1750+-+Jardim+Boa+Vista,+Campo+Largo+-+PR,+83609-235/",
-                points: [
-                    { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
-                    { title: "UBS Rondinha", address: "Estrada da Sereia, 15 - Rondinha", lat: -25.4480348, lng: -49.4800238, label: "1" },
-                    { title: "UBS Cercadinho", address: "Rua Nossa Senhora Aparecida, s/n - Cercadinho", lat: -25.4423407, lng: -49.4549416, label: "2" },
-                    { title: "UBS Caratuva", address: "Avenida Mato Grosso, 1558 - Ferraria", lat: -25.448855, lng: -49.4552043, label: "3" },
-                    { title: "UBS Jardim Guarany", address: "Rua Ipê, s/n - Jardim Guarani", lat: -25.4308063, lng: -49.4053287, label: "4" },
-                    { title: "UBS Ferraria", address: "Rua Izídio Santos Cruzara, 1750 - Ferraria", lat: -25.4588726, lng: -49.3966462, label: "5" }
-                ]
-            },
-            rota3: {
-                title: "Rota 3: Norte Urbano, Oeste e Itambezinho",
-                googleUrl: "https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/UBS+Fazendinha,+Rod.+Eng.+Raul+Azevedo+Macedo,+4603+-+Centro,+Campo+Largo+-+PR,+83606-482/USF+Jardim+Rivabem,+R+Medianeira,+s%2Fn+-+Vila+Andreassa+Miranda,+Campo+Largo+-+PR,+83605-550/Unidade+de+Sa%C3%BAde+Itaboa,+-203,+R.+Epaminondas+B%C3%BClow,+113+-+Lot.+Itaboa,+Campo+Largo+-+PR,+83605-190/Unidade+B%C3%A1sica+de+Sa%C3%BAde+(UBS)+Itambezinho,+Rua+Cassimiro+Karman,+S%2FN%C2%BA+-+Campo+Largo,+PR,+83602-665/",
-                points: [
-                    { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
-                    { title: "UBS Fazendinha", address: "Rod. Eng. Raul Azevedo Macedo, 4603", lat: -25.4170851, lng: -49.5037877, label: "1" },
-                    { title: "UBS Jardim Rivabem", address: "Rua Medianeira, s/n - Vila Rivabem", lat: -25.4491017, lng: -49.5553523, label: "2" },
-                    { title: "UBS Itaboa", address: "Rua Epaminondas Bülow, 113 - Itaboa", lat: -25.4541949, lng: -49.5655377, label: "3" },
-                    { title: "UBS Itambezinho", address: "Rua Cassemiro Karman, s/n - Itambezinho", lat: -25.3244461, lng: -49.6856269, label: "4" }
-                ]
-            },
-            rota4: {
-                title: "Rota 4: Bateias e Distrito Rural / Interior",
-                googleUrl: "https://www.google.com/maps/dir/Prefeitura+Municipal+de+Campo+Largo,+Av.+Padre+Natal+Pigato,+925+-+Vila+Elizabeth,+Campo+Largo+-+PR,+83601-630/Unidade+B%C3%A1sica+De+Sa%C3%BAde+Bateias,+Rua+Joil+Antonio+Basso+-+Bateias,+Campo+Largo+-+PR/Unidade+B%C3%A1sica+de+Sa%C3%BAde+Santa+Cruz+-+Tr%C3%AAs+C%C3%B3rregos,+Campo+Largo+-+PR/Unidade+B%C3%A1sica+de+Sa%C3%BAde+Santa+Cruz+-+Tr%C3%AAs+C%C3%B3rregos,+Campo+Largo+-+PR/Estr.+principal+de+S%C3%A3o+Silvestre+-+S%C3%A3o+Silvestre,+Campo+Largo+-+PR/Estr.+Principal+de+S%C3%A3o+Pedro+-+Abap%C3%A3,+Castro+-+PR/",
-                points: [
-                    { title: "Prefeitura Municipal de Campo Largo", address: "Av. Padre Natal Pigato, 925 - Vila Elizabeth", lat: -25.455800, lng: -49.5176976, label: "P" },
-                    { title: "UBS Bateias", address: "Rua Joil Antonio Basso, s/n - Bateias", lat: -25.3610408, lng: -49.5105371, label: "1" },
-                    { title: "UBS Três Córregos", address: "Estrada Principal de Três Córregos, s/n", lat: -25.2194316, lng: -49.6941699, label: "2" },
-                    { title: "UBS Santa Cruz", address: "Estrada Principal de Santa Cruz, s/n", lat: -25.2194316, lng: -49.6941699, label: "3" },
-                    { title: "UBS São Silvestre", address: "Estrada Principal de São Silvestre, s/n", lat: -25.1744275, lng: -49.6376628, label: "4" },
-                    { title: "UBS São Pedro", address: "Estrada Principal de São Pedro - Abapã", lat: -24.9677118, lng: -49.6142294, label: "5" }
-                ]
-            }
+<script>
+(function () {
+  var PREF = { short: 'Prefeitura', name: 'Prefeitura Municipal de Campo Largo', kind: 'Ponto de partida', addr: 'Av. Padre Natal Pigato, 925 – Vila Elizabeth', cep: '83601-630', lat: -25.4558, lon: -49.5176976 };
+  var US = 'Unidade de saúde';
+
+  var ROUTES = [
+    { id: 'inicial', name: 'Rota inicial', desc: 'Prefeitura, unidades de saúde, UPA e Centro da Juventude Bom Jesus.', stops: [
+      PREF,
+      { short: 'UBS Dante Portugal Castagnolli', name: 'UBS Dante Portugal Castagnolli', kind: US, addr: 'R. Joanim Stroparo, 119 – Vila Bancária', cep: '83601-460', lat: -25.4693083, lon: -49.524695 },
+      { short: 'UPA Campo Largo', name: 'UPA – Unidade de Pronto Atendimento de Campo Largo', kind: 'Pronto atendimento', addr: 'R. Francisco Xavier de Almeida Garret, 385 – Abranche Guimarães', cep: '83601-230', lat: -25.4695108, lon: -49.5230378 },
+      { short: 'Centro da Juventude Bom Jesus', name: 'Centro da Juventude Bom Jesus', kind: 'Centro da Juventude', addr: 'Rua Ademar de Barros, 196 – Bom Jesus', cep: '83601-390', lat: -25.4545707, lon: -49.5414852 },
+      { short: 'US Vila Glória', name: 'Unidade de Saúde Vila Glória', kind: US, addr: 'R. Belo Horizonte, 165 – Campo Largo/PR', cep: '', lat: -25.473676, lon: -49.5700388 },
+      { short: 'US Águas Claras', name: 'Unidade de Saúde Águas Claras', kind: US, addr: 'R. José de Paiva Vidal, 2800 – São Marcos', cep: '83602-160', lat: -25.4744128, lon: -49.5500468 },
+      { short: 'R. Salmão, 513', name: 'R. Salmão, 513', kind: 'Destino final', addr: 'R. Salmão, 513 – Jardim Três Rios', cep: '83603-265', lat: -25.4958212, lon: -49.5454653 }
+    ] },
+    { id: 'upa', name: 'UPA', desc: 'Trecho direto entre a Prefeitura e a UPA.', stops: [
+      PREF,
+      { short: 'UPA Campo Largo', name: 'UPA – Unidade de Pronto Atendimento de Campo Largo', kind: 'Pronto atendimento', addr: 'R. Francisco Xavier de Almeida Garret, 385 – Abranche Guimarães', cep: '83601-230', lat: -25.4695108, lon: -49.5230378 }
+    ] },
+    { id: 'centro', name: 'Centro', desc: 'Unidades de saúde da área central, de Bom Jesus a Botiatuva.', stops: [
+      PREF,
+      { short: 'UBS Dante Portugal Castagnolli', name: 'UBS Dante Portugal Castagnolli', kind: US, addr: 'R. Joanim Stroparo, 119 – Vila Bancária', cep: '83601-460', lat: -25.4693083, lon: -49.524695 },
+      { short: 'UBS Bom Jesus', name: 'UBS Bom Jesus', kind: US, addr: 'Rua Ademar de Barros, 126 – Jardim Social', cep: '', lat: -25.4552449, lon: -49.5414705 },
+      { short: 'US Vila Glória', name: 'Unidade de Saúde Vila Glória', kind: US, addr: 'R. Belo Horizonte, 165 – Campo Largo/PR', cep: '', lat: -25.473676, lon: -49.5700388 },
+      { short: 'US Águas Claras', name: 'Unidade de Saúde Águas Claras', kind: US, addr: 'R. José de Paiva Vidal, 2800 – São Marcos', cep: '83602-160', lat: -25.4744128, lon: -49.5500468 },
+      { short: 'UBS Ari Fior', name: 'UBS Ari Fior (Riacho Doce)', kind: US, addr: 'R. Salmão, 513 – Jardim Três Rios', cep: '83603-265', lat: -25.4956187, lon: -49.5456462 },
+      { short: 'US Amadeu Mazzo', name: 'Unidade de Saúde Amadeu Mazzo (Botiatuva)', kind: US, addr: 'R. João Stukas, 3237 – Jardim Tropical', cep: '83602-110', lat: -25.4773694, lon: -49.5365089 }
+    ] },
+    { id: 'leste', name: 'Leste e Distrito de Ferraria', desc: 'Rondinha, Cercadinho e o distrito de Ferraria.', stops: [
+      PREF,
+      { short: 'PS Jardim Rondinha', name: 'Posto de Saúde Jardim Rondinha', kind: US, addr: 'Rondinha – Campo Largo/PR', cep: '', lat: -25.4480348, lon: -49.4800238 },
+      { short: 'UBS Cercadinho', name: 'Unidade Básica de Saúde Cercadinho', kind: US, addr: 'R. Nossa Sra. da Aparecida – Cercadinho', cep: '83602-140', lat: -25.4423407, lon: -49.4549416 },
+      { short: 'R. Mato Grosso, 1558', name: 'R. Mato Grosso, 1558', kind: 'Ferraria', addr: 'R. Mato Grosso, 1558 – Ferraria', cep: '83608-640', lat: -25.448786, lon: -49.4552432 },
+      { short: 'US Jardim Guarany', name: 'Unidade de Saúde Jardim Guarany', kind: US, addr: 'R. Ipê – Jardim Guarany', cep: '83608-390', lat: -25.4308063, lon: -49.4053287 },
+      { short: 'UBS Ferraria', name: 'Unidade Básica de Saúde Ferraria', kind: US, addr: 'R. Izídio Santo Cruzara, 1750 – Jardim Boa Vista', cep: '83609-235', lat: -25.4588726, lon: -49.3966462 }
+    ] },
+    { id: 'norte', name: 'Norte Urbano e Oeste', desc: 'Fazendinha, Rivabem, Itaboa e Itambezinho.', stops: [
+      PREF,
+      { short: 'UBS Fazendinha', name: 'UBS Fazendinha', kind: US, addr: 'Rod. Eng. Raul Azevedo Macedo, 4603 – Centro', cep: '83606-482', lat: -25.4170851, lon: -49.5037877 },
+      { short: 'USF Jardim Rivabem', name: 'USF Jardim Rivabem', kind: US, addr: 'R. Medianeira, s/n – Vila Andreassa Miranda', cep: '83605-550', lat: -25.4491017, lon: -49.5553523 },
+      { short: 'US Itaboa', name: 'Unidade de Saúde Itaboa', kind: US, addr: 'R. Epaminondas Bülow, 113 – Lot. Itaboa', cep: '83605-190', lat: -25.4541949, lon: -49.5655377 },
+      { short: 'UBS Itambezinho', name: 'Unidade Básica de Saúde Itambezinho', kind: US, addr: 'Rua Cassimiro Karman, s/nº – Itambezinho', cep: '83602-665', lat: -25.3244461, lon: -49.6856269 }
+    ] },
+    { id: 'rural', name: 'Distrito Rural e Bateias', desc: 'Bateias, Três Córregos e São Silvestre, ao norte do município.', stops: [
+      PREF,
+      { short: 'UBS Bateias', name: 'Unidade Básica de Saúde Bateias', kind: US, addr: 'Rua Joil Antonio Basso – Bateias', cep: '', lat: -25.3610408, lon: -49.5105371 },
+      { short: 'UBS Santa Cruz', name: 'Unidade Básica de Saúde Santa Cruz', kind: US, addr: 'Três Córregos – Campo Largo/PR', cep: '', lat: -25.2194316, lon: -49.6941699 },
+      { short: 'UBS São Silvestre', name: 'Unidade Básica de Saúde São Silvestre', kind: US, addr: 'Palmital de São Silvestre – Campo Largo/PR', cep: '', lat: -25.1056323, lon: -49.6499303 },
+      { short: 'UBS São Pedro', name: 'Unidade Básica de Saúde São Pedro', kind: US, addr: 'São Silvestre – Campo Largo/PR', cep: '', lat: -25.0144561, lon: -49.6028313 }
+    ] }
+  ];
+
+  var rad = Math.PI / 180, R = 6371000;
+  function hav(a, b) {
+    var dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+    var h = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.pow(Math.sin(dLon / 2), 2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function fmt(m) {
+    if (m < 1000) return Math.round(m / 10) * 10 + ' m';
+    return (m / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
+  }
+
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(n, a, p) { var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  var svg = document.getElementById('map'), stage = document.getElementById('stage');
+  var gGrid = document.getElementById('grid'), gLegs = document.getElementById('legs'), gChevs = document.getElementById('chevs'), gMarks = document.getElementById('marks');
+
+  var stops, total, longest, W, H, K, upm, cosLat, lat0, lon0, spanW, spanH;
+  var view = { cx: 0, cy: 0, z: 1 }, sel = -1, playTimer = null, anim = 0;
+  var legEls = [], chevEls = [], markEls = [], items = [], cur = 0;
+
+  function prepare(r) {
+    stops = r.stops.map(function (s) { return Object.assign({}, s); });
+    total = 0; longest = 0;
+    stops.forEach(function (s, i) {
+      s.leg = i ? hav(stops[i - 1], s) : 0;
+      total += s.leg; s.cum = total;
+      if (s.leg > longest) longest = s.leg;
+    });
+    var lats = stops.map(function (s) { return s.lat; }), lons = stops.map(function (s) { return s.lon; });
+    var minLat = Math.min.apply(null, lats), maxLat = Math.max.apply(null, lats);
+    var minLon = Math.min.apply(null, lons), maxLon = Math.max.apply(null, lons);
+    cosLat = Math.cos(((minLat + maxLat) / 2) * rad);
+    var padLat = Math.max((maxLat - minLat) * 0.14, 0.004), padLon = Math.max((maxLon - minLon) * 0.14, 0.004);
+    lat0 = maxLat + padLat; lon0 = minLon - padLon;
+    spanW = (maxLon - minLon + 2 * padLon) * cosLat; spanH = (maxLat - minLat + 2 * padLat);
+    K = 1000 / Math.max(spanW, spanH);
+    W = spanW * K; H = spanH * K;
+    upm = K / 111320;
+    stops.forEach(function (s) { s.x = (s.lon - lon0) * cosLat * K; s.y = (lat0 - s.lat) * K; });
+  }
+
+  function buildGrid() {
+    gGrid.textContent = '';
+    var ext = Math.max(0.06, Math.max(spanH, spanW / cosLat) * 0.8);
+    var latTop = lat0 + ext, latBot = lat0 - spanH - ext, lonL = lon0 - ext, lonR = lon0 + spanW / cosLat + ext;
+    var steps = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2], step = steps[steps.length - 1];
+    for (var q = 0; q < steps.length; q++) {
+      if ((latTop - latBot) / steps[q] <= 40 && (lonR - lonL) / steps[q] <= 40) { step = steps[q]; break; }
+    }
+    var x1 = (lonL - lon0) * cosLat * K, x2 = (lonR - lon0) * cosLat * K, y1 = (lat0 - latTop) * K, y2 = (lat0 - latBot) * K;
+    for (var la = Math.ceil(latBot / step) * step; la <= latTop; la += step) {
+      var y = (lat0 - la) * K;
+      el('line', { x1: x1, x2: x2, y1: y, y2: y, class: 'grid-l', 'vector-effect': 'non-scaling-stroke' }, gGrid);
+    }
+    for (var lo = Math.ceil(lonL / step) * step; lo <= lonR; lo += step) {
+      var x = (lo - lon0) * cosLat * K;
+      el('line', { x1: x, x2: x, y1: y1, y2: y2, class: 'grid-l', 'vector-effect': 'non-scaling-stroke' }, gGrid);
+    }
+    var km = step * 111.32;
+    document.getElementById('gridlbl').textContent = 'Mapa esquemático · grade de ' + (km < 1 ? Math.round(km * 1000) + ' m' : Math.round(km) + ' km');
+  }
+
+  function buildLegs() {
+    gLegs.textContent = ''; gChevs.textContent = '';
+    legEls = []; chevEls = [];
+    for (var i = 0; i < stops.length - 1; i++) {
+      var a = stops[i], b = stops[i + 1];
+      legEls.push(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'leg', 'vector-effect': 'non-scaling-stroke' }, gLegs));
+      var ang = Math.atan2(b.y - a.y, b.x - a.x) / rad;
+      var c = el('g', { 'data-x': (a.x + b.x) / 2, 'data-y': (a.y + b.y) / 2, 'data-a': ang }, gChevs);
+      el('polygon', { points: '-5,-4.5 5,0 -5,4.5', class: 'chev' }, c);
+      chevEls.push(c);
+    }
+  }
+
+  function geom() {
+    var r = svg.getBoundingClientRect();
+    var asp = r.width / r.height;
+    var vw0 = Math.max(W, H * asp);
+    var vw = vw0 / view.z, vh = vw / asp;
+    return { rw: r.width, rh: r.height, vw: vw, vh: vh, f: vw / r.width, left: r.left, top: r.top };
+  }
+
+  /* posiciona os rótulos sem sobreposição, em pixels de tela */
+  function placeLabels(g) {
+    var x0 = view.cx - g.vw / 2, y0 = view.cy - g.vh / 2;
+    var occ = [];
+    markEls.forEach(function (m) {
+      m.sx = (m.x - x0) / g.f; m.sy = (m.y - y0) / g.f;
+      occ.push({ l: m.sx - 15, r: m.sx + 15, t: m.sy - 15, b: m.sy + 15 });
+    });
+    var order = markEls.slice().sort(function (p, q) { return (q.i === sel) - (p.i === sel) || p.i - q.i; });
+    function hit(box) {
+      for (var k = 0; k < occ.length; k++) { var o = occ[k]; if (box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t) return true; }
+      return false;
+    }
+    order.forEach(function (m) {
+      var w = m.text.length * 7 + 6, h = 17, sx = m.sx, sy = m.sy, placed = null;
+      var cands = [
+        { x: 19, y: 0, a: 'start', box: { l: sx + 17, r: sx + 19 + w, t: sy - h / 2, b: sy + h / 2 } },
+        { x: -19, y: 0, a: 'end', box: { l: sx - 19 - w, r: sx - 17, t: sy - h / 2, b: sy + h / 2 } },
+        { x: 0, y: -25, a: 'middle', box: { l: sx - w / 2, r: sx + w / 2, t: sy - 25 - h / 2, b: sy - 25 + h / 2 } },
+        { x: 0, y: 25, a: 'middle', box: { l: sx - w / 2, r: sx + w / 2, t: sy + 25 - h / 2, b: sy + 25 + h / 2 } }
+      ];
+      for (var c = 0; c < cands.length && !placed; c++) if (!hit(cands[c].box)) placed = cands[c];
+      if (placed) {
+        m.lbl.setAttribute('x', placed.x); m.lbl.setAttribute('y', placed.y); m.lbl.setAttribute('text-anchor', placed.a);
+        m.lbl.style.display = ''; occ.push(placed.box);
+      } else {
+        m.lbl.style.display = 'none';
+      }
+    });
+  }
+
+  function render() {
+    if (!stops) return;
+    var g = geom();
+    if (!g.rw || !g.rh) return;
+    svg.setAttribute('viewBox', (view.cx - g.vw / 2) + ' ' + (view.cy - g.vh / 2) + ' ' + g.vw + ' ' + g.vh);
+    markEls.forEach(function (m) { m.g.setAttribute('transform', 'translate(' + m.x + ' ' + m.y + ') scale(' + g.f + ')'); });
+    chevEls.forEach(function (c) {
+      c.setAttribute('transform', 'translate(' + c.getAttribute('data-x') + ' ' + c.getAttribute('data-y') + ') rotate(' + c.getAttribute('data-a') + ') scale(' + g.f + ')');
+    });
+    placeLabels(g);
+    var pxPerM = upm / g.f, opts = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000], pick = opts[0];
+    opts.forEach(function (m) { if (m * pxPerM <= 110) pick = m; });
+    document.getElementById('scalebar').style.width = (pick * pxPerM) + 'px';
+    document.getElementById('scalelbl').textContent = pick >= 1000 ? (pick / 1000) + ' km' : pick + ' m';
+  }
+
+  function buildMarks() {
+    gMarks.textContent = '';
+    markEls = [];
+    var order = stops.map(function (_, i) { return i; }).sort(function (p, q) { return (p === sel) - (q === sel); });
+    order.forEach(function (i) {
+      var s = stops[i];
+      var g = el('g', { class: 'mk' + (i === 0 ? ' start' : '') + (i === sel ? ' sel' : ''), 'data-i': i, tabindex: 0, role: 'button', 'aria-label': 'Parada ' + (i + 1) + ': ' + s.name }, gMarks);
+      el('circle', { r: 20, class: 'ring' }, g);
+      el('circle', { r: 13, class: 'c' }, g);
+      var n = el('text', { class: 'n' }, g); n.textContent = i + 1;
+      var t = el('text', { class: 'lbl', x: 19, y: 0, 'text-anchor': 'start', 'dominant-baseline': 'central' }, g); t.textContent = s.short;
+      markEls.push({ g: g, x: s.x, y: s.y, i: i, lbl: t, text: s.short });
+    });
+    render();
+  }
+
+  function updateLegs() {
+    legEls.forEach(function (l, i) { l.setAttribute('class', 'leg' + (sel >= 0 && i >= sel ? ' todo' : '')); });
+  }
+
+  function buildList() {
+    var list = document.getElementById('stops');
+    list.textContent = ''; items = [];
+    stops.forEach(function (s, i) {
+      var li = document.createElement('li');
+      if (i === 0) li.className = 'start';
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'stop'; btn.setAttribute('aria-expanded', 'false');
+      btn.innerHTML = '<span class="num"></span><span class="nm"><span class="kind"></span></span><span class="d"></span>';
+      btn.querySelector('.num').textContent = i + 1;
+      btn.querySelector('.kind').textContent = i === stops.length - 1 && i > 0 && s.kind === US ? US + ' · parada final' : s.kind;
+      btn.querySelector('.nm').appendChild(document.createTextNode(s.name));
+      btn.querySelector('.d').textContent = i ? '+ ' + fmt(s.leg) : 'início';
+      var det = document.createElement('div');
+      det.className = 'detail'; det.hidden = true;
+      det.innerHTML = '<dl><dt>Endereço</dt><dd></dd>' + (s.cep ? '<dt>CEP</dt><dd class="mono"></dd>' : '') +
+        '<dt>Coordenadas</dt><dd class="mono"></dd>' + (i ? '<dt>Trecho anterior</dt><dd></dd>' : '') + '<dt>Acumulado</dt><dd></dd></dl>' +
+        '<div class="acts"><a class="btn" target="_blank" rel="noopener">Ver no Google Maps</a><button type="button" class="btn">Copiar coordenadas</button></div>';
+      var dds = det.querySelectorAll('dd'), k = 0;
+      dds[k++].textContent = s.addr;
+      if (s.cep) dds[k++].textContent = s.cep;
+      var coord = s.lat.toFixed(6) + ', ' + s.lon.toFixed(6);
+      var coordEl = dds[k++]; coordEl.textContent = coord;
+      if (i) dds[k++].textContent = fmt(s.leg) + ' em linha reta desde a parada ' + i;
+      dds[k++].textContent = fmt(s.cum) + (i ? ' desde a Prefeitura' : '');
+      det.querySelector('a').href = 'https://www.google.com/maps/search/?api=1&query=' + s.lat + ',' + s.lon;
+      var cb = det.querySelector('button');
+      cb.addEventListener('click', function () {
+        var done = function () { cb.textContent = 'Copiado'; setTimeout(function () { cb.textContent = 'Copiar coordenadas'; }, 1600); };
+        var fallback = function () {
+          var rg = document.createRange(); rg.selectNodeContents(coordEl);
+          var sl = window.getSelection(); sl.removeAllRanges(); sl.addRange(rg);
+          cb.textContent = 'Selecionado, copie com Ctrl+C';
         };
+        try { navigator.clipboard.writeText(coord).then(done, fallback); } catch (e) { fallback(); }
+      });
+      li.appendChild(btn); li.appendChild(det); list.appendChild(li);
+      btn.addEventListener('click', function () { stopPlay(); select(i === sel ? -1 : i); });
+      items.push({ li: li, btn: btn, det: det });
+    });
+  }
 
-        let map, currentMarkers = [], currentPolyline = null;
+  function select(i, o) {
+    o = o || {};
+    sel = i;
+    items.forEach(function (it, k) {
+      var on = k === sel;
+      it.li.classList.toggle('sel', on);
+      it.det.hidden = !on;
+      it.btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    });
+    buildMarks(); updateLegs();
+    if (sel >= 0) {
+      var s = stops[sel];
+      if (o.fly) animateTo({ cx: s.x, cy: s.y, z: o.z || view.z });
+      else if (view.z > 1.2) animateTo({ cx: s.x, cy: s.y, z: view.z });
+    }
+  }
 
-        function initMap() {
-            map = L.map('map').setView([-25.4558, -49.5176], 12);
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function animateTo(t, dur) {
+    cancelAnimationFrame(anim);
+    if (reduce) { view.cx = t.cx; view.cy = t.cy; view.z = t.z; render(); return; }
+    dur = dur || 520;
+    var s0 = { cx: view.cx, cy: view.cy, z: view.z }, t0 = performance.now();
+    (function step(now) {
+      var p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      view.cx = s0.cx + (t.cx - s0.cx) * e; view.cy = s0.cy + (t.cy - s0.cy) * e;
+      view.z = Math.exp(Math.log(s0.z) + (Math.log(t.z) - Math.log(s0.z)) * e);
+      render();
+      if (p < 1) anim = requestAnimationFrame(step);
+    })(t0);
+  }
+  function fit() { animateTo({ cx: W / 2, cy: H / 2, z: 1 }); }
 
-            // OpenStreetMap Oficial
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function zoomAt(px, py, nz) {
+    var g = geom();
+    nz = clamp(nz, 0.8, 80);
+    var wx = view.cx + (px / g.rw - 0.5) * g.vw, wy = view.cy + (py / g.rh - 0.5) * g.vh;
+    view.z = nz;
+    var g2 = geom();
+    view.cx = wx - (px / g.rw - 0.5) * g2.vw; view.cy = wy - (py / g.rh - 0.5) * g2.vh;
+    render();
+  }
+  function zoomCenter(k) { var g = geom(); cancelAnimationFrame(anim); zoomAt(g.rw / 2, g.rh / 2, view.z * k); }
 
-            switchRoute('rota1');
-        }
+  svg.addEventListener('wheel', function (e) {
+    e.preventDefault(); cancelAnimationFrame(anim);
+    var g = geom();
+    zoomAt(e.clientX - g.left, e.clientY - g.top, view.z * Math.exp(-e.deltaY * 0.0015));
+  }, { passive: false });
 
-        function createCustomIcon(label, isActive = false) {
-            return L.divIcon({
-                className: 'custom-pin',
-                html: `<div style="
-                    background-color: ${label === 'P' ? '#e74c3c' : (isActive ? '#27ae60' : '#1a5f7a')};
-                    color: white;
-                    border-radius: 50%;
-                    width: 30px;
-                    height: 30px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: bold;
-                    border: 2px solid white;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                ">${label}</div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            });
-        }
+  var pts = new Map(), drag = null, pinch = null;
+  svg.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    cancelAnimationFrame(anim);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) {
+      var p = Array.from(pts.values());
+      pinch = { d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y), z: view.z };
+      drag = null;
+    } else {
+      drag = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, moved: false, id: e.pointerId };
+    }
+  });
+  svg.addEventListener('pointermove', function (e) {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    var g = geom();
+    if (pinch && pts.size >= 2) {
+      var p = Array.from(pts.values());
+      var d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+      zoomAt((p[0].x + p[1].x) / 2 - g.left, (p[0].y + p[1].y) / 2 - g.top, pinch.z * d / pinch.d);
+      return;
+    }
+    if (!drag) return;
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+    if (!drag.moved) { drag.moved = true; try { svg.setPointerCapture(drag.id); } catch (er) {} stage.classList.add('dragging'); }
+    view.cx = drag.cx - dx * g.f; view.cy = drag.cy - dy * g.f;
+    render();
+  });
+  function endPtr(e) {
+    var wasClick = drag && !drag.moved && e.type === 'pointerup';
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (wasClick) {
+      var m = e.target.closest ? e.target.closest('.mk') : null;
+      if (m) { stopPlay(); select(+m.getAttribute('data-i')); }
+    }
+    drag = null; stage.classList.remove('dragging');
+  }
+  svg.addEventListener('pointerup', endPtr);
+  svg.addEventListener('pointercancel', endPtr);
+  svg.addEventListener('keydown', function (e) {
+    var m = e.target.closest ? e.target.closest('.mk') : null;
+    if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); stopPlay(); select(+m.getAttribute('data-i')); }
+  });
 
-        function switchRoute(routeKey) {
-            const route = routesData[routeKey];
-            if (!route) return;
+  document.getElementById('zin').addEventListener('click', function () { zoomCenter(1.6); });
+  document.getElementById('zout').addEventListener('click', function () { zoomCenter(1 / 1.6); });
+  document.getElementById('zfit').addEventListener('click', function () { stopPlay(); fit(); });
+  document.getElementById('next').addEventListener('click', function () { stopPlay(); select(sel < 0 ? 0 : Math.min(stops.length - 1, sel + 1), { fly: true, z: Math.max(view.z, 1.6) }); });
+  document.getElementById('prev').addEventListener('click', function () { stopPlay(); select(sel <= 0 ? 0 : sel - 1, { fly: true, z: Math.max(view.z, 1.6) }); });
 
-            currentMarkers.forEach(m => map.removeLayer(m));
-            currentMarkers = [];
-            if (currentPolyline) map.removeLayer(currentPolyline);
+  var playBtn = document.getElementById('play');
+  function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } playBtn.textContent = 'Percorrer rota'; }
+  function startPlay() {
+    var n = 0;
+    playBtn.textContent = 'Pausar';
+    select(0, { fly: true, z: 2.6 });
+    playTimer = setInterval(function () {
+      n++;
+      if (n >= stops.length) { stopPlay(); fit(); return; }
+      select(n, { fly: true, z: 2.6 });
+    }, 2300);
+  }
+  playBtn.addEventListener('click', function () { if (playTimer) stopPlay(); else startPlay(); });
 
-            document.getElementById('googleMapsBtn').href = route.googleUrl;
+  /* seletor de rotas */
+  var chipBox = document.getElementById('routes'), chips = [];
+  ROUTES.forEach(function (r, i) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = '<span></span><small></small>';
+    b.querySelector('span').textContent = r.name;
+    b.querySelector('small').textContent = r.stops.length + ' pts';
+    b.addEventListener('click', function () { loadRoute(i); });
+    chipBox.appendChild(b); chips.push(b);
+  });
 
-            const stopsContainer = document.getElementById('stopsList');
-            stopsContainer.innerHTML = '';
+  function loadRoute(idx) {
+    stopPlay(); cancelAnimationFrame(anim);
+    cur = idx; sel = -1;
+    var r = ROUTES[idx];
+    chips.forEach(function (c, i) { c.setAttribute('aria-pressed', i === idx ? 'true' : 'false'); });
+    prepare(r);
+    document.getElementById('rt-name').textContent = r.name;
+    document.getElementById('rt-desc').textContent = r.desc;
+    document.getElementById('st-n').textContent = stops.length;
+    document.getElementById('st-t').textContent = fmt(total);
+    document.getElementById('st-m').textContent = fmt(longest);
+    var o = stops[0], d = stops[stops.length - 1];
+    var wp = stops.slice(1, -1).map(function (s) { return s.lat + ',' + s.lon; }).join('|');
+    document.getElementById('gmaps').href = 'https://www.google.com/maps/dir/?api=1&origin=' + o.lat + ',' + o.lon +
+      '&destination=' + d.lat + ',' + d.lon + (wp ? '&waypoints=' + encodeURIComponent(wp) : '') + '&travelmode=driving';
+    view.cx = W / 2; view.cy = H / 2; view.z = 1;
+    buildGrid(); buildLegs(); buildList(); buildMarks(); updateLegs();
+    try { history.replaceState(null, '', '#' + r.id); } catch (e) {}
+  }
 
-            const routeCoordinates = [];
+  var start = 0;
+  try { var h = location.hash.replace('#', ''); ROUTES.forEach(function (r, i) { if (r.id === h) start = i; }); } catch (e) {}
+  loadRoute(start);
+  if (window.ResizeObserver) new ResizeObserver(render).observe(stage); else window.addEventListener('resize', render);
+})();
+</script>
 
-            route.points.forEach((point, index) => {
-                routeCoordinates.push([point.lat, point.lng]);
-
-                const card = document.createElement('div');
-                card.className = `stop-card ${index === 0 ? 'active' : ''}`;
-                card.onclick = () => highlightPoint(index);
-                card.innerHTML = `
-                    <div class="badge ${point.label === 'P' ? 'start' : ''}">${point.label}</div>
-                    <div class="stop-info">
-                        <h3>${point.title}</h3>
-                        <p>${point.address}</p>
-                    </div>
-                `;
-                stopsContainer.appendChild(card);
-
-                const marker = L.marker([point.lat, point.lng], {
-                    icon: createCustomIcon(point.label)
-                }).addTo(map);
-
-                marker.bindPopup(`
-                    <div style="font-family: sans-serif;">
-                        <strong style="color: #1a5f7a;">${point.label === 'P' ? 'Partida' : 'Ponto ' + point.label}: ${point.title}</strong><br>
-                        <small style="color: #555;">${point.address}</small>
-                    </div>
-                `);
-
-                marker.on('click', () => highlightPoint(index));
-                currentMarkers.push(marker);
-            });
-
-            currentPolyline = L.polyline(routeCoordinates, {
-                color: '#1a5f7a',
-                weight: 4,
-                opacity: 0.75,
-                dashArray: '8, 8'
-            }).addTo(map);
-
-            map.fitBounds(currentPolyline.getBounds(), { padding: [40, 40] });
-        }
-
-        function highlightPoint(index) {
-            const currentRouteKey = document.getElementById('routeSelect').value;
-            const point = routesData[currentRouteKey].points[index];
-
-            map.flyTo([point.lat, point.lng], 15, { duration: 1.0 });
-            currentMarkers[index].openPopup();
-
-            const cards = document.querySelectorAll('.stop-card');
-            cards.forEach((card, i) => {
-                if (i === index) {
-                    card.classList.add('active');
-                    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                } else {
-                    card.classList.remove('active');
-                }
-            });
-        }
-
-        window.onload = initMap;
-    </script>
-</body>
-</html>
+</body></html>
