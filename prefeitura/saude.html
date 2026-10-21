@@ -1,10 +1,15 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rota Campo Largo</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <style>
+
 /* Layout: seletor de rotas no topo; mapa esquemático com zoom/arraste à esquerda, lista de paradas com detalhe à direita; empilha no celular. */
 :root {
   --bg: #edf1f2;
@@ -122,13 +127,25 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
 .acts a.btn { text-decoration: none; display: inline-block; }
 .note { color: var(--muted); font-size: 12px; max-width: 90ch; margin: 0; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
-</style>
 
-<div class="wrap">
+body { margin: 0; padding-inline: 16px; }
+.stage { height: clamp(420px, 70vh, 760px); background: var(--map); }
+#map { width: 100%; height: 100%; cursor: grab; font-family: var(--body); z-index: 0; }
+.leaflet-container { background: var(--map); }
+.pin { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font: 600 12px var(--mono); display: grid; place-items: center; border: 2.5px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,.45); }
+.pin.start { background: var(--start); color: var(--on-start); }
+.pin.sel { transform: scale(1.3); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent), 0 1px 6px rgba(0,0,0,.5); }
+.pin.start.sel { box-shadow: 0 0 0 3px color-mix(in srgb, var(--start) 45%, transparent), 0 1px 6px rgba(0,0,0,.5); }
+.leaflet-tooltip { font: 600 12px var(--body); color: #12262b; border: 0; box-shadow: 0 1px 5px rgba(0,0,0,.35); }
+.status { font: 400 11px var(--mono); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap" style="padding-block: 20px 36px">
   <header>
     <div class="eyebrow">Campo Largo · PR</div>
     <h1>Rotas a partir da Prefeitura</h1>
-    <p class="sub">Escolha uma rota para ver as paradas no mapa. Clique numa parada para abrir endereço, distância e link do Google Maps.</p>
+    <p class="sub">Escolha uma rota para ver as paradas sobre o mapa. Clique numa parada para abrir endereço, distância e link do Google Maps.</p>
   </header>
 
   <div class="routes" id="routes" role="group" aria-label="Rotas"></div>
@@ -138,24 +155,12 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
       <div class="bar">
         <button class="btn" id="prev" type="button">‹ Anterior</button>
         <button class="btn" id="next" type="button">Próxima ›</button>
-        <span class="spacer"></span>
         <button class="btn primary" id="play" type="button">Percorrer rota</button>
+        <span class="spacer"></span>
+        <button class="btn" id="base" type="button" aria-pressed="false">Satélite</button>
+        <button class="btn" id="zfit" type="button">Ver rota toda</button>
       </div>
-      <div class="stage" id="stage">
-        <svg id="map" role="img" aria-label="Mapa esquemático com as paradas da rota ligadas em ordem" xmlns="http://www.w3.org/2000/svg">
-          <g id="grid"></g>
-          <g id="legs"></g>
-          <g id="chevs"></g>
-          <g id="marks"></g>
-        </svg>
-        <div class="zoom">
-          <button class="btn" id="zin" type="button" aria-label="Aproximar">+</button>
-          <button class="btn" id="zout" type="button" aria-label="Afastar">−</button>
-          <button class="btn" id="zfit" type="button" aria-label="Ajustar à rota" style="font-size:11px">Tudo</button>
-        </div>
-        <div class="scale"><i id="scalebar"></i><span id="scalelbl"></span></div>
-        <div class="badge" id="gridlbl">Mapa esquemático · sem ruas</div>
-      </div>
+      <div class="stage"><div id="map"></div></div>
     </section>
 
     <aside class="side">
@@ -166,18 +171,18 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
         </div>
         <div class="stats">
           <div class="stat"><b id="st-n"></b><span>paradas</span></div>
-          <div class="stat"><b id="st-t"></b><span>em linha reta, no total</span></div>
+          <div class="stat"><b id="st-t"></b><span id="st-tl">distância total</span></div>
           <div class="stat"><b id="st-m"></b><span>maior trecho</span></div>
         </div>
+        <div class="status" id="status"></div>
         <a class="link" id="gmaps" href="#" target="_blank" rel="noopener">Abrir esta rota no Google Maps</a>
       </div>
       <ol class="stops" id="stops"></ol>
     </aside>
   </div>
-
-  <p class="note">As posições vêm das coordenadas dos links das rotas. Os trechos são linhas retas entre as paradas, então as distâncias mostradas são menores que o percurso de carro. Arraste para mover o mapa e use a roda do mouse, os botões ou a pinça para aproximar.</p>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
 (function () {
   var PREF = { short: 'Prefeitura', name: 'Prefeitura Municipal de Campo Largo', kind: 'Ponto de partida', addr: 'Av. Padre Natal Pigato, 925 – Vila Elizabeth', cep: '83601-630', lat: -25.4558, lon: -49.5176976 };
@@ -230,154 +235,45 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
     ] }
   ];
 
-  var rad = Math.PI / 180, R = 6371000;
-  function hav(a, b) {
-    var dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
-    var h = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.pow(Math.sin(dLon / 2), 2);
-    return 2 * R * Math.asin(Math.sqrt(h));
-  }
   function fmt(m) {
     if (m < 1000) return Math.round(m / 10) * 10 + ' m';
     return (m / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
   }
+  var rad = Math.PI / 180;
+  function hav(a, b) {
+    var dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+    var h = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.pow(Math.sin(dLon / 2), 2);
+    return 2 * 6371000 * Math.asin(Math.sqrt(h));
+  }
 
-  var NS = 'http://www.w3.org/2000/svg';
-  function el(n, a, p) { var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
-  var svg = document.getElementById('map'), stage = document.getElementById('stage');
-  var gGrid = document.getElementById('grid'), gLegs = document.getElementById('legs'), gChevs = document.getElementById('chevs'), gMarks = document.getElementById('marks');
+  var map = L.map('map', { zoomControl: true, attributionControl: true });
+  var street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' });
+  var sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagens &copy; Esri, Maxar, Earthstar Geographics' });
+  var satOn = false;
+  street.addTo(map);
+  document.getElementById('base').addEventListener('click', function () {
+    satOn = !satOn;
+    if (satOn) { map.removeLayer(street); sat.addTo(map); } else { map.removeLayer(sat); street.addTo(map); }
+    this.setAttribute('aria-pressed', satOn ? 'true' : 'false');
+    this.textContent = satOn ? 'Mapa de ruas' : 'Satélite';
+  });
 
-  var stops, total, longest, W, H, K, upm, cosLat, lat0, lon0, spanW, spanH;
-  var view = { cx: 0, cy: 0, z: 1 }, sel = -1, playTimer = null, anim = 0;
-  var legEls = [], chevEls = [], markEls = [], items = [], cur = 0;
+  var stops = [], cur = 0, sel = -1, markers = [], line = null, items = [], playTimer = null, token = 0, byRoad = false;
 
-  function prepare(r) {
-    stops = r.stops.map(function (s) { return Object.assign({}, s); });
-    total = 0; longest = 0;
+  function icon(i, on) {
+    return L.divIcon({ className: '', html: '<div class="pin' + (i === 0 ? ' start' : '') + (on ? ' sel' : '') + '">' + (i + 1) + '</div>', iconSize: [28, 28], iconAnchor: [14, 14] });
+  }
+
+  function numbers() {
+    var total = 0, longest = 0;
     stops.forEach(function (s, i) {
-      s.leg = i ? hav(stops[i - 1], s) : 0;
-      total += s.leg; s.cum = total;
-      if (s.leg > longest) longest = s.leg;
+      if (i) { if (!byRoad) s.leg = hav(stops[i - 1], s); total += s.leg; if (s.leg > longest) longest = s.leg; }
+      s.cum = total;
     });
-    var lats = stops.map(function (s) { return s.lat; }), lons = stops.map(function (s) { return s.lon; });
-    var minLat = Math.min.apply(null, lats), maxLat = Math.max.apply(null, lats);
-    var minLon = Math.min.apply(null, lons), maxLon = Math.max.apply(null, lons);
-    cosLat = Math.cos(((minLat + maxLat) / 2) * rad);
-    var padLat = Math.max((maxLat - minLat) * 0.14, 0.004), padLon = Math.max((maxLon - minLon) * 0.14, 0.004);
-    lat0 = maxLat + padLat; lon0 = minLon - padLon;
-    spanW = (maxLon - minLon + 2 * padLon) * cosLat; spanH = (maxLat - minLat + 2 * padLat);
-    K = 1000 / Math.max(spanW, spanH);
-    W = spanW * K; H = spanH * K;
-    upm = K / 111320;
-    stops.forEach(function (s) { s.x = (s.lon - lon0) * cosLat * K; s.y = (lat0 - s.lat) * K; });
-  }
-
-  function buildGrid() {
-    gGrid.textContent = '';
-    var ext = Math.max(0.06, Math.max(spanH, spanW / cosLat) * 0.8);
-    var latTop = lat0 + ext, latBot = lat0 - spanH - ext, lonL = lon0 - ext, lonR = lon0 + spanW / cosLat + ext;
-    var steps = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2], step = steps[steps.length - 1];
-    for (var q = 0; q < steps.length; q++) {
-      if ((latTop - latBot) / steps[q] <= 40 && (lonR - lonL) / steps[q] <= 40) { step = steps[q]; break; }
-    }
-    var x1 = (lonL - lon0) * cosLat * K, x2 = (lonR - lon0) * cosLat * K, y1 = (lat0 - latTop) * K, y2 = (lat0 - latBot) * K;
-    for (var la = Math.ceil(latBot / step) * step; la <= latTop; la += step) {
-      var y = (lat0 - la) * K;
-      el('line', { x1: x1, x2: x2, y1: y, y2: y, class: 'grid-l', 'vector-effect': 'non-scaling-stroke' }, gGrid);
-    }
-    for (var lo = Math.ceil(lonL / step) * step; lo <= lonR; lo += step) {
-      var x = (lo - lon0) * cosLat * K;
-      el('line', { x1: x, x2: x, y1: y1, y2: y2, class: 'grid-l', 'vector-effect': 'non-scaling-stroke' }, gGrid);
-    }
-    var km = step * 111.32;
-    document.getElementById('gridlbl').textContent = 'Mapa esquemático · grade de ' + (km < 1 ? Math.round(km * 1000) + ' m' : Math.round(km) + ' km');
-  }
-
-  function buildLegs() {
-    gLegs.textContent = ''; gChevs.textContent = '';
-    legEls = []; chevEls = [];
-    for (var i = 0; i < stops.length - 1; i++) {
-      var a = stops[i], b = stops[i + 1];
-      legEls.push(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'leg', 'vector-effect': 'non-scaling-stroke' }, gLegs));
-      var ang = Math.atan2(b.y - a.y, b.x - a.x) / rad;
-      var c = el('g', { 'data-x': (a.x + b.x) / 2, 'data-y': (a.y + b.y) / 2, 'data-a': ang }, gChevs);
-      el('polygon', { points: '-5,-4.5 5,0 -5,4.5', class: 'chev' }, c);
-      chevEls.push(c);
-    }
-  }
-
-  function geom() {
-    var r = svg.getBoundingClientRect();
-    var asp = r.width / r.height;
-    var vw0 = Math.max(W, H * asp);
-    var vw = vw0 / view.z, vh = vw / asp;
-    return { rw: r.width, rh: r.height, vw: vw, vh: vh, f: vw / r.width, left: r.left, top: r.top };
-  }
-
-  /* posiciona os rótulos sem sobreposição, em pixels de tela */
-  function placeLabels(g) {
-    var x0 = view.cx - g.vw / 2, y0 = view.cy - g.vh / 2;
-    var occ = [];
-    markEls.forEach(function (m) {
-      m.sx = (m.x - x0) / g.f; m.sy = (m.y - y0) / g.f;
-      occ.push({ l: m.sx - 15, r: m.sx + 15, t: m.sy - 15, b: m.sy + 15 });
-    });
-    var order = markEls.slice().sort(function (p, q) { return (q.i === sel) - (p.i === sel) || p.i - q.i; });
-    function hit(box) {
-      for (var k = 0; k < occ.length; k++) { var o = occ[k]; if (box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t) return true; }
-      return false;
-    }
-    order.forEach(function (m) {
-      var w = m.text.length * 7 + 6, h = 17, sx = m.sx, sy = m.sy, placed = null;
-      var cands = [
-        { x: 19, y: 0, a: 'start', box: { l: sx + 17, r: sx + 19 + w, t: sy - h / 2, b: sy + h / 2 } },
-        { x: -19, y: 0, a: 'end', box: { l: sx - 19 - w, r: sx - 17, t: sy - h / 2, b: sy + h / 2 } },
-        { x: 0, y: -25, a: 'middle', box: { l: sx - w / 2, r: sx + w / 2, t: sy - 25 - h / 2, b: sy - 25 + h / 2 } },
-        { x: 0, y: 25, a: 'middle', box: { l: sx - w / 2, r: sx + w / 2, t: sy + 25 - h / 2, b: sy + 25 + h / 2 } }
-      ];
-      for (var c = 0; c < cands.length && !placed; c++) if (!hit(cands[c].box)) placed = cands[c];
-      if (placed) {
-        m.lbl.setAttribute('x', placed.x); m.lbl.setAttribute('y', placed.y); m.lbl.setAttribute('text-anchor', placed.a);
-        m.lbl.style.display = ''; occ.push(placed.box);
-      } else {
-        m.lbl.style.display = 'none';
-      }
-    });
-  }
-
-  function render() {
-    if (!stops) return;
-    var g = geom();
-    if (!g.rw || !g.rh) return;
-    svg.setAttribute('viewBox', (view.cx - g.vw / 2) + ' ' + (view.cy - g.vh / 2) + ' ' + g.vw + ' ' + g.vh);
-    markEls.forEach(function (m) { m.g.setAttribute('transform', 'translate(' + m.x + ' ' + m.y + ') scale(' + g.f + ')'); });
-    chevEls.forEach(function (c) {
-      c.setAttribute('transform', 'translate(' + c.getAttribute('data-x') + ' ' + c.getAttribute('data-y') + ') rotate(' + c.getAttribute('data-a') + ') scale(' + g.f + ')');
-    });
-    placeLabels(g);
-    var pxPerM = upm / g.f, opts = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000], pick = opts[0];
-    opts.forEach(function (m) { if (m * pxPerM <= 110) pick = m; });
-    document.getElementById('scalebar').style.width = (pick * pxPerM) + 'px';
-    document.getElementById('scalelbl').textContent = pick >= 1000 ? (pick / 1000) + ' km' : pick + ' m';
-  }
-
-  function buildMarks() {
-    gMarks.textContent = '';
-    markEls = [];
-    var order = stops.map(function (_, i) { return i; }).sort(function (p, q) { return (p === sel) - (q === sel); });
-    order.forEach(function (i) {
-      var s = stops[i];
-      var g = el('g', { class: 'mk' + (i === 0 ? ' start' : '') + (i === sel ? ' sel' : ''), 'data-i': i, tabindex: 0, role: 'button', 'aria-label': 'Parada ' + (i + 1) + ': ' + s.name }, gMarks);
-      el('circle', { r: 20, class: 'ring' }, g);
-      el('circle', { r: 13, class: 'c' }, g);
-      var n = el('text', { class: 'n' }, g); n.textContent = i + 1;
-      var t = el('text', { class: 'lbl', x: 19, y: 0, 'text-anchor': 'start', 'dominant-baseline': 'central' }, g); t.textContent = s.short;
-      markEls.push({ g: g, x: s.x, y: s.y, i: i, lbl: t, text: s.short });
-    });
-    render();
-  }
-
-  function updateLegs() {
-    legEls.forEach(function (l, i) { l.setAttribute('class', 'leg' + (sel >= 0 && i >= sel ? ' todo' : '')); });
+    document.getElementById('st-n').textContent = stops.length;
+    document.getElementById('st-t').textContent = fmt(total);
+    document.getElementById('st-m').textContent = fmt(longest);
+    document.getElementById('st-tl').textContent = byRoad ? 'pelas ruas, de carro' : 'em linha reta, no total';
   }
 
   function buildList() {
@@ -390,7 +286,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
       btn.type = 'button'; btn.className = 'stop'; btn.setAttribute('aria-expanded', 'false');
       btn.innerHTML = '<span class="num"></span><span class="nm"><span class="kind"></span></span><span class="d"></span>';
       btn.querySelector('.num').textContent = i + 1;
-      btn.querySelector('.kind').textContent = i === stops.length - 1 && i > 0 && s.kind === US ? US + ' · parada final' : s.kind;
+      btn.querySelector('.kind').textContent = s.kind;
       btn.querySelector('.nm').appendChild(document.createTextNode(s.name));
       btn.querySelector('.d').textContent = i ? '+ ' + fmt(s.leg) : 'início';
       var det = document.createElement('div');
@@ -398,12 +294,12 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
       det.innerHTML = '<dl><dt>Endereço</dt><dd></dd>' + (s.cep ? '<dt>CEP</dt><dd class="mono"></dd>' : '') +
         '<dt>Coordenadas</dt><dd class="mono"></dd>' + (i ? '<dt>Trecho anterior</dt><dd></dd>' : '') + '<dt>Acumulado</dt><dd></dd></dl>' +
         '<div class="acts"><a class="btn" target="_blank" rel="noopener">Ver no Google Maps</a><button type="button" class="btn">Copiar coordenadas</button></div>';
-      var dds = det.querySelectorAll('dd'), k = 0;
+      var dds = det.querySelectorAll('dd'), k = 0, how = byRoad ? 'pelas ruas' : 'em linha reta';
       dds[k++].textContent = s.addr;
       if (s.cep) dds[k++].textContent = s.cep;
       var coord = s.lat.toFixed(6) + ', ' + s.lon.toFixed(6);
       var coordEl = dds[k++]; coordEl.textContent = coord;
-      if (i) dds[k++].textContent = fmt(s.leg) + ' em linha reta desde a parada ' + i;
+      if (i) dds[k++].textContent = fmt(s.leg) + ' ' + how + ' desde a parada ' + i;
       dds[k++].textContent = fmt(s.cum) + (i ? ' desde a Prefeitura' : '');
       det.querySelector('a').href = 'https://www.google.com/maps/search/?api=1&query=' + s.lat + ',' + s.lon;
       var cb = det.querySelector('button');
@@ -417,13 +313,12 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
         try { navigator.clipboard.writeText(coord).then(done, fallback); } catch (e) { fallback(); }
       });
       li.appendChild(btn); li.appendChild(det); list.appendChild(li);
-      btn.addEventListener('click', function () { stopPlay(); select(i === sel ? -1 : i); });
+      btn.addEventListener('click', function () { stopPlay(); select(i === sel ? -1 : i, true); });
       items.push({ li: li, btn: btn, det: det });
     });
   }
 
-  function select(i, o) {
-    o = o || {};
+  function select(i, fly) {
     sel = i;
     items.forEach(function (it, k) {
       var on = k === sel;
@@ -431,117 +326,83 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
       it.det.hidden = !on;
       it.btn.setAttribute('aria-expanded', on ? 'true' : 'false');
     });
-    buildMarks(); updateLegs();
+    markers.forEach(function (m, k) { m.setIcon(icon(k, k === sel)); m.setZIndexOffset(k === sel ? 1000 : 0); if (k !== sel) m.closeTooltip(); });
     if (sel >= 0) {
-      var s = stops[sel];
-      if (o.fly) animateTo({ cx: s.x, cy: s.y, z: o.z || view.z });
-      else if (view.z > 1.2) animateTo({ cx: s.x, cy: s.y, z: view.z });
+      markers[sel].openTooltip();
+      if (fly) map.flyTo([stops[sel].lat, stops[sel].lon], Math.max(map.getZoom(), 15), { duration: 0.8 });
     }
   }
 
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function animateTo(t, dur) {
-    cancelAnimationFrame(anim);
-    if (reduce) { view.cx = t.cx; view.cy = t.cy; view.z = t.z; render(); return; }
-    dur = dur || 520;
-    var s0 = { cx: view.cx, cy: view.cy, z: view.z }, t0 = performance.now();
-    (function step(now) {
-      var p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
-      view.cx = s0.cx + (t.cx - s0.cx) * e; view.cy = s0.cy + (t.cy - s0.cy) * e;
-      view.z = Math.exp(Math.log(s0.z) + (Math.log(t.z) - Math.log(s0.z)) * e);
-      render();
-      if (p < 1) anim = requestAnimationFrame(step);
-    })(t0);
+  function drawLine(latlngs, dashed) {
+    if (line) map.removeLayer(line);
+    line = L.polyline(latlngs, { color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0b6b6e', weight: 5, opacity: 0.9, dashArray: dashed ? '2 9' : null, lineCap: 'round' }).addTo(map);
+    markers.forEach(function (m) { m.setZIndexOffset(m === markers[sel] ? 1000 : 0); });
   }
-  function fit() { animateTo({ cx: W / 2, cy: H / 2, z: 1 }); }
 
-  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-  function zoomAt(px, py, nz) {
-    var g = geom();
-    nz = clamp(nz, 0.8, 80);
-    var wx = view.cx + (px / g.rw - 0.5) * g.vw, wy = view.cy + (py / g.rh - 0.5) * g.vh;
-    view.z = nz;
-    var g2 = geom();
-    view.cx = wx - (px / g.rw - 0.5) * g2.vw; view.cy = wy - (py / g.rh - 0.5) * g2.vh;
-    render();
+  function fitAll() { map.fitBounds(L.latLngBounds(stops.map(function (s) { return [s.lat, s.lon]; })), { padding: [48, 48] }); }
+
+  function loadRoute(idx) {
+    stopPlay(); token++;
+    var my = token;
+    cur = idx; sel = -1; byRoad = false;
+    var r = ROUTES[idx];
+    stops = r.stops.map(function (s) { return Object.assign({}, s); });
+    Array.prototype.forEach.call(document.querySelectorAll('#routes .chip'), function (c, i) { c.setAttribute('aria-pressed', i === idx ? 'true' : 'false'); });
+    document.getElementById('rt-name').textContent = r.name;
+    document.getElementById('rt-desc').textContent = r.desc;
+    var o = stops[0], d = stops[stops.length - 1];
+    var wp = stops.slice(1, -1).map(function (s) { return s.lat + ',' + s.lon; }).join('|');
+    document.getElementById('gmaps').href = 'https://www.google.com/maps/dir/?api=1&origin=' + o.lat + ',' + o.lon + '&destination=' + d.lat + ',' + d.lon + (wp ? '&waypoints=' + encodeURIComponent(wp) : '') + '&travelmode=driving';
+
+    markers.forEach(function (m) { map.removeLayer(m); });
+    markers = stops.map(function (s, i) {
+      var m = L.marker([s.lat, s.lon], { icon: icon(i, false), title: s.name, keyboard: true }).addTo(map);
+      m.bindTooltip(s.short, { direction: 'right', offset: [16, 0] });
+      m.on('click', function () { stopPlay(); select(sel === i ? -1 : i, false); });
+      return m;
+    });
+    numbers(); buildList();
+    drawLine(stops.map(function (s) { return [s.lat, s.lon]; }), true);
+    fitAll();
+    document.getElementById('status').textContent = 'Buscando o traçado pelas ruas…';
+
+    /* traçado por ruas (servidor público do OSRM); se falhar, mantém as linhas retas */
+    var coords = stops.map(function (s) { return s.lon + ',' + s.lat; }).join(';');
+    fetch('https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson&steps=false')
+      .then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); })
+      .then(function (j) {
+        if (my !== token || !j.routes || !j.routes[0]) return;
+        var rt = j.routes[0];
+        stops.forEach(function (s, i) { if (i) s.leg = rt.legs[i - 1].distance; });
+        byRoad = true;
+        drawLine(rt.geometry.coordinates.map(function (c) { return [c[1], c[0]]; }), false);
+        numbers();
+        var keep = sel; buildList(); select(keep, false);
+        document.getElementById('status').textContent = 'Traçado pelas ruas, calculado com OSRM.';
+      })
+      .catch(function () {
+        if (my !== token) return;
+        document.getElementById('status').textContent = 'Não foi possível buscar o traçado pelas ruas. Mostrando linhas retas.';
+      });
   }
-  function zoomCenter(k) { var g = geom(); cancelAnimationFrame(anim); zoomAt(g.rw / 2, g.rh / 2, view.z * k); }
 
-  svg.addEventListener('wheel', function (e) {
-    e.preventDefault(); cancelAnimationFrame(anim);
-    var g = geom();
-    zoomAt(e.clientX - g.left, e.clientY - g.top, view.z * Math.exp(-e.deltaY * 0.0015));
-  }, { passive: false });
-
-  var pts = new Map(), drag = null, pinch = null;
-  svg.addEventListener('pointerdown', function (e) {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    cancelAnimationFrame(anim);
-    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pts.size === 2) {
-      var p = Array.from(pts.values());
-      pinch = { d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y), z: view.z };
-      drag = null;
-    } else {
-      drag = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, moved: false, id: e.pointerId };
-    }
-  });
-  svg.addEventListener('pointermove', function (e) {
-    if (!pts.has(e.pointerId)) return;
-    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    var g = geom();
-    if (pinch && pts.size >= 2) {
-      var p = Array.from(pts.values());
-      var d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
-      zoomAt((p[0].x + p[1].x) / 2 - g.left, (p[0].y + p[1].y) / 2 - g.top, pinch.z * d / pinch.d);
-      return;
-    }
-    if (!drag) return;
-    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (!drag.moved && Math.hypot(dx, dy) < 5) return;
-    if (!drag.moved) { drag.moved = true; try { svg.setPointerCapture(drag.id); } catch (er) {} stage.classList.add('dragging'); }
-    view.cx = drag.cx - dx * g.f; view.cy = drag.cy - dy * g.f;
-    render();
-  });
-  function endPtr(e) {
-    var wasClick = drag && !drag.moved && e.type === 'pointerup';
-    pts.delete(e.pointerId);
-    if (pts.size < 2) pinch = null;
-    if (wasClick) {
-      var m = e.target.closest ? e.target.closest('.mk') : null;
-      if (m) { stopPlay(); select(+m.getAttribute('data-i')); }
-    }
-    drag = null; stage.classList.remove('dragging');
-  }
-  svg.addEventListener('pointerup', endPtr);
-  svg.addEventListener('pointercancel', endPtr);
-  svg.addEventListener('keydown', function (e) {
-    var m = e.target.closest ? e.target.closest('.mk') : null;
-    if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); stopPlay(); select(+m.getAttribute('data-i')); }
-  });
-
-  document.getElementById('zin').addEventListener('click', function () { zoomCenter(1.6); });
-  document.getElementById('zout').addEventListener('click', function () { zoomCenter(1 / 1.6); });
-  document.getElementById('zfit').addEventListener('click', function () { stopPlay(); fit(); });
-  document.getElementById('next').addEventListener('click', function () { stopPlay(); select(sel < 0 ? 0 : Math.min(stops.length - 1, sel + 1), { fly: true, z: Math.max(view.z, 1.6) }); });
-  document.getElementById('prev').addEventListener('click', function () { stopPlay(); select(sel <= 0 ? 0 : sel - 1, { fly: true, z: Math.max(view.z, 1.6) }); });
-
-  var playBtn = document.getElementById('play');
-  function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } playBtn.textContent = 'Percorrer rota'; }
-  function startPlay() {
+  function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } document.getElementById('play').textContent = 'Percorrer rota'; }
+  document.getElementById('play').addEventListener('click', function () {
+    if (playTimer) { stopPlay(); return; }
     var n = 0;
-    playBtn.textContent = 'Pausar';
-    select(0, { fly: true, z: 2.6 });
+    this.textContent = 'Pausar';
+    select(0, true);
     playTimer = setInterval(function () {
       n++;
-      if (n >= stops.length) { stopPlay(); fit(); return; }
-      select(n, { fly: true, z: 2.6 });
-    }, 2300);
-  }
-  playBtn.addEventListener('click', function () { if (playTimer) stopPlay(); else startPlay(); });
+      if (n >= stops.length) { stopPlay(); fitAll(); return; }
+      select(n, true);
+    }, 2600);
+  });
+  document.getElementById('next').addEventListener('click', function () { stopPlay(); select(sel < 0 ? 0 : Math.min(stops.length - 1, sel + 1), true); });
+  document.getElementById('prev').addEventListener('click', function () { stopPlay(); select(sel <= 0 ? 0 : sel - 1, true); });
+  document.getElementById('zfit').addEventListener('click', function () { stopPlay(); fitAll(); });
 
-  /* seletor de rotas */
-  var chipBox = document.getElementById('routes'), chips = [];
+  var chipBox = document.getElementById('routes');
   ROUTES.forEach(function (r, i) {
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'chip'; b.setAttribute('aria-pressed', 'false');
@@ -549,34 +410,12 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4vw, 
     b.querySelector('span').textContent = r.name;
     b.querySelector('small').textContent = r.stops.length + ' pts';
     b.addEventListener('click', function () { loadRoute(i); });
-    chipBox.appendChild(b); chips.push(b);
+    chipBox.appendChild(b);
   });
-
-  function loadRoute(idx) {
-    stopPlay(); cancelAnimationFrame(anim);
-    cur = idx; sel = -1;
-    var r = ROUTES[idx];
-    chips.forEach(function (c, i) { c.setAttribute('aria-pressed', i === idx ? 'true' : 'false'); });
-    prepare(r);
-    document.getElementById('rt-name').textContent = r.name;
-    document.getElementById('rt-desc').textContent = r.desc;
-    document.getElementById('st-n').textContent = stops.length;
-    document.getElementById('st-t').textContent = fmt(total);
-    document.getElementById('st-m').textContent = fmt(longest);
-    var o = stops[0], d = stops[stops.length - 1];
-    var wp = stops.slice(1, -1).map(function (s) { return s.lat + ',' + s.lon; }).join('|');
-    document.getElementById('gmaps').href = 'https://www.google.com/maps/dir/?api=1&origin=' + o.lat + ',' + o.lon +
-      '&destination=' + d.lat + ',' + d.lon + (wp ? '&waypoints=' + encodeURIComponent(wp) : '') + '&travelmode=driving';
-    view.cx = W / 2; view.cy = H / 2; view.z = 1;
-    buildGrid(); buildLegs(); buildList(); buildMarks(); updateLegs();
-    try { history.replaceState(null, '', '#' + r.id); } catch (e) {}
-  }
-
   var start = 0;
   try { var h = location.hash.replace('#', ''); ROUTES.forEach(function (r, i) { if (r.id === h) start = i; }); } catch (e) {}
   loadRoute(start);
-  if (window.ResizeObserver) new ResizeObserver(render).observe(stage); else window.addEventListener('resize', render);
 })();
 </script>
-
-</body></html>
+</body>
+</html>
