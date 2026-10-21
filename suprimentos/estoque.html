@@ -250,7 +250,7 @@ Por padrão, a data inicial é ontem e a final é hoje, mas você pode alterar. 
 <table class="est w-100">
 <thead><tr>
 <th class="g-data">Mov.</th><th class="g-data">Nº</th><th class="g-data">Data / Hora</th><th class="g-data">Tipo</th><th class="g-data">Estado</th><th class="g-data">Depósito</th>
-<th class="g-data">Cód.</th><th class="g-data">Produto</th><th class="g-data">Un.</th><th class="g-data">Qtd.</th><th class="g-data">Vlr. unit.</th><th class="g-data">Vlr. total</th><th class="g-data">Vlr. estornado</th>
+<th class="g-data">Cód.</th><th class="g-data">Produto</th><th class="g-data">Un.</th><th class="g-data">Qtd.</th><th class="g-data">Vlr. unit.</th><th class="g-data">Vlr. total</th>
 <th class="g-data">Documento</th><th class="g-data">CNPJ / C. Custo</th><th class="g-data">Observação</th>
 </tr></thead>
 <tbody id="tbodyLista"></tbody>
@@ -510,7 +510,7 @@ async function consultar(){
   renderTudo();
   const estE = [...docMap.values()].filter(d => d.k === "E" && d.estado > 1).length, estS = [...docMap.values()].filter(d => d.k === "S" && d.estado > 1).length, est3 = estE + estS;
   const extra = (falhas ? ` Atenção: ${falhas} consulta(s) falharam após novas tentativas; o resultado pode estar incompleto.` : "")
-              + (est3 ? ` Há ${estE} entrada(s) e ${estS} saída(s) estornadas (parcial ou total): o cartão "Valor estornado" mostra os valores; confira se o movimento de estorno correspondente também entrou.` : "");
+              + (est3 ? ` Há ${estE} entrada(s) e ${estS} saída(s) estornadas (parcial ou total): confira se o movimento de estorno correspondente também entrou.` : "");
   if (abortar) mostrarStatus("Consulta interrompida. O que foi lido até aqui está na tabela.", "warning");
   else mostrarStatus(`Consulta concluída (${isoParaBr(ini)} a ${isoParaBr(fim)}): ${st.E.n} entradas e ${st.S.n} saídas.${extra}`, (falhas || est3) ? "warning" : "success");
 }
@@ -641,10 +641,7 @@ function renderKpis(r){
     kpi("Entradas no período", moeda(r.totE), "Tipos marcados", "k-ent") +
     kpi("Saídas no período", moeda(r.totS), "Tipos marcados", "k-sai") +
     kpi("Variação líquida", `<span class="${cls(liq)}">${moeda(liq)}</span>`, "Entradas − saídas") +
-    kpi("SE final calculado", moeda(r.saldoFinal), r.temSaldo ? "Saldo inicial + variação líquida" : "Sem saldo inicial: mostra só a variação") +
-    kpi("Valor estornado", moeda(r.est.valor),
-        `${r.est.n3} estornada(s) total, ${r.est.n2} parcial` + (r.est.semValor ? ` · valor parcial não informado pela API em ${r.est.semValor} item(ns)` : "")
-        + ` · movimentos de estorno lançados: ${moeda((r.totTipo.E8 || 0) + (r.totTipo.S8 || 0))}`, "k-est");
+    kpi("SE final calculado", moeda(r.saldoFinal), r.temSaldo ? "Saldo inicial + variação líquida" : "Sem saldo inicial: mostra só a variação");
 }
 
 function renderTabela(r){
@@ -747,11 +744,10 @@ function renderLista(){
       <td class="num">${x.qtd ? Number(x.qtd).toLocaleString("pt-BR", { minimumFractionDigits:2, maximumFractionDigits:5 }) : "-"}</td>
       <td class="num">${x.vu ? numBR(x.vu) : "-"}</td>
       <td class="num"><strong>${numBR(x.vt)}</strong></td>
-      <td class="num">${x.estado === 1 ? "-" : (x.est === null ? '<span class="small-muted" title="A API não informa o valor estornado parcial deste item">não informado</span>' : `<strong class="neg">${numBR(x.est)}</strong>`)}</td>
       <td>${escapeHtml(x.doc || "-")}</td>
       <td>${escapeHtml(x.terc || "-")}</td>
       <td class="obs-cel" title="${escapeHtml(x.obs)}">${escapeHtml(x.obs || "-")}</td></tr>`;
-  }).join("") : `<tr><td colspan="16" class="text-center py-3 text-muted">Sem movimentos para os filtros atuais. Clique em "Consultar movimentos" ou carregue um JSON.</td></tr>`;
+  }).join("") : `<tr><td colspan="15" class="text-center py-3 text-muted">Sem movimentos para os filtros atuais. Clique em "Consultar movimentos" ou carregue um JSON.</td></tr>`;
   const mais = $("btnMaisLista"), resta = rows.length - mostrar.length;
   mais.classList.toggle("d-none", resta <= 0);
   if (resta > 0) mais.textContent = `Mostrar mais ${Math.min(LIM_LISTA, resta)} (restam ${resta.toLocaleString("pt-BR")})`;
