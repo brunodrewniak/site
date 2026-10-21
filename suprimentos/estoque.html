@@ -54,6 +54,9 @@ table.est tbody tr:hover td, table.est tbody tr:hover td.col-data { background: 
 #selTipos option { font-weight: 400; padding: .2rem .5rem; cursor: pointer; }
 #selTipos option:checked { background: linear-gradient(0deg, #611f69, #611f69); color: #fff; }
 .tr-fora td { color: #9aa1b2; font-style: italic; }
+.tr-est3 td { background: #fff0f0; }
+.tr-est2 td { background: #fff8e1; }
+.kpi.k-est { border-left-color: #dc3545; }
 .obs-cel { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
 .lista-wrap { max-height: 560px; overflow: auto; }
 </style>
@@ -238,15 +241,16 @@ Por padrão, a data inicial é ontem e a final é hoje, mas você pode alterar. 
 </div>
 <div id="painelLista">
 <div class="row g-2 mb-3 align-items-center">
-<div class="col-md-5"><input type="text" id="filtroLista" class="form-control form-control-sm" placeholder="Filtrar por produto, código, documento, CNPJ, centro de custo, observação..."></div>
+<div class="col-md-3"><input type="text" id="filtroLista" class="form-control form-control-sm" placeholder="Filtrar por produto, código, documento, CNPJ, centro de custo, observação..."></div>
 <div class="col-md-2"><select id="selMov" class="form-select form-select-sm"><option value="">Entradas e saídas</option><option value="E">Só entradas</option><option value="S">Só saídas</option></select></div>
+<div class="col-md-2"><select id="selEstado" class="form-select form-select-sm"><option value="">Todos os estados</option><option value="1">1 - Normal</option><option value="2">2 - Estornada Parcial</option><option value="3">3 - Estornada Total</option></select></div>
 <div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chkSoMarcados"><label class="form-check-label small" for="chkSoMarcados">Só tipos selecionados no saldo</label></div></div>
 </div>
 <div class="lista-wrap">
 <table class="est w-100">
 <thead><tr>
 <th class="g-data">Mov.</th><th class="g-data">Nº</th><th class="g-data">Data / Hora</th><th class="g-data">Tipo</th><th class="g-data">Estado</th><th class="g-data">Depósito</th>
-<th class="g-data">Cód.</th><th class="g-data">Produto</th><th class="g-data">Un.</th><th class="g-data">Qtd.</th><th class="g-data">Vlr. unit.</th><th class="g-data">Vlr. total</th>
+<th class="g-data">Cód.</th><th class="g-data">Produto</th><th class="g-data">Un.</th><th class="g-data">Qtd.</th><th class="g-data">Vlr. unit.</th><th class="g-data">Vlr. total</th><th class="g-data">Vlr. estornado</th>
 <th class="g-data">Documento</th><th class="g-data">CNPJ / C. Custo</th><th class="g-data">Observação</th>
 </tr></thead>
 <tbody id="tbodyLista"></tbody>
@@ -372,6 +376,19 @@ async function buscarDoc(tp, ano, cod){
   return { lista:[], json:null };
 }
 
+// Procura em um objeto campos numéricos com "estorn" no nome (ex.: ValorEstornado, QuantidadeEstornada).
+// Campos de quantidade são multiplicados pelo valor unitário. Retorna null se não houver nenhum.
+function achaEstornado(o, unit){
+  let t = null;
+  Object.entries(o || {}).forEach(([k, v]) => {
+    if (!/estorn/i.test(k) || v === null || v === undefined || typeof v === "object" || typeof v === "boolean") return;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return;
+    t = (t || 0) + (/quant|qtd/i.test(k) ? n * (unit || 0) : n);
+  });
+  return t;
+}
+let avisouCamposEstorno = false;
 function criarRegistro(tp, ano, json, info){
   const itens = json.Itens || json.itens || info.Itens || info.itens || [];
   const tipoId = Number(info.Tipo || info.tipo || 0);
@@ -387,6 +404,7 @@ function criarRegistro(tp, ano, json, info){
     docNum: String(info.DocumentoNumero || info.documentoNumero || info.NotaFiscal || ""),
     cc: (() => { const c = info.CentroCusto || info.centroCusto; if (!c) return ""; return c.descricao ? `${c.codigo} - ${c.descricao}` : String(c.codigo ?? ""); })(),
     obs: String(info.Observacao || info.observacao || info.Observacoes || ""),
+    veDoc: achaEstornado(info, 0),
     itens: (Array.isArray(itens) ? itens : []).map(it => {
       const dep = it.Deposito?.codigo ?? it.deposito?.codigo ?? it.Estoque?.Deposito?.codigo ?? it.estoque?.deposito?.codigo ?? "";
       const pr = it.ProdutoUnidade?.Produto || it.produtoUnidade?.produto || {};
@@ -394,14 +412,16 @@ function criarRegistro(tp, ano, json, info){
       const qtd = Number(it.Quantidade || it.quantidade || 0);
       const unit = Number(it.ValorUnitario || it.valorUnitario || it.PrecoEntrada || it.PrecoSaida || it.precoSaida || it.PresoSaida || 0);
       const vt = Number(it.ValorTotal || it.valorTotal || 0) || qtd * unit;
-      return { dep:normDep(dep), vt, cod:String(pr.codigo ?? ""), desc:pr.descricao || it.descricao || "Sem descrição", un:un.descricao || "UN", qtd, vu:unit };
+      const ve = achaEstornado(it, unit);
+      if (Number(info.Estado || info.estado || 1) > 1 && !avisouCamposEstorno) { avisouCamposEstorno = true; console.info("Documento estornado: campos do documento =", Object.keys(info), "| campos do item =", Object.keys(it)); }
+      return { dep:normDep(dep), vt, cod:String(pr.codigo ?? ""), desc:pr.descricao || it.descricao || "Sem descrição", un:un.descricao || "UN", qtd, vu:unit, ve };
     })
   };
 }
 // Itens salvos em versões antigas eram pares [depósito, valor]; converte para o formato atual.
 function normItem(x){
-  if (Array.isArray(x)) return { dep:normDep(x[0]), vt:Number(x[1]) || 0, cod:"", desc:"(produto não registrado)", un:"", qtd:0, vu:0 };
-  return { dep:normDep(x.dep), vt:Number(x.vt) || 0, cod:String(x.cod ?? ""), desc:x.desc || "", un:x.un || "", qtd:Number(x.qtd) || 0, vu:Number(x.vu) || 0 };
+  if (Array.isArray(x)) return { dep:normDep(x[0]), vt:Number(x[1]) || 0, cod:"", desc:"(produto não registrado)", un:"", qtd:0, vu:0, ve:null };
+  return { dep:normDep(x.dep), vt:Number(x.vt) || 0, cod:String(x.cod ?? ""), desc:x.desc || "", un:x.un || "", qtd:Number(x.qtd) || 0, vu:Number(x.vu) || 0, ve:(x.ve === null || x.ve === undefined) ? null : Number(x.ve) };
 }
 function guardarRegistro(reg){ docMap.set(`${reg.k}|${reg.ano}|${reg.cod}`, reg); }
 
@@ -488,11 +508,18 @@ async function consultar(){
   } finally { clearInterval(timer); mostrarLoading(false); }
 
   renderTudo();
-  const est3 = [...docMap.values()].filter(d => d.k === "E" && d.estado === 3).length;
+  const estE = [...docMap.values()].filter(d => d.k === "E" && d.estado > 1).length, estS = [...docMap.values()].filter(d => d.k === "S" && d.estado > 1).length, est3 = estE + estS;
   const extra = (falhas ? ` Atenção: ${falhas} consulta(s) falharam após novas tentativas; o resultado pode estar incompleto.` : "")
-              + (est3 ? ` Há ${est3} entrada(s) com estado "Est. Total" (estornadas): confira se o estorno correspondente também entrou.` : "");
+              + (est3 ? ` Há ${estE} entrada(s) e ${estS} saída(s) estornadas (parcial ou total): o cartão "Valor estornado" mostra os valores; confira se o movimento de estorno correspondente também entrou.` : "");
   if (abortar) mostrarStatus("Consulta interrompida. O que foi lido até aqui está na tabela.", "warning");
   else mostrarStatus(`Consulta concluída (${isoParaBr(ini)} a ${isoParaBr(fim)}): ${st.E.n} entradas e ${st.S.n} saídas.${extra}`, (falhas || est3) ? "warning" : "success");
+}
+
+// Valor estornado de um item: total = valor do item (ou o campo da API, se houver); parcial = só se a API informar; normal = 0.
+function estornoItem(d, it){
+  if (d.estado === 3) return it.ve !== null && it.ve !== undefined ? it.ve : it.vt;
+  if (d.estado === 2) return it.ve !== null && it.ve !== undefined ? it.ve : null;
+  return 0;
 }
 
 // ---------------- cálculo ----------------
@@ -513,6 +540,7 @@ function calcular(){
   const tiposE = {}, tiposS = {}, totTipo = {};
   const dias = {}, porDep = {};
   const horaE = Array(24).fill(0), horaS = Array(24).fill(0);
+  const est = { valor:0, n3:0, n2:0, semValor:0 };
   docMap.forEach(d => {
     const iso = brParaIso(d.data);
     if (!iso || iso < ini || iso > fim) return;
@@ -525,6 +553,13 @@ function calcular(){
       pd[k] = (pd[k] || 0) + it.vt;
     });
     if (!usou) return;
+    if (d.estado === 2 || d.estado === 3) {
+      let vd = 0, desconhecido = 0;
+      d.itens.forEach(it => { if (dep && !dep.has(String(it.dep))) return; const v = estornoItem(d, it); if (v === null) desconhecido++; else vd += v; });
+      if (d.estado === 2 && vd === 0 && d.veDoc) { vd = d.veDoc; desconhecido = 0; }
+      est.valor += vd; est.semValor += desconhecido;
+      if (d.estado === 3) est.n3++; else est.n2++;
+    }
     const chave = d.k + d.tipoId;
     (d.k === "E" ? tiposE : tiposS)[d.tipoId] = d.tipo;
     totTipo[chave] = (totTipo[chave] || 0) + soma;
@@ -547,7 +582,7 @@ function calcular(){
       linhas.push({ iso, d, e, s, liquido: e - s, se: saldo });
     }
   }
-  return { linhas, tiposE, tiposS, totTipo, porDep, horaE, horaS, totE, totS, saldoFinal: saldo, initTotal, temSaldo, ini, fim };
+  return { linhas, tiposE, tiposS, totTipo, porDep, horaE, horaS, est, totE, totS, saldoFinal: saldo, initTotal, temSaldo, ini, fim };
 }
 
 // ---------------- renderização ----------------
@@ -606,7 +641,10 @@ function renderKpis(r){
     kpi("Entradas no período", moeda(r.totE), "Tipos marcados", "k-ent") +
     kpi("Saídas no período", moeda(r.totS), "Tipos marcados", "k-sai") +
     kpi("Variação líquida", `<span class="${cls(liq)}">${moeda(liq)}</span>`, "Entradas − saídas") +
-    kpi("SE final calculado", moeda(r.saldoFinal), r.temSaldo ? "Saldo inicial + variação líquida" : "Sem saldo inicial: mostra só a variação");
+    kpi("SE final calculado", moeda(r.saldoFinal), r.temSaldo ? "Saldo inicial + variação líquida" : "Sem saldo inicial: mostra só a variação") +
+    kpi("Valor estornado", moeda(r.est.valor),
+        `${r.est.n3} estornada(s) total, ${r.est.n2} parcial` + (r.est.semValor ? ` · valor parcial não informado pela API em ${r.est.semValor} item(ns)` : "")
+        + ` · movimentos de estorno lançados: ${moeda((r.totTipo.E8 || 0) + (r.totTipo.S8 || 0))}`, "k-est");
 }
 
 function renderTabela(r){
@@ -669,37 +707,39 @@ function linhasMov(r){
     d.itens.forEach((it, ix) => {
       if (dep && !dep.has(String(it.dep))) return;
       out.push({ iso, hora:d.hora || "", k:d.k, cod:d.cod, tipo:d.tipo, estado:d.estado, fora, dep:it.dep, pc:it.cod, prod:it.desc, un:it.un, qtd:it.qtd, vu:it.vu, vt:it.vt,
-        doc:d.docNum || "", terc:d.k === "E" ? (d.terceiro || "") : (d.cc ? "CC: " + d.cc : ""), obs:d.obs || "", ix });
+        est:estornoItem(d, it), doc:d.docNum || "", terc:d.k === "E" ? (d.terceiro || "") : (d.cc ? "CC: " + d.cc : ""), obs:d.obs || "", ix });
     });
   });
   out.sort((a, b) => { const x = a.iso + a.hora, y = b.iso + b.hora; return x < y ? 1 : x > y ? -1 : (b.cod - a.cod) || (a.ix - b.ix); });
   return out;
 }
 function filtrarLista(r){
-  const q = $("filtroLista").value.trim().toLowerCase(), mov = $("selMov").value, soMarc = $("chkSoMarcados").checked;
+  const q = $("filtroLista").value.trim().toLowerCase(), mov = $("selMov").value, soMarc = $("chkSoMarcados").checked, estF = $("selEstado").value;
   return linhasMov(r).filter(x => {
     if (mov && x.k !== mov) return false;
+    if (estF && String(x.estado) !== estF) return false;
     if (soMarc && x.fora) return false;
     if (q && ![x.prod, x.pc, x.doc, x.terc, x.obs, x.tipo, x.dep].join(" ").toLowerCase().includes(q)) return false;
     return true;
   });
 }
-const ESTADOS = { 1:["Normal","bg-success"], 2:["Est. Parcial","bg-warning text-dark"], 3:["Est. Total","bg-danger"] };
+const ESTADOS = { 1:["Normal","bg-success"], 2:["Estornada Parcial","bg-warning text-dark"], 3:["Estornada Total","bg-danger"] };
 function renderLista(){
   const r = ultimo; if (!r) return;
   const rows = filtrarLista(r), mostrar = rows.slice(0, limiteLista);
   const totE = rows.filter(x => x.k === "E").reduce((a, x) => a + x.vt, 0), totS = rows.filter(x => x.k === "S").reduce((a, x) => a + x.vt, 0);
+  const totEst = rows.reduce((a, x) => a + (x.est || 0), 0);
   $("resumoLista").textContent = rows.length
-    ? `${rows.length.toLocaleString("pt-BR")} item(ns) · entradas ${moeda(totE)} · saídas ${moeda(totS)}` + (rows.length > mostrar.length ? ` · mostrando os ${mostrar.length.toLocaleString("pt-BR")} mais recentes` : "")
+    ? `${rows.length.toLocaleString("pt-BR")} item(ns) · entradas ${moeda(totE)} · saídas ${moeda(totS)}` + (totEst ? ` · estornado ${moeda(totEst)}` : "") + (rows.length > mostrar.length ? ` · mostrando os ${mostrar.length.toLocaleString("pt-BR")} mais recentes` : "")
     : "Itens de cada entrada e saída do período.";
   $("tbodyLista").innerHTML = mostrar.length ? mostrar.map(x => {
-    const est = x.k === "E" ? (ESTADOS[x.estado] || ["Outro", "bg-secondary"]) : null;
-    return `<tr class="${x.fora ? "tr-fora" : ""}">
+    const est = ESTADOS[x.estado] || ["Outro", "bg-secondary"];
+    return `<tr class="${x.fora ? "tr-fora" : (x.estado === 3 ? "tr-est3" : x.estado === 2 ? "tr-est2" : "")}">
       <td><span class="badge ${x.k === "E" ? "" : "bg-info text-dark"}" ${x.k === "E" ? 'style="background:var(--cor-entrada)"' : ""}>${x.k === "E" ? "Entrada" : "Saída"}</span></td>
       <td><strong>${x.cod}</strong></td>
       <td>${isoParaBr(x.iso)} <span class="small-muted">${escapeHtml(x.hora)}</span></td>
       <td>${escapeHtml(x.tipo)}${x.fora ? ' <span class="badge text-bg-light border">fora do saldo</span>' : ""}</td>
-      <td>${est ? `<span class="badge ${est[1]}">${est[0]}</span>` : "-"}</td>
+      <td><span class="badge ${est[1]}">${est[0]}</span></td>
       <td><span class="badge bg-secondary">${escapeHtml(x.dep || "-")}</span></td>
       <td><code>${escapeHtml(x.pc || "-")}</code></td>
       <td>${escapeHtml(x.prod)}</td>
@@ -707,10 +747,11 @@ function renderLista(){
       <td class="num">${x.qtd ? Number(x.qtd).toLocaleString("pt-BR", { minimumFractionDigits:2, maximumFractionDigits:5 }) : "-"}</td>
       <td class="num">${x.vu ? numBR(x.vu) : "-"}</td>
       <td class="num"><strong>${numBR(x.vt)}</strong></td>
+      <td class="num">${x.estado === 1 ? "-" : (x.est === null ? '<span class="small-muted" title="A API não informa o valor estornado parcial deste item">não informado</span>' : `<strong class="neg">${numBR(x.est)}</strong>`)}</td>
       <td>${escapeHtml(x.doc || "-")}</td>
       <td>${escapeHtml(x.terc || "-")}</td>
       <td class="obs-cel" title="${escapeHtml(x.obs)}">${escapeHtml(x.obs || "-")}</td></tr>`;
-  }).join("") : `<tr><td colspan="15" class="text-center py-3 text-muted">Sem movimentos para os filtros atuais. Clique em "Consultar movimentos" ou carregue um JSON.</td></tr>`;
+  }).join("") : `<tr><td colspan="16" class="text-center py-3 text-muted">Sem movimentos para os filtros atuais. Clique em "Consultar movimentos" ou carregue um JSON.</td></tr>`;
   const mais = $("btnMaisLista"), resta = rows.length - mostrar.length;
   mais.classList.toggle("d-none", resta <= 0);
   if (resta > 0) mais.textContent = `Mostrar mais ${Math.min(LIM_LISTA, resta)} (restam ${resta.toLocaleString("pt-BR")})`;
@@ -811,8 +852,8 @@ function exportarCsvLista(){
   if (!ultimo) return;
   const rows = filtrarLista(ultimo);
   if (!rows.length) { alert("Não existem dados para exportar."); return; }
-  const cab = ["Movimento", "Número", "Data", "Hora", "Tipo", "Fora do saldo", "Depósito", "Código produto", "Produto", "Unidade", "Quantidade", "Valor unitário", "Valor total", "Documento", "CNPJ / Centro de custo", "Observação"];
-  baixar("estoque_movimentacao.csv", csvTexto([cab, ...rows.map(x => [x.k === "E" ? "Entrada" : "Saída", x.cod, isoParaBr(x.iso), x.hora, x.tipo, x.fora ? "Sim" : "Não", x.dep, x.pc, x.prod, x.un, csvN(x.qtd), csvN(x.vu), csvN(x.vt), x.doc, x.terc, x.obs])]), "text/csv;charset=utf-8;");
+  const cab = ["Movimento", "Número", "Data", "Hora", "Tipo", "Estado", "Fora do saldo", "Depósito", "Código produto", "Produto", "Unidade", "Quantidade", "Valor unitário", "Valor total", "Valor estornado", "Documento", "CNPJ / Centro de custo", "Observação"];
+  baixar("estoque_movimentacao.csv", csvTexto([cab, ...rows.map(x => [x.k === "E" ? "Entrada" : "Saída", x.cod, isoParaBr(x.iso), x.hora, x.tipo, (ESTADOS[x.estado] || ["Outro"])[0], x.fora ? "Sim" : "Não", x.dep, x.pc, x.prod, x.un, csvN(x.qtd), csvN(x.vu), csvN(x.vt), x.estado === 1 ? "" : (x.est === null ? "não informado" : csvN(x.est)), x.doc, x.terc, x.obs])]), "text/csv;charset=utf-8;");
 }
 function exportarCsvDep(){
   if (!ultimo) return;
@@ -854,7 +895,7 @@ $("btnNenhumTipo").addEventListener("click", () => marcarTodosTipos(false));
 $("btnLista").addEventListener("click", () => { listaVisivel = !listaVisivel; salvarLocal(); aplicarVisibilidadeLista(); });
 $("btnMaisLista").addEventListener("click", () => { limiteLista += LIM_LISTA; renderLista(); });
 $("btnCsvLista").addEventListener("click", exportarCsvLista);
-["filtroLista","selMov","chkSoMarcados"].forEach(id => {
+["filtroLista","selMov","selEstado","chkSoMarcados"].forEach(id => {
   $(id).addEventListener(id === "filtroLista" ? "input" : "change", () => { limiteLista = LIM_LISTA; renderLista(); });
 });
 
