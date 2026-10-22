@@ -31,7 +31,7 @@ html,body{height:100%;margin:0;background:var(--grafite);color:var(--papel);
   position:absolute;top:16px;left:16px;width:340px;max-width:calc(100% - 32px);
   max-height:calc(100% - 32px);overflow:auto;
   background:var(--grafite);border:1px solid var(--linha);border-top:3px solid var(--amarelo);
-  border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);z-index:5;
+  border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);z-index:1100;
 }
 .painel header{padding:14px 16px 10px;border-bottom:1px solid var(--linha)}
 .etiqueta{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
@@ -59,7 +59,7 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 .vazio{font-size:.85rem;color:var(--muted);line-height:1.5}
 
 .legenda{
-  position:absolute;right:16px;bottom:28px;z-index:5;background:var(--grafite);border:1px solid var(--linha);
+  position:absolute;right:16px;bottom:28px;z-index:1100;background:var(--grafite);border:1px solid var(--linha);
   border-radius:8px;padding:10px 12px;font-size:.75rem;display:flex;flex-direction:column;gap:6px;max-width:calc(100% - 32px)
 }
 .legenda div{display:flex;align-items:center;gap:8px}
@@ -89,7 +89,6 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 
 <div class="legenda">
   <div><span class="chip" style="background:#f2b705"></span> Bloco vinculado a um centro de custos</div>
-  <div><span class="chip" style="background:#6c757d"></span> Bloco ainda sem vínculo</div>
 </div>
 
 <script>
@@ -98,7 +97,7 @@ const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89d
 
 // Vista inicial: zoom na prefeitura. Leaflet é 2D, então só zoom e centro se aplicam
 // (rotação e inclinação do link original ficam de fora). center = [lng, lat].
-const VISTA_PREFEITURA = { zoom:18.65, center:[-49.5179145, -25.455052] };
+const VISTA_PREFEITURA = { zoom:18.65, center:[-49.519257, -25.454614] };
 
 // Cada bloco do mapa aponta para um centro de custos.
 // "filtro" decide, na planilha, quais lançamentos pertencem ao bloco. Para vincular outro bloco, basta
@@ -120,38 +119,21 @@ const BLOCOS_CENTRO_CUSTO = {
   }
 };
 
-// ================= Geometria dos blocos (marcação provisória) =================
-// Malha 5x5 de quadras ao redor do ponto central. O bloco 15 ocupa o centro; as demais
-// numerações seguem a ordem de leitura. Troque por polígonos reais quando estiverem desenhados.
-const LAT0 = VISTA_PREFEITURA.center[1], LNG0 = VISTA_PREFEITURA.center[0];
+// ================= Geometria do bloco =================
+// Por enquanto só o bloco 15 existe. Ponto central: LatLng(-25.454614, 310.480743),
+// que equivale a longitude -49.519257 (310.480743 - 360). Retângulo provisório de 44 x 36 m;
+// troque por um polígono desenhado sobre o prédio quando estiver pronto.
+const LAT0 = -25.454614, LNG0 = 310.480743 - 360;
 const M_LAT = 1/111320;
 const M_LNG = 1/(111320*Math.cos(LAT0*Math.PI/180));
-
-function gerarBlocos(){
-  const feats = [];
-  const passo = 58, larg = 44, prof = 36;   // metros
-  const outros = [];
-  for(let n=1;n<=25;n++) if(n!==15) outros.push(n);
-  let k = 0;
-  for(let r=0;r<5;r++){
-    for(let c=0;c<5;c++){
-      const centro = (r===2 && c===2);
-      const id = centro ? 15 : outros[k++];
-      const cx = LNG0 + (c-2)*passo*M_LNG;
-      const cy = LAT0 + (2-r)*passo*M_LAT;
-      const dx = larg/2*M_LNG, dy = prof/2*M_LAT;
-      feats.push({
-        type:"Feature",
-        properties:{ bloco:id, vinculado: !!BLOCOS_CENTRO_CUSTO[id] },
-        geometry:{ type:"Polygon", coordinates:[[
-          [cx-dx,cy-dy],[cx+dx,cy-dy],[cx+dx,cy+dy],[cx-dx,cy+dy],[cx-dx,cy-dy]
-        ]]}
-      });
-    }
-  }
-  return { type:"FeatureCollection", features:feats };
-}
-const BLOCOS_GEO = gerarBlocos();
+const dx = 22*M_LNG, dy = 18*M_LAT;
+const BLOCOS_GEO = { type:"FeatureCollection", features:[{
+  type:"Feature",
+  properties:{ bloco:15, vinculado:true },
+  geometry:{ type:"Polygon", coordinates:[[
+    [LNG0-dx,LAT0-dy],[LNG0+dx,LAT0-dy],[LNG0+dx,LAT0+dy],[LNG0-dx,LAT0+dy],[LNG0-dx,LAT0-dy]
+  ]]}
+}]};
 
 // ================= Dados de custo =================
 const $ = id => document.getElementById(id);
