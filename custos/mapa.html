@@ -3,15 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mapa de Blocos | BI de Custos Campo Largo</title>
+<title>Mapa de Custos | BI de Custos Campo Largo</title>
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
-/* Layout: mapa 3D em tela cheia com painel flutuante do centro de custos selecionado.
+/* Layout: mapa em tela cheia, painel de custos flutuante à frente (z-index acima das camadas do Leaflet).
    Paleta herdada do dashboard.html (amarelo #f2b705 sobre grafite #212529). */
 :root{
   --amarelo:#f2b705;
@@ -26,27 +25,43 @@
 html,body{height:100%;margin:0;background:var(--grafite);color:var(--papel);
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 #mapa{position:absolute;inset:0}
+.leaflet-container{background:var(--grafite-2);font-family:inherit}
+.leaflet-control-attribution{font-size:10px}
 
 .painel{
-  position:absolute;top:16px;left:16px;width:340px;max-width:calc(100% - 32px);
+  position:absolute;top:16px;left:16px;width:360px;max-width:calc(100% - 32px);
   max-height:calc(100% - 32px);overflow:auto;
   background:var(--grafite);border:1px solid var(--linha);border-top:3px solid var(--amarelo);
   border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);z-index:1100;
 }
 .painel header{padding:14px 16px 10px;border-bottom:1px solid var(--linha)}
-.etiqueta{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  background:var(--amarelo);color:var(--grafite);padding:2px 8px;border-radius:4px}
-.painel h1{font-size:1.05rem;margin:8px 0 2px;line-height:1.25;text-wrap:balance}
+.painel h1{font-size:1.1rem;margin:0 0 2px;line-height:1.25;text-wrap:balance;display:flex;gap:8px;align-items:flex-start}
+.painel h1 svg{flex:none;margin-top:2px}
 .sub{font-size:.78rem;color:var(--muted);margin:0}
 .corpo{padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px}
+
+h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+
+/* Período e Filtros */
+.filtros{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}
+.campo{display:flex;flex-direction:column;gap:3px;min-width:0}
+.campo.cheio{grid-column:1 / -1}
+.campo label{font-size:.72rem;font-weight:600;color:var(--papel)}
+.campo input,.campo select{
+  width:100%;padding:6px 8px;font-size:.8rem;border-radius:5px;border:1px solid var(--linha);
+  background:var(--grafite-2);color:var(--papel);color-scheme:dark;min-width:0
+}
+.campo input:focus-visible,.campo select:focus-visible,.btn:focus-visible{outline:2px solid var(--amarelo);outline-offset:1px}
+.acoes{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:6px 10px;font-size:.78rem;border-radius:5px;border:1px solid var(--linha);background:transparent;color:var(--papel);cursor:pointer}
+.btn:hover{background:var(--grafite-2)}
+
 .kpi small{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .kpi strong{display:block;font-size:1.9rem;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--amarelo)}
-.kpi span{font-size:.78rem;color:var(--muted)}
 .linha2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .mini{border-left:3px solid var(--amarelo-escuro);padding-left:10px}
 .mini small{display:block;font-size:.7rem;color:var(--muted)}
 .mini b{font-size:1rem;font-variant-numeric:tabular-nums}
-h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
 .itens{display:flex;flex-direction:column;gap:9px;margin:0;padding:0;list-style:none}
 .itens li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.8rem}
 .itens .nome{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -56,91 +71,56 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 .origem{font-size:.72rem;color:var(--muted);display:flex;gap:6px;align-items:center}
 .ponto{width:8px;height:8px;border-radius:50%;background:#20c997;flex:none}
 .ponto.sim{background:var(--amarelo)}
-.vazio{font-size:.85rem;color:var(--muted);line-height:1.5}
+.vazio{font-size:.85rem;color:var(--muted);line-height:1.5;margin:0}
 
-.legenda{
-  position:absolute;right:16px;bottom:28px;z-index:1100;background:var(--grafite);border:1px solid var(--linha);
-  border-radius:8px;padding:10px 12px;font-size:.75rem;display:flex;flex-direction:column;gap:6px;max-width:calc(100% - 32px)
+/* Marcador */
+.pino{background:none;border:0}
+.pino svg{display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.45))}
+.pino-rotulo{
+  background:var(--grafite);color:var(--papel);border:1px solid var(--amarelo);border-radius:5px;
+  box-shadow:none;font-size:12px;font-weight:600;padding:3px 8px
 }
-.legenda div{display:flex;align-items:center;gap:8px}
-.chip{width:14px;height:14px;border-radius:3px;flex:none}
-
-.leaflet-container{background:var(--grafite-2);font-family:inherit}
-.rotulo-bloco{
-  background:rgba(255,255,255,.92);border:0;border-radius:4px;box-shadow:none;
-  color:var(--grafite);font-size:11px;font-weight:700;padding:1px 6px
-}
-.rotulo-bloco::before{display:none}
-.leaflet-top.leaflet-right{margin-top:0}
-.leaflet-control-layers,.leaflet-bar a{color:var(--grafite)}
-.leaflet-control-attribution{font-size:10px}
+.pino-rotulo::before{border-top-color:var(--amarelo)!important}
 
 @media (max-width:640px){
-  .painel{top:auto;bottom:0;left:0;right:0;width:auto;max-width:none;max-height:46%;border-radius:12px 12px 0 0}
-  .legenda{display:none}
+  .painel{top:auto;bottom:0;left:0;right:0;width:auto;max-width:none;max-height:58%;border-radius:12px 12px 0 0}
 }
 </style>
 </head>
 <body>
 
 <div id="mapa"></div>
-
 <aside class="painel" id="painel" aria-live="polite"></aside>
-
-<div class="legenda">
-  <div><span class="chip" style="background:#f2b705"></span> Bloco vinculado a um centro de custos</div>
-</div>
 
 <script>
 // ================= Configuração =================
 const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=xlsx";
 
-// Vista inicial: zoom na prefeitura. Leaflet é 2D, então só zoom e centro se aplicam
-// (rotação e inclinação do link original ficam de fora). center = [lng, lat].
-const VISTA_PREFEITURA = { zoom:18.65, center:[-49.519257, -25.454614] };
+// Centro de custos exibido no mapa. Para referenciar outros, acrescente novas entradas neste vetor
+// (filtro por nome da secretaria ou por prefixo do código do objeto de custo).
+// O Leaflet usa longitude entre -180 e 180: LatLng(-25.454614, 310.480743) equivale a lng 310.480743 - 360.
+const CENTROS_CUSTO = [{
+  nome: "Secretaria Municipal da Fazenda",
+  lat: -25.454614,
+  lng: 310.480743 - 360,
+  secretariaRegex: /fazenda/i,
+  // codigoPrefixo: "0002.00XX",
+  // Valores de demonstração, usados só se a planilha não puder ser lida
+  simulado: [
+    ["Pessoal - Estatutário", 612400.10], ["Encargos Patronais", 188250.45],
+    ["Pessoal - Comissionado", 164300.00], ["Energia Elétrica", 87420.33],
+    ["Material de Expediente", 52310.84], ["Serviços de Informática", 41890.00]
+  ]
+}];
+const ZOOM_INICIAL = 18.65;
 
-// Cada bloco do mapa aponta para um centro de custos.
-// "filtro" decide, na planilha, quais lançamentos pertencem ao bloco. Para vincular outro bloco, basta
-// acrescentar uma entrada aqui (por nome da secretaria ou por prefixo do código do objeto de custo).
-const BLOCOS_CENTRO_CUSTO = {
-  15: {
-    nome: "Secretaria Municipal da Fazenda",
-    secretariaRegex: /fazenda/i,
-    // codigoPrefixo: "0002.00XX",   // use se preferir identificar pelo código do objeto de custo
-    // Valores de demonstração, usados só se a planilha não puder ser lida
-    simulado: {
-      total: 1284530.72, registros: 312,
-      itens: [
-        ["Pessoal - Estatutário", 612400.10], ["Encargos Patronais", 188250.45],
-        ["Pessoal - Comissionado", 164300.00], ["Energia Elétrica", 87420.33],
-        ["Material de Expediente", 52310.84], ["Serviços de Informática", 41890.00]
-      ]
-    }
-  }
-};
-
-// ================= Geometria do bloco =================
-// Por enquanto só o bloco 15 existe. Ponto central: LatLng(-25.454614, 310.480743),
-// que equivale a longitude -49.519257 (310.480743 - 360). Retângulo provisório de 44 x 36 m;
-// troque por um polígono desenhado sobre o prédio quando estiver pronto.
-const LAT0 = -25.454614, LNG0 = 310.480743 - 360;
-const M_LAT = 1/111320;
-const M_LNG = 1/(111320*Math.cos(LAT0*Math.PI/180));
-const dx = 22*M_LNG, dy = 18*M_LAT;
-const BLOCOS_GEO = { type:"FeatureCollection", features:[{
-  type:"Feature",
-  properties:{ bloco:15, vinculado:true },
-  geometry:{ type:"Polygon", coordinates:[[
-    [LNG0-dx,LAT0-dy],[LNG0+dx,LAT0-dy],[LNG0+dx,LAT0+dy],[LNG0-dx,LAT0+dy],[LNG0-dx,LAT0-dy]
-  ]]}
-}]};
-
-// ================= Dados de custo =================
+// ================= Utilitários =================
 const $ = id => document.getElementById(id);
 const moeda = v => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0);
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm = s => String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
 
-function num(v){
+function numero(v){
   if(typeof v==="number") return Number.isFinite(v)?v:0;
   if(!v) return 0;
   let t = String(v).replace("R$","").trim();
@@ -154,11 +134,17 @@ function paraData(v){
   if(typeof v==="string"){ const d=new Date(v); if(!isNaN(d)) return d; }
   return null;
 }
-const chaveMes = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-const NOMES_MES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function dataISO(d){
+  if(!d) return "";
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 
-// Lê a planilha publicada e devolve o resumo do centro de custos do bloco
-async function carregarCentroCusto(cfg){
+// ================= Dados =================
+// dadosCentro[i] = { origem, linhas:[{data,departamentoCodigo,departamento,objetoNome,itemCusto,valor}] }
+const dadosCentro = [];
+let centroAtual = 0;
+
+async function carregarCentro(cfg){
   const resp = await fetch(PUB_XLSX_URL);
   if(!resp.ok) throw new Error("HTTP "+resp.status);
   const wb = XLSX.read(await resp.arrayBuffer(), { type:"array", cellDates:true });
@@ -170,160 +156,191 @@ async function carregarCentroCusto(cfg){
     const cod = r["Objeto de Custo - Secretaria"];
     if(cod) secPorCodigo[String(cod).trim()] = r["Secretaria"] || "";
   });
-  const codigosAlvo = Object.entries(secPorCodigo)
+  const alvo = Object.entries(secPorCodigo)
     .filter(([cod,nome]) => cfg.codigoPrefixo ? cod.startsWith(cfg.codigoPrefixo) : cfg.secretariaRegex.test(nome))
     .map(([cod]) => cod);
-  if(!codigosAlvo.length) throw new Error("Secretaria não encontrada na planilha");
+  if(!alvo.length) throw new Error("Secretaria não encontrada na planilha");
+
+  const deptMap = {}, objMap = {};
+  if(wb.Sheets["Departamentos"]) XLSX.utils.sheet_to_json(wb.Sheets["Departamentos"]).forEach(r=>{
+    const c = r["Objeto de Custo - Departamento"]; if(c) deptMap[String(c).trim()] = r["Departamento"] || "";
+  });
+  if(wb.Sheets["Objetos"]) XLSX.utils.sheet_to_json(wb.Sheets["Objetos"]).forEach(r=>{
+    const c = r["Objeto de Custo"]; if(c) objMap[String(c).trim()] = r["Descrição"] || "";
+  });
 
   const linhas = XLSX.utils.sheet_to_json(abaDados, { defval:null })
     .filter(r => r["Objeto de Custo"])
-    .map(r => ({
-      cod: String(r["Objeto de Custo"]).trim(),
-      data: paraData(r["Data"]),
-      item: r["Item de Custo"] || "Não informado",
-      valor: num(r["Valor Apropriado"])
-    }))
-    .filter(r => r.data && codigosAlvo.includes(r.cod.split(".").slice(0,2).join(".")));
-  if(!linhas.length) throw new Error("Sem lançamentos para a secretaria");
-
-  // Mês de referência: o atual; se ainda não houver lançamentos, o mais recente disponível
-  const hoje = chaveMes(new Date());
-  const meses = [...new Set(linhas.map(l=>chaveMes(l.data)))].sort();
-  const mesRef = meses.includes(hoje) ? hoje : meses[meses.length-1];
-  const doMes = linhas.filter(l=>chaveMes(l.data)===mesRef);
-
-  const porItem = {};
-  doMes.forEach(l => porItem[l.item] = (porItem[l.item]||0) + l.valor);
-  const [ano, mes] = mesRef.split("-");
-  return {
-    origem:"real",
-    periodo:`${NOMES_MES[Number(mes)-1]} de ${ano}`,
-    total: doMes.reduce((t,l)=>t+l.valor,0),
-    registros: doMes.length,
-    itens: Object.entries(porItem).sort((a,b)=>b[1]-a[1]).slice(0,6)
-  };
-}
-
-const resumoPorBloco = {};   // bloco -> resumo
-
-async function prepararDados(){
-  for(const [id,cfg] of Object.entries(BLOCOS_CENTRO_CUSTO)){
-    try{
-      resumoPorBloco[id] = await carregarCentroCusto(cfg);
-    }catch(e){
-      console.warn("Usando valores de demonstração para o bloco", id, "-", e.message);
-      const hoje = new Date();
-      resumoPorBloco[id] = {
-        origem:"simulado",
-        periodo:`${NOMES_MES[hoje.getMonth()]} de ${hoje.getFullYear()}`,
-        ...cfg.simulado
+    .map(r => {
+      const cod = String(r["Objeto de Custo"]).trim();
+      const p = cod.split(".");
+      const dep = p.slice(0,3).join(".");
+      return {
+        secCod: p.slice(0,2).join("."),
+        data: paraData(r["Data"]),
+        departamentoCodigo: dep,
+        departamento: deptMap[dep] || "Não identificado",
+        objetoNome: objMap[cod] || cod,
+        itemCusto: r["Item de Custo"] || "Não informado",
+        valor: numero(r["Valor Apropriado"])
       };
-    }
-  }
+    })
+    .filter(r => r.data && alvo.includes(r.secCod));
+  if(!linhas.length) throw new Error("Sem lançamentos para a secretaria");
+  return { origem:"real", linhas };
 }
 
-// ================= Painel =================
-function mostrarBloco(id){
-  const cfg = BLOCOS_CENTRO_CUSTO[id];
-  const painel = $("painel");
-  if(!cfg){
-    painel.innerHTML = `
-      <header><span class="etiqueta">Bloco ${id}</span>
-      <h1>Sem centro de custos vinculado</h1>
-      <p class="sub">Selecione o bloco 15 para ver a prévia.</p></header>
-      <div class="corpo"><p class="vazio">Este bloco ainda não foi referenciado. Para vinculá-lo, acrescente uma entrada em <b>BLOCOS_CENTRO_CUSTO</b>.</p></div>`;
-    return;
-  }
-  const r = resumoPorBloco[id];
-  if(!r){
-    painel.innerHTML = `<header><span class="etiqueta">Bloco ${id}</span><h1>${esc(cfg.nome)}</h1></header><div class="corpo"><p class="vazio">Carregando custos...</p></div>`;
-    return;
-  }
-  const maior = r.itens.length ? r.itens[0][1] : 1;
-  const media = r.registros ? r.total/r.registros : 0;
-  painel.innerHTML = `
+// Sem acesso à planilha: lançamentos fictícios do mês atual, só para a prévia
+function dadosSimulados(cfg){
+  const h = new Date();
+  const linhas = [];
+  cfg.simulado.forEach(([item,total],k)=>{
+    for(let i=0;i<4;i++){
+      linhas.push({
+        data:new Date(h.getFullYear(),h.getMonth(),3+i*6+k),
+        departamentoCodigo: i%2 ? "SIM.02" : "SIM.01",
+        departamento: i%2 ? "Departamento de Arrecadação" : "Departamento de Contabilidade",
+        objetoNome: cfg.nome, itemCusto:item, valor: total/4
+      });
+    }
+  });
+  return { origem:"simulado", linhas };
+}
+
+// ================= Filtros (mesmos do dashboard.html) =================
+function mesAtualPadrao(){
+  const h = new Date();
+  return [dataISO(new Date(h.getFullYear(),h.getMonth(),1)), dataISO(new Date(h.getFullYear(),h.getMonth()+1,0))];
+}
+
+function opcoes(linhas, chave, rotulo){
+  const m = new Map(linhas.map(l=>[l[chave], l[rotulo||chave]]));
+  return [...m.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]),"pt-BR"));
+}
+
+function montarPainel(){
+  const cfg = CENTROS_CUSTO[centroAtual];
+  const [ini, fim] = mesAtualPadrao();
+  $("painel").innerHTML = `
     <header>
-      <span class="etiqueta">Bloco ${id}</span>
-      <h1>${esc(cfg.nome)}</h1>
-      <p class="sub">Custos apropriados em ${esc(r.periodo)}</p>
+      <h1><svg width="18" height="18" viewBox="0 0 24 24" fill="#f2b705" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+        <span>${esc(cfg.nome)}</span></h1>
+      <p class="sub" id="subPeriodo"></p>
     </header>
     <div class="corpo">
-      <div class="kpi">
-        <small>Total apropriado</small>
-        <strong>${moeda(r.total)}</strong>
-      </div>
-      <div class="linha2">
-        <div class="mini"><small>Lançamentos</small><b>${r.registros.toLocaleString("pt-BR")}</b></div>
-        <div class="mini"><small>Média por lançamento</small><b>${moeda(media)}</b></div>
-      </div>
-      <div>
-        <h2>Principais itens de custo</h2>
-        <ul class="itens">
-          ${r.itens.map(([nome,v])=>`
-            <li><span class="nome" title="${esc(nome)}">${esc(nome)}</span><span class="val">${moeda(v)}</span>
-            <span class="barra"><i style="width:${Math.max(3,(v/maior)*100).toFixed(1)}%"></i></span></li>`).join("")}
-        </ul>
-      </div>
-      <div class="origem"><span class="ponto ${r.origem==="real"?"":"sim"}"></span>
-        ${r.origem==="real" ? "Dados da planilha publicada" : "Valores de demonstração (planilha não acessível neste navegador)"}
-      </div>
+      <section>
+        <h2>Período e Filtros</h2>
+        <div class="filtros">
+          <div class="campo"><label for="dataInicial">Data Inicial</label><input type="date" id="dataInicial" value="${ini}"></div>
+          <div class="campo"><label for="dataFinal">Data Final</label><input type="date" id="dataFinal" value="${fim}"></div>
+          <div class="campo"><label for="filtroDepartamento">Departamento</label>
+            <select id="filtroDepartamento"><option value="">Todos</option></select></div>
+          <div class="campo"><label for="filtroItem">Item de Custo</label>
+            <select id="filtroItem"><option value="">Todos</option></select></div>
+          <div class="campo cheio"><label for="filtroBusca">Buscar Unidade / Objeto</label>
+            <input type="text" id="filtroBusca" placeholder="Ex: Gabinete, Arrecadação..."></div>
+        </div>
+        <div class="acoes" style="margin-top:10px"><button class="btn" id="btnLimpar" type="button">Limpar Filtros</button></div>
+      </section>
+      <div id="resultado"></div>
     </div>`;
+
+  const d = dadosCentro[centroAtual];
+  $("filtroDepartamento").innerHTML = `<option value="">Todos</option>` +
+    opcoes(d.linhas,"departamentoCodigo","departamento").map(([c,n])=>`<option value="${esc(c)}">${esc(n)}</option>`).join("");
+  $("filtroItem").innerHTML = `<option value="">Todos</option>` +
+    opcoes(d.linhas,"itemCusto").map(([c])=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+
+  ["dataInicial","dataFinal","filtroDepartamento","filtroItem"].forEach(id=>$(id).addEventListener("change", atualizarResultado));
+  $("filtroBusca").addEventListener("input", atualizarResultado);
+  $("btnLimpar").addEventListener("click", ()=>{
+    const [i,f] = mesAtualPadrao();
+    $("dataInicial").value=i; $("dataFinal").value=f;
+    $("filtroDepartamento").value=""; $("filtroItem").value=""; $("filtroBusca").value="";
+    atualizarResultado();
+  });
+  atualizarResultado();
+}
+
+function atualizarResultado(){
+  const d = dadosCentro[centroAtual];
+  const ini = $("dataInicial").value, fim = $("dataFinal").value;
+  const dep = $("filtroDepartamento").value, item = $("filtroItem").value;
+  const busca = norm($("filtroBusca").value.trim());
+
+  const sel = d.linhas.filter(l=>{
+    const ds = dataISO(l.data);
+    return (!ini || ds>=ini) && (!fim || ds<=fim) &&
+      (!dep || l.departamentoCodigo===dep) && (!item || l.itemCusto===item) &&
+      (!busca || norm(l.objetoNome).includes(busca) || norm(l.departamento).includes(busca));
+  });
+
+  const total = sel.reduce((t,l)=>t+l.valor,0);
+  const porItem = {};
+  sel.forEach(l=> porItem[l.itemCusto] = (porItem[l.itemCusto]||0)+l.valor);
+  const top = Object.entries(porItem).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maior = top.length ? top[0][1] : 1;
+  const fmt = s => s ? s.split("-").reverse().join("/") : "…";
+  $("subPeriodo").textContent = `Custos apropriados de ${fmt(ini)} a ${fmt(fim)}`;
+
+  $("resultado").innerHTML = sel.length ? `
+    <div class="kpi"><small>Total apropriado</small><strong>${moeda(total)}</strong></div>
+    <div class="linha2" style="margin:14px 0">
+      <div class="mini"><small>Lançamentos</small><b>${sel.length.toLocaleString("pt-BR")}</b></div>
+      <div class="mini"><small>Média por lançamento</small><b>${moeda(total/sel.length)}</b></div>
+    </div>
+    <h2>Principais itens de custo</h2>
+    <ul class="itens">${top.map(([n,v])=>`
+      <li><span class="nome" title="${esc(n)}">${esc(n)}</span><span class="val">${moeda(v)}</span>
+      <span class="barra"><i style="width:${Math.max(3,(v/maior)*100).toFixed(1)}%"></i></span></li>`).join("")}</ul>
+    <div class="origem" style="margin-top:14px"><span class="ponto ${d.origem==="real"?"":"sim"}"></span>
+      ${d.origem==="real" ? "Dados da planilha publicada" : "Valores de demonstração (planilha não acessível neste navegador)"}</div>`
+  : `<p class="vazio">Nenhum lançamento encontrado com os filtros aplicados.</p>`;
 }
 
 // ================= Mapa (Leaflet, sem token) =================
-let mapa = null;
-const camadasBloco = {};   // id -> polygon
-let blocoSel = null;
-
-const ESTILO_VINCULADO = { color:"#c79300", weight:2, fillColor:"#f2b705", fillOpacity:.55 };
-const ESTILO_LIVRE     = { color:"#495057", weight:1.5, fillColor:"#6c757d", fillOpacity:.35 };
-const ESTILO_SEL       = { color:"#ffffff", weight:3, fillOpacity:.8 };
-
-function estiloBase(id){ return BLOCOS_CENTRO_CUSTO[id] ? ESTILO_VINCULADO : ESTILO_LIVRE; }
-
 function iniciarMapa(){
-  mapa = L.map("mapa", { zoomSnap:0, zoomDelta:0.5, maxZoom:20, zoomControl:false })
-          .setView([VISTA_PREFEITURA.center[1], VISTA_PREFEITURA.center[0]], VISTA_PREFEITURA.zoom);
+  const c = CENTROS_CUSTO[0];
+  const mapa = L.map("mapa", { zoomSnap:0, zoomDelta:0.5, maxZoom:20, zoomControl:false })
+                .setView([c.lat, c.lng], ZOOM_INICIAL);
   L.control.zoom({ position:"topright" }).addTo(mapa);
 
-  const ruas = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom:20, maxNativeZoom:19, attribution:"&copy; OpenStreetMap"
-  });
-  const satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom:20, maxNativeZoom:19, attribution:"Imagens &copy; Esri"
-  });
-  ruas.addTo(mapa);
+  const ruas = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom:20, maxNativeZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(mapa);
+  const satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom:20, maxNativeZoom:19, attribution:"Imagens &copy; Esri" });
   L.control.layers({ "Mapa de ruas":ruas, "Satélite":satelite }, null, { position:"topright" }).addTo(mapa);
 
-  BLOCOS_GEO.features.forEach(f=>{
-    const id = f.properties.bloco;
-    const anel = f.geometry.coordinates[0].map(([lng,lat])=>[lat,lng]);
-    const poly = L.polygon(anel, estiloBase(id)).addTo(mapa);
-    poly.bindTooltip("Bloco "+id, { permanent:true, direction:"center", className:"rotulo-bloco" });
-    poly.on("click", ()=> selecionar(id));
-    camadasBloco[id] = poly;
+  const icone = L.divIcon({
+    className:"pino", iconSize:[36,46], iconAnchor:[18,46], tooltipAnchor:[0,-40],
+    html:`<svg width="36" height="46" viewBox="0 0 36 46" aria-hidden="true">
+      <path d="M18 1C9 1 2 8 2 17c0 12 16 28 16 28s16-16 16-28C34 8 27 1 18 1z" fill="#f2b705" stroke="#212529" stroke-width="2"/>
+      <circle cx="18" cy="17" r="6.5" fill="#212529"/></svg>`
   });
-
-  selecionar(15);   // a prévia já abre no bloco da Fazenda
-}
-
-function selecionar(id){
-  id = Number(id);
-  if(blocoSel!==null && camadasBloco[blocoSel]) camadasBloco[blocoSel].setStyle(estiloBase(blocoSel));
-  blocoSel = id;
-  if(camadasBloco[id]){
-    camadasBloco[id].setStyle(ESTILO_SEL);
-    camadasBloco[id].bringToFront();
-  }
-  mostrarBloco(id);
+  CENTROS_CUSTO.forEach(cc=>{
+    L.marker([cc.lat, cc.lng], { icon:icone, title:cc.nome, keyboard:true })
+      .addTo(mapa)
+      .bindTooltip(esc(cc.nome), { permanent:true, direction:"top", className:"pino-rotulo" });
+  });
 }
 
 // ================= Início =================
 (async function(){
-  mostrarBloco(15);
   iniciarMapa();
-  await prepararDados();
-  mostrarBloco(blocoSel ?? 15);
+  const cfg = CENTROS_CUSTO[centroAtual];
+  dadosCentro[centroAtual] = dadosSimulados(cfg);   // painel aparece de imediato
+  montarPainel();
+  try{
+    dadosCentro[centroAtual] = await carregarCentro(cfg);
+  }catch(e){
+    console.warn("Usando valores de demonstração:", e.message);
+    return;
+  }
+  // Atualiza as opções dos filtros com os dados reais, mantendo o período já escolhido
+  const ini = $("dataInicial").value, fim = $("dataFinal").value;
+  montarPainel();
+  $("dataInicial").value = ini; $("dataFinal").value = fim;
+  atualizarResultado();
 })();
 </script>
 </body>
