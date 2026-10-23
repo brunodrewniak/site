@@ -8,9 +8,10 @@
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <style>
-/* Layout: mapa em tela cheia, painel de custos flutuante à frente (z-index acima das camadas do Leaflet).
+/* Layout: mapa em tela cheia; painel do BI flutuante à frente (z-index acima das camadas do Leaflet).
    Paleta herdada do dashboard.html (amarelo #f2b705 sobre grafite #212529). */
 :root{
   --amarelo:#f2b705;
@@ -29,7 +30,7 @@ html,body{height:100%;margin:0;background:var(--grafite);color:var(--papel);
 .leaflet-control-attribution{font-size:10px}
 
 .painel{
-  position:absolute;top:16px;left:16px;width:360px;max-width:calc(100% - 32px);
+  position:absolute;top:16px;left:16px;width:440px;max-width:calc(100% - 32px);
   max-height:calc(100% - 32px);overflow:auto;
   background:var(--grafite);border:1px solid var(--linha);border-top:3px solid var(--amarelo);
   border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);z-index:1100;
@@ -38,45 +39,13 @@ html,body{height:100%;margin:0;background:var(--grafite);color:var(--papel);
 .painel h1{font-size:1.1rem;margin:0 0 2px;line-height:1.25;text-wrap:balance;display:flex;gap:8px;align-items:flex-start}
 .painel h1 svg{flex:none;margin-top:2px}
 .sub{font-size:.78rem;color:var(--muted);margin:0}
-.corpo{padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px}
-
+.corpo{padding:14px 16px 16px;display:flex;flex-direction:column;gap:16px}
 h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
 
-/* Período e Filtros */
-.filtros{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}
-.campo{display:flex;flex-direction:column;gap:3px;min-width:0}
-.campo.cheio{grid-column:1 / -1}
-.campo label{font-size:.72rem;font-weight:600;color:var(--papel)}
-.campo input,.campo select{
-  width:100%;padding:6px 8px;font-size:.8rem;border-radius:5px;border:1px solid var(--linha);
-  background:var(--grafite-2);color:var(--papel);color-scheme:dark;min-width:0
-}
-.campo input:focus-visible,.campo select:focus-visible,.btn:focus-visible{outline:2px solid var(--amarelo);outline-offset:1px}
-.acoes{display:flex;gap:8px;flex-wrap:wrap}
-.btn{padding:6px 10px;font-size:.78rem;border-radius:5px;border:1px solid var(--linha);background:transparent;color:var(--papel);cursor:pointer}
-.btn:hover{background:var(--grafite-2)}
-
-.kpi small{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.kpi strong{display:block;font-size:1.9rem;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--amarelo)}
-.linha2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.mini{border-left:3px solid var(--amarelo-escuro);padding-left:10px}
-.mini small{display:block;font-size:.7rem;color:var(--muted)}
-.mini b{font-size:1rem;font-variant-numeric:tabular-nums}
-.itens{display:flex;flex-direction:column;gap:9px;margin:0;padding:0;list-style:none}
-.itens li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.8rem}
-.itens .nome{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.itens .val{font-variant-numeric:tabular-nums;font-weight:600}
-.barra{grid-column:1 / -1;height:5px;border-radius:3px;background:var(--grafite-2);overflow:hidden}
-.barra i{display:block;height:100%;background:var(--amarelo)}
-.origem{font-size:.72rem;color:var(--muted);display:flex;gap:6px;align-items:center}
-.ponto{width:8px;height:8px;border-radius:50%;background:#20c997;flex:none}
-.ponto.sim{background:var(--amarelo)}
-.vazio{font-size:.85rem;color:var(--muted);line-height:1.5;margin:0}
-
-/* Seleção de secretaria */
+/* Seleção de secretaria / local */
 .busca-sec{position:relative}
-.busca-sec input{padding-left:28px}
-.busca-sec svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);pointer-events:none}
+.campo.busca-sec input{padding-left:28px}
+.busca-sec svg{position:absolute;left:8px;bottom:9px;pointer-events:none}
 .lista-sec{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:168px;overflow:auto}
 .lista-sec button{
   width:100%;display:flex;align-items:center;gap:8px;text-align:left;padding:6px 8px;font-size:.8rem;
@@ -86,23 +55,62 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 .lista-sec button[aria-pressed="true"]{border-color:var(--amarelo);background:var(--grafite-2);font-weight:700}
 .lista-sec .bolinha{width:10px;height:10px;border-radius:50%;background:var(--amarelo);flex:none;border:2px solid var(--grafite)}
 .lista-sec [aria-pressed="false"] .bolinha{background:var(--muted)}
+.lista-sec .qtd{margin-left:auto;font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+.lista-sec .grupo{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:8px 8px 2px}
+.sem-resultado{font-size:.78rem;color:var(--muted);padding:6px 8px}
 .lista-sec button:focus-visible{outline:2px solid var(--amarelo);outline-offset:1px}
+.cabecalho-sec{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.cabecalho-sec h2{margin:0}
 .aviso{font-size:.74rem;color:var(--muted);margin:8px 0 0;line-height:1.4}
 .local{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;padding:6px 8px;
   border-radius:5px;background:var(--grafite-2);border-left:3px solid var(--amarelo);font-size:.8rem}
 .local[hidden]{display:none}
 .local span{min-width:0;font-weight:600}
-.lista-sec .qtd{margin-left:auto;font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
-.sem-resultado{font-size:.78rem;color:var(--muted);padding:6px 8px}
-.cabecalho-sec{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.cabecalho-sec h2{margin:0}
+
+/* Período e Filtros */
+.filtros{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}
+.campo{display:flex;flex-direction:column;gap:3px;min-width:0;position:relative}
+.campo.cheio{grid-column:1 / -1}
+.campo label{font-size:.72rem;font-weight:600;color:var(--papel)}
+.campo input,.campo select{
+  width:100%;padding:6px 8px;font-size:.8rem;border-radius:5px;border:1px solid var(--linha);
+  background:var(--grafite-2);color:var(--papel);color-scheme:dark;min-width:0
+}
+.campo input:focus-visible,.campo select:focus-visible,.btn:focus-visible{outline:2px solid var(--amarelo);outline-offset:1px}
+.btn{padding:6px 10px;font-size:.78rem;border-radius:5px;border:1px solid var(--linha);background:transparent;color:var(--papel);cursor:pointer}
+.btn:hover{background:var(--grafite-2)}
 .btn-mini{padding:2px 8px;font-size:.72rem}
+
+/* Indicadores (mesmos cards do BI) */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:var(--grafite-2);border-radius:6px;padding:8px 10px;min-width:0;border-top:2px solid var(--amarelo-escuro)}
+.kpi small{display:block;font-size:.66rem;color:var(--muted)}
+.kpi b{display:block;font-size:.95rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi.grande{grid-column:1 / -1;border-top-color:var(--amarelo)}
+.kpi.grande b{font-size:1.7rem;color:var(--amarelo)}
+
+/* Gráficos */
+.grafico{background:var(--grafite-2);border-radius:6px;padding:10px}
+.grafico h2{margin-bottom:6px}
+.caixa{position:relative;height:200px}
+
+/* Tabela de lançamentos */
+.tabela-wrap{overflow:auto;max-height:260px;border:1px solid var(--linha);border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:.74rem}
+th,td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--linha);vertical-align:top}
+th{position:sticky;top:0;background:var(--grafite-2);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.nota{font-size:.72rem;color:var(--muted);margin:6px 0 0}
+
+.estado{font-size:.85rem;color:var(--muted);line-height:1.5;margin:0}
+.estado.erro{color:#ffb4a8}
+.origem{font-size:.72rem;color:var(--muted);display:flex;gap:6px;align-items:center}
+.ponto{width:8px;height:8px;border-radius:50%;background:#20c997;flex:none}
 
 /* Marcador */
 .pino{background:none;border:0}
 .pino svg{display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.45));transition:transform .15s;transform-origin:50% 100%}
 .pino.sel svg{transform:scale(1.25)}
-.pino:not(.sel) svg{opacity:.8}
 .pino-rotulo{
   background:var(--grafite);color:var(--papel);border:1px solid var(--amarelo);border-radius:5px;
   box-shadow:none;font-size:12px;font-weight:600;padding:3px 8px
@@ -110,7 +118,7 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 .pino-rotulo::before{border-top-color:var(--amarelo)!important}
 
 @media (max-width:640px){
-  .painel{top:auto;bottom:0;left:0;right:0;width:auto;max-width:none;max-height:58%;border-radius:12px 12px 0 0}
+  .painel{top:auto;bottom:0;left:0;right:0;width:auto;max-width:none;max-height:62%;border-radius:12px 12px 0 0}
 }
 </style>
 </head>
@@ -122,34 +130,13 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 <script>
 // ================= Configuração =================
 const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=xlsx";
-
-// Secretarias da lista de seleção. Os marcadores NÃO ficam aqui: vêm da aba Objetos da planilha, uma pin por
-// objeto de custo com as colunas Latitude e Longitude preenchidas. Para incluir outra secretaria, acrescente uma entrada.
-// "filtro" localiza a secretaria na aba Secretarias da planilha (por nome); como alternativa, use
-// codigoPrefixo com o código do objeto de custo (ex.: "0002.0015").
-const CENTROS_CUSTO = [
-  { nome:"Secretaria Municipal da Fazenda",        filtro:/fazenda/i,
-    base:1.0 },
-  { nome:"Secretaria Municipal de Saúde",          filtro:/sa[uú]de/i,
-    base:3.4 },
-  { nome:"Secretaria Municipal de Administração",  filtro:/administra[cç][aã]o/i,
-    base:1.6 },
-  { nome:"Secretaria Municipal de Educação",       filtro:/educa[cç][aã]o/i,
-    base:5.2 },
-  { nome:"Secretaria Municipal de Meio Ambiente",  filtro:/meio\s*ambiente/i,
-    base:0.7 },
-  { nome:"Secretaria Municipal de Cultura",        filtro:/cultura/i,
-    base:0.5 }
-];
-// Valores de demonstração (usados só se a planilha não puder ser lida); "base" escala os totais de cada secretaria
-const ITENS_SIMULADOS = [
-  ["Pessoal - Estatutário", 612400.10], ["Encargos Patronais", 188250.45],
-  ["Pessoal - Comissionado", 164300.00], ["Energia Elétrica", 87420.33],
-  ["Material de Expediente", 52310.84], ["Serviços de Informática", 41890.00]
-];
 const ZOOM_INICIAL = 18.65;
-// Vista inicial: zoom na prefeitura
-const CENTRO_INICIAL = [-25.455052, -49.5179145];
+const CENTRO_INICIAL = [-25.455052, -49.5179145];   // vista inicial: zoom na prefeitura
+const LINHAS_TABELA = 50;
+const PALETA_CORES = [
+  "#20c997","#fd7e14","#0dcaf0","#6f42c1","#ffc107","#198754","#d63384","#0d6efd","#e83e8c","#6c757d",
+  "#17a2b8","#28a745","#ff851b","#b10dc9","#39ccd7"
+];
 
 // ================= Utilitários =================
 const $ = id => document.getElementById(id);
@@ -175,12 +162,7 @@ function dataISO(d){
   if(!d) return "";
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-
-// ================= Dados =================
-// dadosCentro[i] = { origem, linhas:[{data,departamentoCodigo,departamento,objetoNome,itemCusto,valor}] }
-const dadosCentro = [];
-let centroAtual = 0;
-let objetoSel = null;   // código do objeto de custo (local) selecionado pelo marcador
+const dataBR = d => d ? d.toLocaleDateString("pt-BR") : "";
 
 // Procura a coluna pelo cabeçalho, sem diferenciar maiúsculas, acentos ou espaços
 function colunaPor(linha, regex){
@@ -192,35 +174,41 @@ function coordenada(v, ehLongitude){
   if(v===null || v===undefined || String(v).trim()==="") return null;
   let n = typeof v==="number" ? v : Number(String(v).trim().replace(",","."));
   if(!Number.isFinite(n) || n===0) return null;
-  if(ehLongitude && n>180) n -= 360;   // ex.: 310.480743 vira -49.519257 (formato do Google Maps/Leaflet)
+  if(ehLongitude && n>180) n -= 360;   // ex.: 310.480743 vira -49.519257
   if(Math.abs(n) > (ehLongitude ? 180 : 90)) return null;
   return n;
 }
 
-let wbCache = null;
+// ================= Dados (planilha publicada, a mesma do BI) =================
+let secretarias = [];      // [{cod, nome, linhas:[...], locais:[...]}]
+let centroAtual = -1;      // índice em secretarias
+let objetoSel = null;      // código do objeto de custo selecionado pelo marcador ou pela busca
+let carregado = false;
+
 async function carregarPlanilha(){
-  if(wbCache) return wbCache;
   const resp = await fetch(PUB_XLSX_URL);
   if(!resp.ok) throw new Error("HTTP "+resp.status);
   const wb = XLSX.read(await resp.arrayBuffer(), { type:"array", cellDates:true });
-  if(!wb.Sheets["Dados"] || !wb.Sheets["Secretarias"]) throw new Error("Abas Dados/Secretarias ausentes");
+  if(!wb.Sheets["Dados"] || !wb.Sheets["Secretarias"]) throw new Error('Abas "Dados" e "Secretarias" não encontradas.');
 
-  const secPorCodigo = {}, deptMap = {}, objMap = {};
+  const secPorCodigo = {}, deptMap = {}, objMap = {}, locais = [];
   XLSX.utils.sheet_to_json(wb.Sheets["Secretarias"]).forEach(r=>{
     const c = r["Objeto de Custo - Secretaria"]; if(c) secPorCodigo[String(c).trim()] = r["Secretaria"] || "";
   });
   if(wb.Sheets["Departamentos"]) XLSX.utils.sheet_to_json(wb.Sheets["Departamentos"]).forEach(r=>{
     const c = r["Objeto de Custo - Departamento"]; if(c) deptMap[String(c).trim()] = r["Departamento"] || "";
   });
-  const locais = [];   // objetos de custo com Latitude e Longitude preenchidas
+  // Aba Objetos: Descrição + Latitude/Longitude. Só entra no mapa quem tem as duas coordenadas preenchidas.
   if(wb.Sheets["Objetos"]) XLSX.utils.sheet_to_json(wb.Sheets["Objetos"], { defval:null }).forEach(r=>{
     const c = r["Objeto de Custo"]; if(!c) return;
     const cod = String(c).trim();
     const nome = r["Descrição"] || cod;
     objMap[cod] = nome;
-    const lat = coordenada(colunaPor(r, /^lat(itude)?$/)), lng = coordenada(colunaPor(r, /^(lng|lon|long|longitude)$/), true);
+    const lat = coordenada(colunaPor(r, /^lat(itude)?$/));
+    const lng = coordenada(colunaPor(r, /^(lng|lon|long|longitude)$/), true);
     if(lat!==null && lng!==null) locais.push({ cod, nome, secCod:cod.split(".").slice(0,2).join("."), lat, lng });
   });
+
   const linhas = XLSX.utils.sheet_to_json(wb.Sheets["Dados"], { defval:null })
     .filter(r => r["Objeto de Custo"])
     .map(r => {
@@ -228,8 +216,7 @@ async function carregarPlanilha(){
       const p = cod.split(".");
       const dep = p.slice(0,3).join(".");
       return {
-        secCod: p.slice(0,2).join("."),
-        cod,
+        cod, secCod:p.slice(0,2).join("."),
         data: paraData(r["Data"]),
         departamentoCodigo: dep,
         departamento: deptMap[dep] || "Não identificado",
@@ -237,45 +224,28 @@ async function carregarPlanilha(){
         itemCusto: r["Item de Custo"] || "Não informado",
         valor: numero(r["Valor Apropriado"])
       };
-    })
-    .filter(r => r.data);
-  wbCache = { secPorCodigo, linhas, locais };
-  return wbCache;
+    });
+
+  // Todas as secretarias da planilha; códigos de objetos sem secretaria cadastrada também entram
+  const cods = new Map(Object.entries(secPorCodigo));
+  linhas.forEach(l=>{ if(!cods.has(l.secCod)) cods.set(l.secCod, ""); });
+  locais.forEach(l=>{ if(!cods.has(l.secCod)) cods.set(l.secCod, ""); });
+  return [...cods.entries()]
+    .map(([cod,nome])=>({
+      cod, nome: String(nome||("Secretaria "+cod)).trim(),
+      linhas: linhas.filter(l=>l.secCod===cod),
+      locais: locais.filter(l=>l.secCod===cod)
+    }))
+    .sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
 }
 
-function dadosDoCentro(cfg, planilha){
-  const alvo = Object.entries(planilha.secPorCodigo)
-    .filter(([cod,nome]) => cfg.codigoPrefixo ? cod.startsWith(cfg.codigoPrefixo) : cfg.filtro.test(nome))
-    .map(([cod]) => cod);
-  if(!alvo.length) throw new Error("Secretaria não encontrada na planilha: "+cfg.nome);
-  const linhas = planilha.linhas.filter(r => alvo.includes(r.secCod));
-  if(!linhas.length) throw new Error("Sem lançamentos: "+cfg.nome);
-  return { origem:"real", linhas, locais: planilha.locais.filter(l => alvo.includes(l.secCod)) };
-}
+// ================= Painel =================
+const graficos = {};
 
-// Sem acesso à planilha: lançamentos fictícios do mês atual, só para a prévia
-function dadosSimulados(cfg){
-  const h = new Date();
-  const linhas = [];
-  ITENS_SIMULADOS.forEach(([item,total],k)=>{
-    for(let i=0;i<4;i++){
-      linhas.push({
-        data:new Date(h.getFullYear(),h.getMonth(),3+i*6+k),
-        cod:"SIM", departamentoCodigo: i%2 ? "SIM.02" : "SIM.01",
-        departamento: i%2 ? "Departamento Administrativo" : "Departamento Técnico",
-        objetoNome: cfg.nome, itemCusto:item, valor: total*cfg.base/4
-      });
-    }
-  });
-  return { origem:"simulado", linhas, locais:[] };
-}
-
-// ================= Filtros (mesmos do dashboard.html) =================
 function mesAtualPadrao(){
   const h = new Date();
   return [dataISO(new Date(h.getFullYear(),h.getMonth(),1)), dataISO(new Date(h.getFullYear(),h.getMonth()+1,0))];
 }
-
 function opcoes(linhas, chave, rotulo){
   const m = new Map(linhas.map(l=>[l[chave], l[rotulo||chave]]));
   return [...m.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]),"pt-BR"));
@@ -286,25 +256,26 @@ function montarPainel(){
   $("painel").innerHTML = `
     <header>
       <h1><svg width="18" height="18" viewBox="0 0 24 24" fill="#f2b705" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
-        <span id="tituloSec"></span></h1>
-      <p class="sub" id="subPeriodo"></p>
+        <span id="tituloSec">BI de Custos | Campo Largo</span></h1>
+      <p class="sub" id="subPeriodo">Carregando dados da planilha...</p>
       <div class="local" id="chipLocal" hidden>
         <span id="nomeLocal"></span>
-        <button type="button" class="btn btn-mini" id="btnTodosLocais" aria-label="Mostrar a secretaria inteira">Ver secretaria inteira</button>
+        <button type="button" class="btn btn-mini" id="btnTodosLocais">Ver secretaria inteira</button>
       </div>
     </header>
     <div class="corpo">
       <section>
-        <div class="cabecalho-sec"><h2>Secretarias</h2>
-          <button class="btn btn-mini" id="btnVerTodas" type="button">Ver todas no mapa</button></div>
+        <div class="cabecalho-sec"><h2>Secretarias e locais</h2>
+          <button class="btn btn-mini" id="btnVerTodas" type="button">Ver todos no mapa</button></div>
         <div class="campo busca-sec">
+          <label for="buscaSecretaria" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Buscar secretaria ou local</label>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa1a8" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-          <label for="buscaSecretaria" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Buscar secretaria</label>
-          <input type="search" id="buscaSecretaria" placeholder="Buscar secretaria (Enter seleciona a primeira)" autocomplete="off">
+          <input type="search" id="buscaSecretaria" placeholder="Buscar secretaria ou local (Descrição)" autocomplete="off">
         </div>
         <ul class="lista-sec" id="listaSecretarias"></ul>
         <p class="aviso" id="avisoLocais"></p>
       </section>
+
       <section>
         <h2>Período e Filtros</h2>
         <div class="filtros">
@@ -315,11 +286,37 @@ function montarPainel(){
           <div class="campo"><label for="filtroItem">Item de Custo</label>
             <select id="filtroItem"><option value="">Todos</option></select></div>
           <div class="campo cheio"><label for="filtroBusca">Buscar Unidade / Objeto</label>
-            <input type="text" id="filtroBusca" placeholder="Ex: Gabinete, Arrecadação..."></div>
+            <input type="text" id="filtroBusca" placeholder="Ex: CMEI, Escola, Secretaria..."></div>
         </div>
-        <div class="acoes" style="margin-top:10px"><button class="btn" id="btnLimpar" type="button">Limpar Filtros</button></div>
+        <div style="margin-top:10px"><button class="btn" id="btnLimpar" type="button">Limpar Filtros</button></div>
       </section>
-      <div id="resultado"></div>
+
+      <div id="estado" class="estado">Carregando dados do BI...</div>
+
+      <div id="conteudo" hidden>
+        <section class="kpis">
+          <div class="kpi grande"><small>Total Apropriado</small><b id="kTotal">R$ 0,00</b></div>
+          <div class="kpi"><small>Registros</small><b id="kRegistros">0</b></div>
+          <div class="kpi"><small>Itens de Custo</small><b id="kItens">0</b></div>
+          <div class="kpi"><small>Unidades/Objetos</small><b id="kObjetos">0</b></div>
+          <div class="kpi"><small>Departamentos</small><b id="kDeptos">0</b></div>
+          <div class="kpi" style="grid-column:span 2"><small>Média / Lançamento</small><b id="kMedia">R$ 0,00</b></div>
+        </section>
+
+        <section class="grafico" style="margin-top:16px"><h2>Evolução Mensal do Custo</h2><div class="caixa"><canvas id="graficoMensal"></canvas></div></section>
+        <section class="grafico" style="margin-top:12px"><h2>Top 10 Itens de Custo</h2><div class="caixa"><canvas id="graficoItem"></canvas></div></section>
+        <section class="grafico" style="margin-top:12px"><h2>Top 10 Departamentos</h2><div class="caixa"><canvas id="graficoDepartamento"></canvas></div></section>
+
+        <section style="margin-top:16px">
+          <h2>Lançamentos</h2>
+          <div class="tabela-wrap">
+            <table><thead><tr><th>Data</th><th>Unidade / Objeto</th><th>Item de Custo</th><th class="num">Valor</th></tr></thead>
+            <tbody id="tbody"></tbody></table>
+          </div>
+          <p class="nota" id="notaTabela"></p>
+        </section>
+        <div class="origem" style="margin-top:12px"><span class="ponto"></span>Dados da planilha publicada do BI</div>
+      </div>
     </div>`;
 
   ["dataInicial","dataFinal","filtroDepartamento","filtroItem"].forEach(id=>$(id).addEventListener("change", atualizarResultado));
@@ -336,16 +333,12 @@ function montarPainel(){
   });
   $("btnTodosLocais").addEventListener("click", ()=> selecionar(centroAtual, true, true, null));
 
-  // Busca de secretaria: filtra a lista sem acento; Enter seleciona a primeira; setas movem entre os itens
+  // Busca: filtra sem acento; Enter seleciona o primeiro resultado; setas percorrem a lista
   $("buscaSecretaria").addEventListener("input", renderizarLista);
   $("buscaSecretaria").addEventListener("keydown", ev=>{
-    if(ev.key==="Enter"){
-      const primeira = $("listaSecretarias").querySelector("button");
-      if(primeira){ ev.preventDefault(); primeira.click(); }
-    } else if(ev.key==="ArrowDown"){
-      const primeira = $("listaSecretarias").querySelector("button");
-      if(primeira){ ev.preventDefault(); primeira.focus(); }
-    }
+    const primeira = $("listaSecretarias").querySelector("button");
+    if(ev.key==="Enter" && primeira){ ev.preventDefault(); primeira.click(); }
+    else if(ev.key==="ArrowDown" && primeira){ ev.preventDefault(); primeira.focus(); }
   });
   $("listaSecretarias").addEventListener("keydown", ev=>{
     const botoes = [...$("listaSecretarias").querySelectorAll("button")];
@@ -358,21 +351,26 @@ function montarPainel(){
 
 function renderizarLista(){
   const termo = norm($("buscaSecretaria").value.trim().replace(/^secretaria\s+(municipal\s+)?(d[aeo]s?\s+)?/i,""));
-  const itens = CENTROS_CUSTO.map((c,i)=>[c,i]).filter(([c])=>!termo || norm(c.nome).includes(termo));
-  $("listaSecretarias").innerHTML = itens.length ? itens.map(([c,i])=>`
-    <li><button type="button" data-i="${i}" aria-pressed="${i===centroAtual}"><span class="bolinha"></span>${esc(c.nome.replace(/^Secretaria Municipal d[aeo]\s+/,""))}<span class="qtd">${dadosCentro[i].locais.length ? dadosCentro[i].locais.length+" no mapa" : ""}</span></button></li>`).join("")
-    : `<li class="sem-resultado">Nenhuma secretaria encontrada.</li>`;
+  const secs = secretarias.map((c,i)=>[c,i]).filter(([c])=>!termo || norm(c.nome).includes(termo));
+  // Com algo digitado, a busca também procura nos objetos de custo (coluna Descrição) que estão no mapa
+  const locais = termo ? secretarias.flatMap((d,i)=>d.locais.map(l=>[l,i])).filter(([l])=>norm(l.nome).includes(termo)).slice(0,30) : [];
+  let html = secs.map(([c,i])=>`
+    <li><button type="button" data-i="${i}" aria-pressed="${i===centroAtual && !objetoSel}"><span class="bolinha"></span>${esc(c.nome.replace(/^Secretaria Municipal d[aeo]\s+/,""))}<span class="qtd">${c.locais.length ? c.locais.length+" no mapa" : ""}</span></button></li>`).join("");
+  if(locais.length) html += `<li class="grupo">Locais no mapa</li>` + locais.map(([l,i])=>`
+    <li><button type="button" data-i="${i}" data-cod="${esc(l.cod)}" aria-pressed="${l.cod===objetoSel}"><span class="bolinha"></span>${esc(l.nome)}</button></li>`).join("");
+  $("listaSecretarias").innerHTML = html || `<li class="sem-resultado">${secretarias.length ? "Nada encontrado." : "Aguardando a planilha..."}</li>`;
   $("listaSecretarias").querySelectorAll("button").forEach(b=>
-    b.addEventListener("click", ()=> selecionar(Number(b.dataset.i), true)));
+    b.addEventListener("click", ()=> selecionar(Number(b.dataset.i), true, false, b.dataset.cod || null)));
 }
 
-// Seleciona uma secretaria: atualiza título, opções dos filtros, resultado e destaca o marcador.
+// Seleciona uma secretaria (e, opcionalmente, um local dela): atualiza filtros, indicadores e marcadores
 function selecionar(i, voar, manterFiltros, objeto){
+  if(i<0 || !secretarias[i]) return;
   const mudouSec = i !== centroAtual;
   centroAtual = i;
   objetoSel = objeto === undefined ? (mudouSec ? null : objetoSel) : objeto;
-  const cfg = CENTROS_CUSTO[i], d = dadosCentro[i];
-  $("tituloSec").textContent = cfg.nome;
+  const d = secretarias[i];
+  $("tituloSec").textContent = d.nome;
 
   const local = objetoSel ? d.locais.find(l=>l.cod===objetoSel) : null;
   $("chipLocal").hidden = !local;
@@ -399,52 +397,104 @@ function selecionar(i, voar, manterFiltros, objeto){
   }
 }
 
+function atualizarAviso(){
+  const total = secretarias.reduce((t,d)=>t+d.locais.length,0);
+  const d = secretarias[centroAtual];
+  let msg = "";
+  if(!total) msg = "Nenhum objeto de custo com Latitude e Longitude preenchidas na aba Objetos.";
+  else if(d && !d.locais.length) msg = "Esta secretaria ainda não tem objetos com Latitude e Longitude preenchidas.";
+  else if(d) msg = `${d.locais.length} ${d.locais.length===1?"local desta secretaria está":"locais desta secretaria estão"} no mapa. Clique num marcador para ver só os custos dele.`;
+  $("avisoLocais").textContent = msg;
+}
+
+// ================= Indicadores, gráficos e tabela (mesmos cálculos do BI) =================
+function agrupar(linhas, campo, limite){
+  const m = {};
+  linhas.forEach(l=> m[l[campo]] = (m[l[campo]]||0) + l.valor);
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,limite);
+}
+function agruparPorMes(linhas){
+  const m = {};
+  linhas.forEach(l=>{
+    if(!l.data) return;
+    const k = `${l.data.getFullYear()}-${String(l.data.getMonth()+1).padStart(2,"0")}`;
+    m[k] = (m[k]||0) + l.valor;
+  });
+  return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0]));
+}
+function desenhar(id, config){
+  if(graficos[id]) graficos[id].destroy();
+  graficos[id] = new Chart($(id), config);
+}
+function opcoesGrafico(extra){
+  return Object.assign({
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => moeda(ctx.raw) } } },
+    scales:{
+      x:{ ticks:{color:"#c9ced3", font:{size:10}}, grid:{color:"rgba(255,255,255,.08)"} },
+      y:{ ticks:{color:"#c9ced3", font:{size:10}}, grid:{color:"rgba(255,255,255,.08)"} }
+    }
+  }, extra||{});
+}
+
 function atualizarResultado(){
-  const d = dadosCentro[centroAtual];
+  const d = secretarias[centroAtual];
+  if(!d) return;
   const ini = $("dataInicial").value, fim = $("dataFinal").value;
   const dep = $("filtroDepartamento").value, item = $("filtroItem").value;
   const busca = norm($("filtroBusca").value.trim());
 
   const sel = d.linhas.filter(l=>{
     const ds = dataISO(l.data);
-    return (!ini || ds>=ini) && (!fim || ds<=fim) &&
+    return (!ini || (ds && ds>=ini)) && (!fim || (ds && ds<=fim)) &&
       (!objetoSel || l.cod===objetoSel || l.cod.startsWith(objetoSel+".")) &&
       (!dep || l.departamentoCodigo===dep) && (!item || l.itemCusto===item) &&
-      (!busca || norm(l.objetoNome).includes(busca) || norm(l.departamento).includes(busca));
+      (!busca || norm(l.objetoNome).includes(busca) || norm(l.departamento).includes(busca) || norm(d.nome).includes(busca));
   });
 
-  const total = sel.reduce((t,l)=>t+l.valor,0);
-  const porItem = {};
-  sel.forEach(l=> porItem[l.itemCusto] = (porItem[l.itemCusto]||0)+l.valor);
-  const top = Object.entries(porItem).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maior = top.length ? top[0][1] : 1;
   const fmt = s => s ? s.split("-").reverse().join("/") : "…";
   $("subPeriodo").textContent = `Custos apropriados de ${fmt(ini)} a ${fmt(fim)}`;
 
-  $("resultado").innerHTML = sel.length ? `
-    <div class="kpi"><small>Total apropriado</small><strong>${moeda(total)}</strong></div>
-    <div class="linha2" style="margin:14px 0">
-      <div class="mini"><small>Lançamentos</small><b>${sel.length.toLocaleString("pt-BR")}</b></div>
-      <div class="mini"><small>Média por lançamento</small><b>${moeda(total/sel.length)}</b></div>
-    </div>
-    <h2>Principais itens de custo</h2>
-    <ul class="itens">${top.map(([n,v])=>`
-      <li><span class="nome" title="${esc(n)}">${esc(n)}</span><span class="val">${moeda(v)}</span>
-      <span class="barra"><i style="width:${Math.max(3,(v/maior)*100).toFixed(1)}%"></i></span></li>`).join("")}</ul>
-    <div class="origem" style="margin-top:14px"><span class="ponto ${d.origem==="real"?"":"sim"}"></span>
-      ${d.origem==="real" ? "Dados da planilha publicada" : "Valores de demonstração (planilha não acessível neste navegador)"}</div>`
-  : `<p class="vazio">Nenhum lançamento encontrado com os filtros aplicados.</p>`;
-}
+  if(!sel.length){
+    $("estado").hidden = false;
+    $("estado").textContent = "Nenhum lançamento encontrado com os filtros aplicados.";
+    $("conteudo").hidden = true;
+    return;
+  }
+  $("estado").hidden = true;
+  $("conteudo").hidden = false;
 
-function atualizarAviso(){
-  const total = dadosCentro.reduce((t,d)=>t+d.locais.length,0);
-  const d = dadosCentro[centroAtual];
-  let msg = "";
-  if(!planilhaLida) msg = "Planilha não acessível neste navegador: sem marcadores.";
-  else if(!total) msg = "Nenhum objeto de custo com Latitude e Longitude preenchidas na aba Objetos.";
-  else if(!d.locais.length) msg = "Esta secretaria ainda não tem objetos com Latitude e Longitude preenchidas.";
-  else msg = `${d.locais.length} ${d.locais.length===1?"local desta secretaria está":"locais desta secretaria estão"} no mapa. Clique num marcador para ver só os custos dele.`;
-  $("avisoLocais").textContent = msg;
+  const total = sel.reduce((t,l)=>t+l.valor,0);
+  $("kTotal").textContent = moeda(total);
+  $("kRegistros").textContent = sel.length.toLocaleString("pt-BR");
+  $("kItens").textContent = new Set(sel.map(l=>l.itemCusto)).size.toLocaleString("pt-BR");
+  $("kObjetos").textContent = new Set(sel.map(l=>l.cod)).size.toLocaleString("pt-BR");
+  $("kDeptos").textContent = new Set(sel.map(l=>l.departamentoCodigo)).size.toLocaleString("pt-BR");
+  $("kMedia").textContent = moeda(total/sel.length);
+
+  const mensal = agruparPorMes(sel);
+  desenhar("graficoMensal", { type:"line",
+    data:{ labels:mensal.map(([k])=>{const [a,m]=k.split("-");return `${m}/${a}`;}),
+      datasets:[{ label:"Custo Total (R$)", data:mensal.map(([,v])=>v), borderColor:"#f2b705",
+        backgroundColor:"rgba(242,183,5,.18)", fill:true, tension:.3, borderWidth:2, pointRadius:3 }] },
+    options:opcoesGrafico() });
+
+  const itens = agrupar(sel,"itemCusto",10);
+  desenhar("graficoItem", { type:"bar",
+    data:{ labels:itens.map(i=>i[0]), datasets:[{ label:"Valor Apropriado", data:itens.map(i=>i[1]), backgroundColor:PALETA_CORES.slice(0,10) }] },
+    options:opcoesGrafico({ indexAxis:"y" }) });
+
+  const deps = agrupar(sel,"departamento",10);
+  desenhar("graficoDepartamento", { type:"bar",
+    data:{ labels:deps.map(i=>i[0]), datasets:[{ label:"Valor Apropriado", data:deps.map(i=>i[1]), backgroundColor:PALETA_CORES.slice(2,12) }] },
+    options:opcoesGrafico({ indexAxis:"y" }) });
+
+  const recentes = [...sel].sort((a,b)=>(b.data||0)-(a.data||0)).slice(0,LINHAS_TABELA);
+  $("tbody").innerHTML = recentes.map(l=>`
+    <tr><td>${esc(dataBR(l.data))}</td><td>${esc(l.objetoNome)}</td><td>${esc(l.itemCusto)}</td><td class="num"><b>${moeda(l.valor)}</b></td></tr>`).join("");
+  $("notaTabela").textContent = sel.length>LINHAS_TABELA
+    ? `Mostrando os ${LINHAS_TABELA} lançamentos mais recentes de ${sel.length.toLocaleString("pt-BR")}.`
+    : `${sel.length.toLocaleString("pt-BR")} lançamento(s).`;
 }
 
 // ================= Mapa (Leaflet, sem token) =================
@@ -470,10 +520,8 @@ function destacarMarcador(m, secSel, localSel){
 }
 
 function iniciarMapa(){
-  mapa = L.map("mapa", { zoomSnap:0, zoomDelta:0.5, maxZoom:20, zoomControl:false })
-          .setView(CENTRO_INICIAL, ZOOM_INICIAL);
+  mapa = L.map("mapa", { zoomSnap:0, zoomDelta:0.5, maxZoom:20, zoomControl:false }).setView(CENTRO_INICIAL, ZOOM_INICIAL);
   L.control.zoom({ position:"topright" }).addTo(mapa);
-
   const ruas = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     { maxZoom:20, maxNativeZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(mapa);
   const satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -481,11 +529,11 @@ function iniciarMapa(){
   L.control.layers({ "Mapa de ruas":ruas, "Satélite":satelite }, null, { position:"topright" }).addTo(mapa);
 }
 
-// Cria um marcador por objeto de custo com coordenadas preenchidas na planilha
+// Um marcador por objeto de custo com Latitude e Longitude preenchidas na aba Objetos
 function criarMarcadores(){
   marcadores.forEach(m=>m.remove());
   marcadores.length = 0;
-  dadosCentro.forEach((d,secIdx)=>{
+  secretarias.forEach((d,secIdx)=>{
     d.locais.forEach(l=>{
       l.secIdx = secIdx;
       const m = L.marker([l.lat,l.lng], { icon:criarIcone(false,false), title:l.nome, keyboard:true }).addTo(mapa);
@@ -497,25 +545,30 @@ function criarMarcadores(){
 }
 
 // ================= Início =================
-let planilhaLida = false;
-(async function(){
-  iniciarMapa();
-  CENTROS_CUSTO.forEach((cfg,i)=> dadosCentro[i] = dadosSimulados(cfg));   // painel aparece de imediato
-  montarPainel();
-  selecionar(0, false);
+async function iniciar(){
+  $("estado").hidden = false; $("estado").classList.remove("erro");
+  $("estado").textContent = "Carregando dados do BI...";
   try{
-    const planilha = await carregarPlanilha();
-    planilhaLida = true;
-    CENTROS_CUSTO.forEach((cfg,i)=>{
-      try{ dadosCentro[i] = dadosDoCentro(cfg, planilha); }
-      catch(e){ console.warn("Valores de demonstração:", e.message); }
-    });
-    criarMarcadores();
-    selecionar(centroAtual, false, true);   // reaplica com dados reais, mantendo os filtros escolhidos
+    secretarias = await carregarPlanilha();
   }catch(e){
-    console.warn("Usando valores de demonstração:", e.message);
+    console.warn("Falha ao ler a planilha:", e);
+    $("subPeriodo").textContent = "Dados indisponíveis";
+    $("estado").classList.add("erro");
+    $("estado").innerHTML = `Não foi possível ler a planilha publicada (${esc(e.message)}). Verifique a conexão e tente de novo. <button class="btn btn-mini" id="btnRetry" type="button">Tentar novamente</button>`;
+    $("btnRetry").addEventListener("click", iniciar);
+    return;
   }
-})();
+  carregado = true;
+  criarMarcadores();
+  // Abre na Fazenda, se existir; senão, na primeira secretaria que tenha local no mapa
+  let i = secretarias.findIndex(c=>/fazenda/i.test(c.nome));
+  if(i<0) i = Math.max(0, secretarias.findIndex(c=>c.locais.length));
+  selecionar(i, false);
+}
+
+iniciarMapa();
+montarPainel();
+iniciar();
 </script>
 </body>
 </html>
