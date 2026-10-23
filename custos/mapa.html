@@ -179,6 +179,22 @@ const chaveCol = k => norm(k).replace(/[^a-z0-9]/g,"");
 function acharChave(linha, regex){
   return Object.keys(linha).find(k => regex.test(chaveCol(k)));
 }
+// Os códigos têm 10 níveis preenchidos com 0000 à direita; o objeto "0002.0001.0000..." abrange tudo que começa com "0002.0001"
+function prefixoObjeto(cod){
+  const p = String(cod).split(".");
+  while(p.length>2 && /^0+$/.test(p[p.length-1])) p.pop();
+  return p.join(".");
+}
+const pertenceAoObjeto = (codLinha, codObjeto) => {
+  const pre = prefixoObjeto(codObjeto);
+  return codLinha===codObjeto || codLinha===pre || codLinha.startsWith(pre+".");
+};
+// Nível hierárquico do código: 0002 = 1, 0002.0001 = 2 (secretaria), 0002.0001.0001 = 3 (departamento)...
+function nivelDoCodigo(cod){
+  const p = String(cod).split(".");
+  while(p.length && /^0+$/.test(p[p.length-1])) p.pop();
+  return p.length;
+}
 const vazio = v => v===null || v===undefined || String(v).trim()==="";
 
 // Converte uma coordenada para número. Aceita número, texto com vírgula ou ponto decimal, sinal "−",
@@ -224,15 +240,10 @@ async function carregarPlanilha(){
   const resp = await fetch(PUB_XLSX_URL, { cache:"no-store" });
   if(!resp.ok) throw new Error("HTTP "+resp.status);
   const wb = XLSX.read(await resp.arrayBuffer(), { type:"array", cellDates:true });
-  if(!wb.Sheets["Dados"] || !wb.Sheets["Secretarias"]) throw new Error('Abas "Dados" e "Secretarias" não encontradas.');
+  if(!wb.Sheets["Dados"] || !wb.Sheets["Objetos"]) throw new Error('Abas "Dados" e "Objetos" não encontradas.');
 
+  // A estrutura vem só da aba Objetos: nível 2 = secretaria, nível 3 = departamento, demais = unidades/objetos.
   const secPorCodigo = {}, deptMap = {}, objMap = {}, locais = [];
-  XLSX.utils.sheet_to_json(wb.Sheets["Secretarias"]).forEach(r=>{
-    const c = r["Objeto de Custo - Secretaria"]; if(c) secPorCodigo[String(c).trim()] = r["Secretaria"] || "";
-  });
-  if(wb.Sheets["Departamentos"]) XLSX.utils.sheet_to_json(wb.Sheets["Departamentos"]).forEach(r=>{
-    const c = r["Objeto de Custo - Departamento"]; if(c) deptMap[String(c).trim()] = r["Departamento"] || "";
-  });
   // Aba Objetos: Descrição + Latitude/Longitude. Só entra no mapa quem tem as duas coordenadas preenchidas.
   diagObjetos = { lidos:0, comAmbas:0, invalidos:[], colLat:null, colLng:null, colunas:[] };
   if(wb.Sheets["Objetos"]){
@@ -250,6 +261,9 @@ async function carregarPlanilha(){
       const cod = String(c).trim();
       const nome = (kDesc && !vazio(r[kDesc])) ? String(r[kDesc]).trim() : cod;
       objMap[cod] = nome;
+      const nivel = nivelDoCodigo(cod), pre = prefixoObjeto(cod);
+      if(nivel===2) secPorCodigo[pre] = nome;
+      if(nivel===3) deptMap[pre] = nome;
       diagObjetos.lidos++;
       const bLat = diagObjetos.colLat ? r[diagObjetos.colLat] : null, bLng = diagObjetos.colLng ? r[diagObjetos.colLng] : null;
       if(vazio(bLat) && vazio(bLng)) return;               // sem coordenadas: não aparece no mapa
@@ -517,7 +531,7 @@ function atualizarResultado(){
   const sel = d.linhas.filter(l=>{
     const ds = dataISO(l.data);
     return (!ini || (ds && ds>=ini)) && (!fim || (ds && ds<=fim)) &&
-      (!objetoSel || l.cod===objetoSel || l.cod.startsWith(objetoSel+".")) &&
+      (!objetoSel || pertenceAoObjeto(l.cod, objetoSel)) &&
       (!dep || l.departamentoCodigo===dep) && (!item || l.itemCusto===item) &&
       (!busca || norm(l.objetoNome).includes(busca) || norm(l.departamento).includes(busca) || norm(d.nome).includes(busca));
   });
