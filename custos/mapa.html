@@ -87,6 +87,12 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 .lista-sec .bolinha{width:10px;height:10px;border-radius:50%;background:var(--amarelo);flex:none;border:2px solid var(--grafite)}
 .lista-sec [aria-pressed="false"] .bolinha{background:var(--muted)}
 .lista-sec button:focus-visible{outline:2px solid var(--amarelo);outline-offset:1px}
+.aviso{font-size:.74rem;color:var(--muted);margin:8px 0 0;line-height:1.4}
+.local{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;padding:6px 8px;
+  border-radius:5px;background:var(--grafite-2);border-left:3px solid var(--amarelo);font-size:.8rem}
+.local[hidden]{display:none}
+.local span{min-width:0;font-weight:600}
+.lista-sec .qtd{margin-left:auto;font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
 .sem-resultado{font-size:.78rem;color:var(--muted);padding:6px 8px}
 .cabecalho-sec{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .cabecalho-sec h2{margin:0}
@@ -117,22 +123,22 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 // ================= Configuração =================
 const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=xlsx";
 
-// Centros de custos exibidos no mapa, um marcador por secretaria. Para incluir outra, acrescente uma entrada.
+// Secretarias da lista de seleção. Os marcadores NÃO ficam aqui: vêm da aba Objetos da planilha, uma pin por
+// objeto de custo com as colunas Latitude e Longitude preenchidas. Para incluir outra secretaria, acrescente uma entrada.
 // "filtro" localiza a secretaria na aba Secretarias da planilha (por nome); como alternativa, use
 // codigoPrefixo com o código do objeto de custo (ex.: "0002.0015").
-// O Leaflet usa longitude entre -180 e 180: LatLng(-25.454614, 310.480743) equivale a lng 310.480743 - 360.
 const CENTROS_CUSTO = [
-  { nome:"Secretaria Municipal da Fazenda",        lat:-25.454614, lng:310.480743-360, filtro:/fazenda/i,
+  { nome:"Secretaria Municipal da Fazenda",        filtro:/fazenda/i,
     base:1.0 },
-  { nome:"Secretaria Municipal de Saúde",          lat:-25.454832, lng:-49.518522,   filtro:/sa[uú]de/i,
+  { nome:"Secretaria Municipal de Saúde",          filtro:/sa[uú]de/i,
     base:3.4 },
-  { nome:"Secretaria Municipal de Administração",  lat:-25.454818, lng:-49.518294,   filtro:/administra[cç][aã]o/i,
+  { nome:"Secretaria Municipal de Administração",  filtro:/administra[cç][aã]o/i,
     base:1.6 },
-  { nome:"Secretaria Municipal de Educação",       lat:-25.455224, lng:-49.518052,   filtro:/educa[cç][aã]o/i,
+  { nome:"Secretaria Municipal de Educação",       filtro:/educa[cç][aã]o/i,
     base:5.2 },
-  { nome:"Secretaria Municipal de Meio Ambiente",  lat:-25.476121, lng:-49.527287,   filtro:/meio\s*ambiente/i,
+  { nome:"Secretaria Municipal de Meio Ambiente",  filtro:/meio\s*ambiente/i,
     base:0.7 },
-  { nome:"Secretaria Municipal de Cultura",        lat:-25.460802, lng:-49.528041,   filtro:/cultura/i,
+  { nome:"Secretaria Municipal de Cultura",        filtro:/cultura/i,
     base:0.5 }
 ];
 // Valores de demonstração (usados só se a planilha não puder ser lida); "base" escala os totais de cada secretaria
@@ -142,6 +148,8 @@ const ITENS_SIMULADOS = [
   ["Material de Expediente", 52310.84], ["Serviços de Informática", 41890.00]
 ];
 const ZOOM_INICIAL = 18.65;
+// Vista inicial: zoom na prefeitura
+const CENTRO_INICIAL = [-25.455052, -49.5179145];
 
 // ================= Utilitários =================
 const $ = id => document.getElementById(id);
@@ -172,6 +180,22 @@ function dataISO(d){
 // dadosCentro[i] = { origem, linhas:[{data,departamentoCodigo,departamento,objetoNome,itemCusto,valor}] }
 const dadosCentro = [];
 let centroAtual = 0;
+let objetoSel = null;   // código do objeto de custo (local) selecionado pelo marcador
+
+// Procura a coluna pelo cabeçalho, sem diferenciar maiúsculas, acentos ou espaços
+function colunaPor(linha, regex){
+  const k = Object.keys(linha).find(k => regex.test(norm(k).replace(/\s+/g,"")));
+  return k === undefined ? null : linha[k];
+}
+// Converte para número válido ou devolve null quando vazia/inválida. Aceita vírgula decimal.
+function coordenada(v, ehLongitude){
+  if(v===null || v===undefined || String(v).trim()==="") return null;
+  let n = typeof v==="number" ? v : Number(String(v).trim().replace(",","."));
+  if(!Number.isFinite(n) || n===0) return null;
+  if(ehLongitude && n>180) n -= 360;   // ex.: 310.480743 vira -49.519257 (formato do Google Maps/Leaflet)
+  if(Math.abs(n) > (ehLongitude ? 180 : 90)) return null;
+  return n;
+}
 
 let wbCache = null;
 async function carregarPlanilha(){
@@ -188,8 +212,14 @@ async function carregarPlanilha(){
   if(wb.Sheets["Departamentos"]) XLSX.utils.sheet_to_json(wb.Sheets["Departamentos"]).forEach(r=>{
     const c = r["Objeto de Custo - Departamento"]; if(c) deptMap[String(c).trim()] = r["Departamento"] || "";
   });
-  if(wb.Sheets["Objetos"]) XLSX.utils.sheet_to_json(wb.Sheets["Objetos"]).forEach(r=>{
-    const c = r["Objeto de Custo"]; if(c) objMap[String(c).trim()] = r["Descrição"] || "";
+  const locais = [];   // objetos de custo com Latitude e Longitude preenchidas
+  if(wb.Sheets["Objetos"]) XLSX.utils.sheet_to_json(wb.Sheets["Objetos"], { defval:null }).forEach(r=>{
+    const c = r["Objeto de Custo"]; if(!c) return;
+    const cod = String(c).trim();
+    const nome = r["Descrição"] || cod;
+    objMap[cod] = nome;
+    const lat = coordenada(colunaPor(r, /^lat(itude)?$/)), lng = coordenada(colunaPor(r, /^(lng|lon|long|longitude)$/), true);
+    if(lat!==null && lng!==null) locais.push({ cod, nome, secCod:cod.split(".").slice(0,2).join("."), lat, lng });
   });
   const linhas = XLSX.utils.sheet_to_json(wb.Sheets["Dados"], { defval:null })
     .filter(r => r["Objeto de Custo"])
@@ -199,6 +229,7 @@ async function carregarPlanilha(){
       const dep = p.slice(0,3).join(".");
       return {
         secCod: p.slice(0,2).join("."),
+        cod,
         data: paraData(r["Data"]),
         departamentoCodigo: dep,
         departamento: deptMap[dep] || "Não identificado",
@@ -208,7 +239,7 @@ async function carregarPlanilha(){
       };
     })
     .filter(r => r.data);
-  wbCache = { secPorCodigo, linhas };
+  wbCache = { secPorCodigo, linhas, locais };
   return wbCache;
 }
 
@@ -219,7 +250,7 @@ function dadosDoCentro(cfg, planilha){
   if(!alvo.length) throw new Error("Secretaria não encontrada na planilha: "+cfg.nome);
   const linhas = planilha.linhas.filter(r => alvo.includes(r.secCod));
   if(!linhas.length) throw new Error("Sem lançamentos: "+cfg.nome);
-  return { origem:"real", linhas };
+  return { origem:"real", linhas, locais: planilha.locais.filter(l => alvo.includes(l.secCod)) };
 }
 
 // Sem acesso à planilha: lançamentos fictícios do mês atual, só para a prévia
@@ -230,13 +261,13 @@ function dadosSimulados(cfg){
     for(let i=0;i<4;i++){
       linhas.push({
         data:new Date(h.getFullYear(),h.getMonth(),3+i*6+k),
-        departamentoCodigo: i%2 ? "SIM.02" : "SIM.01",
+        cod:"SIM", departamentoCodigo: i%2 ? "SIM.02" : "SIM.01",
         departamento: i%2 ? "Departamento Administrativo" : "Departamento Técnico",
         objetoNome: cfg.nome, itemCusto:item, valor: total*cfg.base/4
       });
     }
   });
-  return { origem:"simulado", linhas };
+  return { origem:"simulado", linhas, locais:[] };
 }
 
 // ================= Filtros (mesmos do dashboard.html) =================
@@ -257,6 +288,10 @@ function montarPainel(){
       <h1><svg width="18" height="18" viewBox="0 0 24 24" fill="#f2b705" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
         <span id="tituloSec"></span></h1>
       <p class="sub" id="subPeriodo"></p>
+      <div class="local" id="chipLocal" hidden>
+        <span id="nomeLocal"></span>
+        <button type="button" class="btn btn-mini" id="btnTodosLocais" aria-label="Mostrar a secretaria inteira">Ver secretaria inteira</button>
+      </div>
     </header>
     <div class="corpo">
       <section>
@@ -268,6 +303,7 @@ function montarPainel(){
           <input type="search" id="buscaSecretaria" placeholder="Buscar secretaria (Enter seleciona a primeira)" autocomplete="off">
         </div>
         <ul class="lista-sec" id="listaSecretarias"></ul>
+        <p class="aviso" id="avisoLocais"></p>
       </section>
       <section>
         <h2>Período e Filtros</h2>
@@ -294,7 +330,11 @@ function montarPainel(){
     $("filtroDepartamento").value=""; $("filtroItem").value=""; $("filtroBusca").value="";
     atualizarResultado();
   });
-  $("btnVerTodas").addEventListener("click", ()=> mapa.fitBounds(CENTROS_CUSTO.map(c=>[c.lat,c.lng]), { padding:[60,60], maxZoom:17 }));
+  $("btnVerTodas").addEventListener("click", ()=>{
+    const pts = marcadores.map(m=>m.getLatLng());
+    if(pts.length) mapa.fitBounds(pts, { padding:[60,60], maxZoom:17 });
+  });
+  $("btnTodosLocais").addEventListener("click", ()=> selecionar(centroAtual, true, true, null));
 
   // Busca de secretaria: filtra a lista sem acento; Enter seleciona a primeira; setas movem entre os itens
   $("buscaSecretaria").addEventListener("input", renderizarLista);
@@ -320,17 +360,23 @@ function renderizarLista(){
   const termo = norm($("buscaSecretaria").value.trim().replace(/^secretaria\s+(municipal\s+)?(d[aeo]s?\s+)?/i,""));
   const itens = CENTROS_CUSTO.map((c,i)=>[c,i]).filter(([c])=>!termo || norm(c.nome).includes(termo));
   $("listaSecretarias").innerHTML = itens.length ? itens.map(([c,i])=>`
-    <li><button type="button" data-i="${i}" aria-pressed="${i===centroAtual}"><span class="bolinha"></span>${esc(c.nome.replace(/^Secretaria Municipal d[aeo]\s+/,""))}</button></li>`).join("")
+    <li><button type="button" data-i="${i}" aria-pressed="${i===centroAtual}"><span class="bolinha"></span>${esc(c.nome.replace(/^Secretaria Municipal d[aeo]\s+/,""))}<span class="qtd">${dadosCentro[i].locais.length ? dadosCentro[i].locais.length+" no mapa" : ""}</span></button></li>`).join("")
     : `<li class="sem-resultado">Nenhuma secretaria encontrada.</li>`;
   $("listaSecretarias").querySelectorAll("button").forEach(b=>
     b.addEventListener("click", ()=> selecionar(Number(b.dataset.i), true)));
 }
 
 // Seleciona uma secretaria: atualiza título, opções dos filtros, resultado e destaca o marcador.
-function selecionar(i, voar, manterFiltros){
+function selecionar(i, voar, manterFiltros, objeto){
+  const mudouSec = i !== centroAtual;
   centroAtual = i;
+  objetoSel = objeto === undefined ? (mudouSec ? null : objetoSel) : objeto;
   const cfg = CENTROS_CUSTO[i], d = dadosCentro[i];
   $("tituloSec").textContent = cfg.nome;
+
+  const local = objetoSel ? d.locais.find(l=>l.cod===objetoSel) : null;
+  $("chipLocal").hidden = !local;
+  if(local) $("nomeLocal").textContent = local.nome;
 
   const dep = manterFiltros ? $("filtroDepartamento").value : "";
   const item = manterFiltros ? $("filtroItem").value : "";
@@ -343,8 +389,14 @@ function selecionar(i, voar, manterFiltros){
 
   atualizarResultado();
   renderizarLista();
-  marcadores.forEach((m,k)=> destacarMarcador(m, CENTROS_CUSTO[k], k===i));
-  if(voar) mapa.flyTo([cfg.lat, cfg.lng], Math.max(mapa.getZoom(), ZOOM_INICIAL), { duration:.8 });
+  atualizarAviso();
+  marcadores.forEach(m=> destacarMarcador(m, m.local.secIdx===i, m.local.cod===objetoSel));
+
+  if(voar){
+    const pontos = (local ? [local] : d.locais).map(l=>[l.lat,l.lng]);
+    if(pontos.length===1) mapa.flyTo(pontos[0], Math.max(mapa.getZoom(), ZOOM_INICIAL), { duration:.8 });
+    else if(pontos.length) mapa.flyToBounds(pontos, { padding:[80,80], maxZoom:ZOOM_INICIAL, duration:.8 });
+  }
 }
 
 function atualizarResultado(){
@@ -356,6 +408,7 @@ function atualizarResultado(){
   const sel = d.linhas.filter(l=>{
     const ds = dataISO(l.data);
     return (!ini || ds>=ini) && (!fim || ds<=fim) &&
+      (!objetoSel || l.cod===objetoSel || l.cod.startsWith(objetoSel+".")) &&
       (!dep || l.departamentoCodigo===dep) && (!item || l.itemCusto===item) &&
       (!busca || norm(l.objetoNome).includes(busca) || norm(l.departamento).includes(busca));
   });
@@ -383,31 +436,42 @@ function atualizarResultado(){
   : `<p class="vazio">Nenhum lançamento encontrado com os filtros aplicados.</p>`;
 }
 
+function atualizarAviso(){
+  const total = dadosCentro.reduce((t,d)=>t+d.locais.length,0);
+  const d = dadosCentro[centroAtual];
+  let msg = "";
+  if(!planilhaLida) msg = "Planilha não acessível neste navegador: sem marcadores.";
+  else if(!total) msg = "Nenhum objeto de custo com Latitude e Longitude preenchidas na aba Objetos.";
+  else if(!d.locais.length) msg = "Esta secretaria ainda não tem objetos com Latitude e Longitude preenchidas.";
+  else msg = `${d.locais.length} ${d.locais.length===1?"local desta secretaria está":"locais desta secretaria estão"} no mapa. Clique num marcador para ver só os custos dele.`;
+  $("avisoLocais").textContent = msg;
+}
+
 // ================= Mapa (Leaflet, sem token) =================
 let mapa = null;
 const marcadores = [];
 
-function criarIcone(sel){
+function criarIcone(secSel, localSel){
+  const cor = secSel ? "#f2b705" : "#9aa1a8";
   return L.divIcon({
-    className:"pino"+(sel?" sel":""), iconSize:[36,46], iconAnchor:[18,46], tooltipAnchor:[0,-40],
+    className:"pino"+(localSel?" sel":""), iconSize:[36,46], iconAnchor:[18,46], tooltipAnchor:[0,-40],
     html:`<svg width="36" height="46" viewBox="0 0 36 46" aria-hidden="true">
-      <path d="M18 1C9 1 2 8 2 17c0 12 16 28 16 28s16-16 16-28C34 8 27 1 18 1z" fill="${sel?"#f2b705":"#9aa1a8"}" stroke="#212529" stroke-width="2"/>
+      <path d="M18 1C9 1 2 8 2 17c0 12 16 28 16 28s16-16 16-28C34 8 27 1 18 1z" fill="${cor}" stroke="#212529" stroke-width="2"/>
       <circle cx="18" cy="17" r="6.5" fill="#212529"/></svg>`
   });
 }
-// Só o marcador selecionado mantém o rótulo aberto; os demais mostram o nome ao passar o mouse
-function destacarMarcador(m, cfg, sel){
-  m.setIcon(criarIcone(sel));
-  m.setZIndexOffset(sel ? 1000 : 0);
+// Marcadores da secretaria selecionada ficam amarelos; o local selecionado fica maior, com o nome aberto
+function destacarMarcador(m, secSel, localSel){
+  m.setIcon(criarIcone(secSel, localSel));
+  m.setZIndexOffset(localSel ? 1000 : (secSel ? 500 : 0));
   m.unbindTooltip();
-  m.bindTooltip(esc(cfg.nome), { permanent:sel, direction:"top", className:"pino-rotulo" });
-  if(sel) m.openTooltip();
+  m.bindTooltip(esc(m.local.nome), { permanent:localSel, direction:"top", className:"pino-rotulo" });
+  if(localSel) m.openTooltip();
 }
 
 function iniciarMapa(){
-  const c = CENTROS_CUSTO[0];
   mapa = L.map("mapa", { zoomSnap:0, zoomDelta:0.5, maxZoom:20, zoomControl:false })
-          .setView([c.lat, c.lng], ZOOM_INICIAL);
+          .setView(CENTRO_INICIAL, ZOOM_INICIAL);
   L.control.zoom({ position:"topright" }).addTo(mapa);
 
   const ruas = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -415,15 +479,25 @@ function iniciarMapa(){
   const satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { maxZoom:20, maxNativeZoom:19, attribution:"Imagens &copy; Esri" });
   L.control.layers({ "Mapa de ruas":ruas, "Satélite":satelite }, null, { position:"topright" }).addTo(mapa);
+}
 
-  CENTROS_CUSTO.forEach((cc,i)=>{
-    const m = L.marker([cc.lat, cc.lng], { icon:criarIcone(false), title:cc.nome, keyboard:true }).addTo(mapa);
-    m.on("click", ()=> selecionar(i, false));
-    marcadores.push(m);
+// Cria um marcador por objeto de custo com coordenadas preenchidas na planilha
+function criarMarcadores(){
+  marcadores.forEach(m=>m.remove());
+  marcadores.length = 0;
+  dadosCentro.forEach((d,secIdx)=>{
+    d.locais.forEach(l=>{
+      l.secIdx = secIdx;
+      const m = L.marker([l.lat,l.lng], { icon:criarIcone(false,false), title:l.nome, keyboard:true }).addTo(mapa);
+      m.local = l;
+      m.on("click", ()=> selecionar(secIdx, false, true, l.cod));
+      marcadores.push(m);
+    });
   });
 }
 
 // ================= Início =================
+let planilhaLida = false;
 (async function(){
   iniciarMapa();
   CENTROS_CUSTO.forEach((cfg,i)=> dadosCentro[i] = dadosSimulados(cfg));   // painel aparece de imediato
@@ -431,10 +505,12 @@ function iniciarMapa(){
   selecionar(0, false);
   try{
     const planilha = await carregarPlanilha();
+    planilhaLida = true;
     CENTROS_CUSTO.forEach((cfg,i)=>{
       try{ dadosCentro[i] = dadosDoCentro(cfg, planilha); }
       catch(e){ console.warn("Valores de demonstração:", e.message); }
     });
+    criarMarcadores();
     selecionar(centroAtual, false, true);   // reaplica com dados reais, mantendo os filtros escolhidos
   }catch(e){
     console.warn("Usando valores de demonstração:", e.message);
