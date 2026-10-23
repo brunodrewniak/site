@@ -7,6 +7,8 @@
 
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" rel="stylesheet">
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
@@ -107,6 +109,14 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 .origem{font-size:.72rem;color:var(--muted);display:flex;gap:6px;align-items:center}
 .ponto{width:8px;height:8px;border-radius:50%;background:#20c997;flex:none}
 
+/* Agrupamento de marcadores sobrepostos */
+.cluster{background:none;border:0}
+.cluster div{
+  width:38px;height:38px;border-radius:50%;background:var(--grafite);color:var(--amarelo);border:3px solid var(--amarelo);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;box-shadow:0 3px 8px rgba(0,0,0,.45)
+}
+.diag{font-size:.7rem;color:var(--muted);margin:6px 0 0;line-height:1.4;overflow-wrap:anywhere}
+
 /* Marcador */
 .pino{background:none;border:0}
 .pino svg{display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.45));transition:transform .15s;transform-origin:50% 100%}
@@ -165,18 +175,42 @@ function dataISO(d){
 const dataBR = d => d ? d.toLocaleDateString("pt-BR") : "";
 
 // Procura a coluna pelo cabeçalho, sem diferenciar maiúsculas, acentos ou espaços
-function colunaPor(linha, regex){
-  const k = Object.keys(linha).find(k => regex.test(norm(k).replace(/\s+/g,"")));
-  return k === undefined ? null : linha[k];
+const chaveCol = k => norm(k).replace(/[^a-z0-9]/g,"");
+function acharChave(linha, regex){
+  return Object.keys(linha).find(k => regex.test(chaveCol(k)));
 }
-// Converte para número válido ou devolve null quando vazia/inválida. Aceita vírgula decimal.
-function coordenada(v, ehLongitude){
-  if(v===null || v===undefined || String(v).trim()==="") return null;
-  let n = typeof v==="number" ? v : Number(String(v).trim().replace(",","."));
+const vazio = v => v===null || v===undefined || String(v).trim()==="";
+
+// Converte uma coordenada para número. Aceita número, texto com vírgula ou ponto decimal, sinal "−",
+// graus/minutos/segundos (25°27'16"S) e valores sem separador decimal (-25454614). Devolve null se não reconhecer.
+function lerCoordenada(v, ehLongitude){
+  if(vazio(v)) return null;
+  const limite = ehLongitude ? 180 : 90;
+  let n;
+  if(typeof v==="number") n = v;
+  else {
+    let t = String(v).trim().replace(/[−–—]/g,"-");
+    if(/[°º]/.test(t)){
+      const p = t.match(/\d+(?:[.,]\d+)?/g) || [];
+      if(!p.length) return null;
+      const num = x => Number(String(x||0).replace(",","."));
+      n = num(p[0]) + num(p[1])/60 + num(p[2])/3600;
+      if(/-|[SWO]\s*$/i.test(t)) n = -n;
+    } else {
+      t = t.replace(/[^0-9.,\-]/g,"");
+      const pontos = (t.match(/\./g)||[]).length, virgulas = (t.match(/,/g)||[]).length;
+      if(pontos && virgulas){                 // 1.234,56 ou 1,234.56: o último separador é o decimal
+        const dec = t.lastIndexOf(",") > t.lastIndexOf(".") ? "," : ".";
+        t = dec===","? t.replace(/\./g,"").replace(",",".") : t.replace(/,/g,"");
+      } else if(virgulas){ t = t.replace(",",".").replace(/,/g,""); }
+      else if(pontos>1){ const k = t.indexOf("."); t = t.slice(0,k+1) + t.slice(k+1).replace(/\./g,""); }
+      n = Number(t);
+    }
+  }
   if(!Number.isFinite(n) || n===0) return null;
-  if(ehLongitude && n>180) n -= 360;   // ex.: 310.480743 vira -49.519257
-  if(Math.abs(n) > (ehLongitude ? 180 : 90)) return null;
-  return n;
+  if(ehLongitude && n>180 && n<=360) n -= 360;          // ex.: 310.480743 vira -49.519257
+  if(Math.abs(n)>=1000) for(let k=0; Math.abs(n)>limite && k<12; k++) n /= 10;   // ex.: -25454614 vira -25.454614
+  return Math.abs(n)<=limite ? n : null;
 }
 
 // ================= Dados (planilha publicada, a mesma do BI) =================
@@ -184,9 +218,10 @@ let secretarias = [];      // [{cod, nome, linhas:[...], locais:[...]}]
 let centroAtual = -1;      // índice em secretarias
 let objetoSel = null;      // código do objeto de custo selecionado pelo marcador ou pela busca
 let carregado = false;
+let diagObjetos = null;
 
 async function carregarPlanilha(){
-  const resp = await fetch(PUB_XLSX_URL);
+  const resp = await fetch(PUB_XLSX_URL, { cache:"no-store" });
   if(!resp.ok) throw new Error("HTTP "+resp.status);
   const wb = XLSX.read(await resp.arrayBuffer(), { type:"array", cellDates:true });
   if(!wb.Sheets["Dados"] || !wb.Sheets["Secretarias"]) throw new Error('Abas "Dados" e "Secretarias" não encontradas.');
@@ -199,15 +234,38 @@ async function carregarPlanilha(){
     const c = r["Objeto de Custo - Departamento"]; if(c) deptMap[String(c).trim()] = r["Departamento"] || "";
   });
   // Aba Objetos: Descrição + Latitude/Longitude. Só entra no mapa quem tem as duas coordenadas preenchidas.
-  if(wb.Sheets["Objetos"]) XLSX.utils.sheet_to_json(wb.Sheets["Objetos"], { defval:null }).forEach(r=>{
-    const c = r["Objeto de Custo"]; if(!c) return;
-    const cod = String(c).trim();
-    const nome = r["Descrição"] || cod;
-    objMap[cod] = nome;
-    const lat = coordenada(colunaPor(r, /^lat(itude)?$/));
-    const lng = coordenada(colunaPor(r, /^(lng|lon|long|longitude)$/), true);
-    if(lat!==null && lng!==null) locais.push({ cod, nome, secCod:cod.split(".").slice(0,2).join("."), lat, lng });
-  });
+  diagObjetos = { lidos:0, comAmbas:0, invalidos:[], colLat:null, colLng:null, colunas:[] };
+  if(wb.Sheets["Objetos"]){
+    const lin = XLSX.utils.sheet_to_json(wb.Sheets["Objetos"], { defval:null });
+    if(lin.length){
+      const amostra = lin[0];
+      diagObjetos.colunas = Object.keys(amostra);
+      diagObjetos.colLat = acharChave(amostra, /^lat/) ?? null;
+      diagObjetos.colLng = acharChave(amostra, /^(lng|lon)/) ?? null;
+    }
+    lin.forEach(r=>{
+      const kCod = acharChave(r, /^(objetodecusto|codigo|centrodecusto)/) ?? Object.keys(r)[0];
+      const kDesc = acharChave(r, /^(descricao|nome)/);
+      const c = r[kCod]; if(vazio(c)) return;
+      const cod = String(c).trim();
+      const nome = (kDesc && !vazio(r[kDesc])) ? String(r[kDesc]).trim() : cod;
+      objMap[cod] = nome;
+      diagObjetos.lidos++;
+      const bLat = diagObjetos.colLat ? r[diagObjetos.colLat] : null, bLng = diagObjetos.colLng ? r[diagObjetos.colLng] : null;
+      if(vazio(bLat) && vazio(bLng)) return;               // sem coordenadas: não aparece no mapa
+      let lat = lerCoordenada(bLat,false), lng = lerCoordenada(bLng,true);
+      if(lat===null && lng===null){ // talvez estejam trocadas (lat na coluna de longitude)
+        const a = lerCoordenada(bLng,false), b = lerCoordenada(bLat,true);
+        if(a!==null && b!==null){ lat=a; lng=b; }
+      }
+      if(lat!==null && lng!==null){
+        diagObjetos.comAmbas++;
+        locais.push({ cod, nome, secCod:cod.split(".").slice(0,2).join("."), lat, lng });
+      } else if(diagObjetos.invalidos.length<4){
+        diagObjetos.invalidos.push(`${nome}: "${bLat??""}" / "${bLng??""}"`);
+      }
+    });
+  }
 
   const linhas = XLSX.utils.sheet_to_json(wb.Sheets["Dados"], { defval:null })
     .filter(r => r["Objeto de Custo"])
@@ -274,6 +332,7 @@ function montarPainel(){
         </div>
         <ul class="lista-sec" id="listaSecretarias"></ul>
         <p class="aviso" id="avisoLocais"></p>
+        <p class="diag" id="diagObjetos"></p>
       </section>
 
       <section>
@@ -392,12 +451,23 @@ function selecionar(i, voar, manterFiltros, objeto){
 
   if(voar){
     const pontos = (local ? [local] : d.locais).map(l=>[l.lat,l.lng]);
-    if(pontos.length===1) mapa.flyTo(pontos[0], Math.max(mapa.getZoom(), ZOOM_INICIAL), { duration:.8 });
+    const alvo = local ? marcadores.find(m=>m.local.cod===local.cod) : null;
+    if(alvo && grupo) grupo.zoomToShowLayer(alvo, ()=>{ mapa.panTo(alvo.getLatLng()); alvo.openTooltip(); });
+    else if(pontos.length===1) mapa.flyTo(pontos[0], Math.max(mapa.getZoom(), ZOOM_INICIAL), { duration:.8 });
     else if(pontos.length) mapa.flyToBounds(pontos, { padding:[80,80], maxZoom:ZOOM_INICIAL, duration:.8 });
   }
 }
 
+function mostrarDiagnostico(){
+  const g = diagObjetos; if(!g) return;
+  let t = `Aba Objetos: ${g.lidos} objeto(s) lidos, ${g.comAmbas} com Latitude e Longitude válidas no mapa.`;
+  if(!g.colLat || !g.colLng) t += ` Coluna não encontrada: ${!g.colLat?"Latitude":""}${!g.colLat&&!g.colLng?" e ":""}${!g.colLng?"Longitude":""}. Colunas da aba: ${g.colunas.join(", ")||"nenhuma"}.`;
+  if(g.invalidos.length) t += ` Valores não reconhecidos (ex.): ${g.invalidos.join(" | ")}.`;
+  $("diagObjetos").textContent = t;
+}
+
 function atualizarAviso(){
+  mostrarDiagnostico();
   const total = secretarias.reduce((t,d)=>t+d.locais.length,0);
   const d = secretarias[centroAtual];
   let msg = "";
@@ -529,19 +599,27 @@ function iniciarMapa(){
   L.control.layers({ "Mapa de ruas":ruas, "Satélite":satelite }, null, { position:"topright" }).addTo(mapa);
 }
 
-// Um marcador por objeto de custo com Latitude e Longitude preenchidas na aba Objetos
+// Um marcador por objeto de custo com Latitude e Longitude preenchidas na aba Objetos.
+// Marcadores muito próximos ou na mesma coordenada ficam agrupados; clicar no grupo abre os pinos.
+let grupo = null;
 function criarMarcadores(){
-  marcadores.forEach(m=>m.remove());
+  if(grupo) grupo.remove();
   marcadores.length = 0;
+  grupo = L.markerClusterGroup({
+    maxClusterRadius:36, showCoverageOnHover:false, spiderfyOnMaxZoom:true, zoomToBoundsOnClick:true,
+    iconCreateFunction: c => L.divIcon({ html:`<div>${c.getChildCount()}</div>`, className:"cluster", iconSize:[38,38] })
+  });
   secretarias.forEach((d,secIdx)=>{
     d.locais.forEach(l=>{
       l.secIdx = secIdx;
-      const m = L.marker([l.lat,l.lng], { icon:criarIcone(false,false), title:l.nome, keyboard:true }).addTo(mapa);
+      const m = L.marker([l.lat,l.lng], { icon:criarIcone(false,false), title:l.nome, keyboard:true });
       m.local = l;
       m.on("click", ()=> selecionar(secIdx, false, true, l.cod));
       marcadores.push(m);
+      grupo.addLayer(m);
     });
   });
+  mapa.addLayer(grupo);
 }
 
 // ================= Início =================
