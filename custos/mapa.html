@@ -59,6 +59,15 @@ h2{font-size:.72rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;l
 .lista-sec [aria-pressed="false"] .bolinha{background:var(--muted)}
 .lista-sec .qtd{margin-left:auto;font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
 .lista-sec .grupo{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:8px 8px 2px}
+.niveis{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--linha);border-radius:6px;overflow:hidden;margin-bottom:8px}
+.niveis button{padding:7px 4px;font-size:.78rem;background:transparent;color:var(--papel);border:0;border-right:1px solid var(--linha);cursor:pointer}
+.niveis button:last-child{border-right:0}
+.niveis button:hover{background:var(--grafite-2)}
+.niveis button[aria-pressed="true"]{background:var(--amarelo);color:var(--grafite);font-weight:700}
+.niveis button:focus-visible{outline:2px solid var(--papel);outline-offset:-2px}
+.lista-sec .txt{min-width:0;flex:1}
+.lista-sec .txt span{display:block;overflow:hidden;text-overflow:ellipsis}
+.lista-sec .pai{font-size:.68rem;color:var(--muted);white-space:nowrap}
 .sem-resultado{font-size:.78rem;color:var(--muted);padding:6px 8px}
 .lista-sec button:focus-visible{outline:2px solid var(--amarelo);outline-offset:1px}
 .cabecalho-sec{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -230,8 +239,17 @@ function lerCoordenada(v, ehLongitude){
 }
 
 // ================= Dados (planilha publicada, a mesma do BI) =================
-let secretarias = [];      // [{cod, nome, linhas:[...], locais:[...]}]
+const NIVEIS = {
+  2:{ nome:"Secretaria",   plural:"Secretarias",   busca:"Buscar secretaria ou local (Descrição)" },
+  3:{ nome:"Departamento",  plural:"Departamentos", busca:"Buscar departamento ou local (Descrição)" },
+  4:{ nome:"Objeto",        plural:"Objetos",       busca:"Buscar objeto ou local (Descrição)" }
+};
+let niveis = {2:[],3:[],4:[]};   // entidades de cada nível: [{cod, codCompleto, nome, nivel, linhas:[...], locais:[...]}]
+let nivelAtual = 2;
+let secretarias = [];      // entidades do nível atual (nome histórico)
+let todosLocais = [];      // todos os objetos com Latitude e Longitude válidas
 let centroAtual = -1;      // índice em secretarias
+let refNivel = null;       // código da última seleção, usado para manter o contexto ao trocar de nível
 let objetoSel = null;      // código do objeto de custo selecionado pelo marcador ou pela busca
 let carregado = false;
 let diagObjetos = null;
@@ -243,7 +261,7 @@ async function carregarPlanilha(){
   if(!wb.Sheets["Dados"] || !wb.Sheets["Objetos"]) throw new Error('Abas "Dados" e "Objetos" não encontradas.');
 
   // A estrutura vem só da aba Objetos: nível 2 = secretaria, nível 3 = departamento, demais = unidades/objetos.
-  const secPorCodigo = {}, deptMap = {}, objMap = {}, locais = [];
+  const secPorCodigo = {}, deptMap = {}, objMap = {}, locais = [], objetos = [];
   // Aba Objetos: Descrição + Latitude/Longitude. Só entra no mapa quem tem as duas coordenadas preenchidas.
   diagObjetos = { lidos:0, comAmbas:0, invalidos:[], colLat:null, colLng:null, colunas:[] };
   if(wb.Sheets["Objetos"]){
@@ -264,6 +282,7 @@ async function carregarPlanilha(){
       const nivel = nivelDoCodigo(cod), pre = prefixoObjeto(cod);
       if(nivel===2) secPorCodigo[pre] = nome;
       if(nivel===3) deptMap[pre] = nome;
+      if(nivel>=2 && nivel<=4) objetos.push({ cod, pre, nivel, nome });
       diagObjetos.lidos++;
       const bLat = diagObjetos.colLat ? r[diagObjetos.colLat] : null, bLng = diagObjetos.colLng ? r[diagObjetos.colLng] : null;
       if(vazio(bLat) && vazio(bLng)) return;               // sem coordenadas: não aparece no mapa
@@ -274,7 +293,7 @@ async function carregarPlanilha(){
       }
       if(lat!==null && lng!==null){
         diagObjetos.comAmbas++;
-        locais.push({ cod, nome, secCod:cod.split(".").slice(0,2).join("."), lat, lng });
+        locais.push({ cod, pre, nivel, nome, secCod:cod.split(".").slice(0,2).join("."), lat, lng });
       } else if(diagObjetos.invalidos.length<4){
         diagObjetos.invalidos.push(`${nome}: "${bLat??""}" / "${bLng??""}"`);
       }
@@ -298,17 +317,20 @@ async function carregarPlanilha(){
       };
     });
 
-  // Todas as secretarias da planilha; códigos de objetos sem secretaria cadastrada também entram
-  const cods = new Map(Object.entries(secPorCodigo));
-  linhas.forEach(l=>{ if(!cods.has(l.secCod)) cods.set(l.secCod, ""); });
-  locais.forEach(l=>{ if(!cods.has(l.secCod)) cods.set(l.secCod, ""); });
-  return [...cods.entries()]
-    .map(([cod,nome])=>({
-      cod, nome: String(nome||("Secretaria "+cod)).trim(),
-      linhas: linhas.filter(l=>l.secCod===cod),
-      locais: locais.filter(l=>l.secCod===cod)
-    }))
-    .sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  // Entidades de cada nível, só a partir da aba Objetos (nível 2 = secretaria, 3 = departamento, 4 = objeto)
+  const ent = {2:new Map(), 3:new Map(), 4:new Map()};
+  objetos.forEach(o=>{ ent[o.nivel].set(o.pre, { cod:o.pre, codCompleto:o.cod, nome:o.nome, nivel:o.nivel, linhas:[], locais:[] }); });
+  linhas.forEach(l=>{
+    const p = l.cod.split(".");
+    if(!ent[2].has(l.secCod)) ent[2].set(l.secCod, { cod:l.secCod, codCompleto:l.secCod, nome:"Secretaria "+l.secCod, nivel:2, linhas:[], locais:[] });
+    [2,3,4].forEach(n=>{ const e = ent[n].get(p.slice(0,n).join(".")); if(e) e.linhas.push(l); });
+  });
+  locais.forEach(l=>{
+    const p = l.pre.split(".");
+    for(let n=2; n<=Math.min(4,l.nivel); n++){ const e = ent[n].get(p.slice(0,n).join(".")); if(e) e.locais.push(l); }
+  });
+  const ordenar = (a,b)=>a.nome.localeCompare(b.nome,"pt-BR");
+  return { niveis:{ 2:[...ent[2].values()].sort(ordenar), 3:[...ent[3].values()].sort(ordenar), 4:[...ent[4].values()].sort(ordenar) }, locais };
 }
 
 // ================= Painel =================
@@ -337,8 +359,13 @@ function montarPainel(){
     </header>
     <div class="corpo">
       <section>
-        <div class="cabecalho-sec"><h2>Secretarias e locais</h2>
+        <div class="cabecalho-sec"><h2>Visualizar por</h2>
           <button class="btn btn-mini" id="btnVerTodas" type="button">Ver todos no mapa</button></div>
+        <div class="niveis" role="group" aria-label="Nível dos custos">
+          <button type="button" data-nivel="2" aria-pressed="true">Secretaria</button>
+          <button type="button" data-nivel="3" aria-pressed="false">Departamento</button>
+          <button type="button" data-nivel="4" aria-pressed="false">Objeto</button>
+        </div>
         <div class="campo busca-sec">
           <label for="buscaSecretaria" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Buscar secretaria ou local</label>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa1a8" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -404,6 +431,7 @@ function montarPainel(){
     const pts = marcadores.map(m=>m.getLatLng());
     if(pts.length) mapa.fitBounds(pts, { padding:[60,60], maxZoom:17 });
   });
+  $("painel").querySelectorAll(".niveis button").forEach(b=> b.addEventListener("click", ()=> mudarNivel(Number(b.dataset.nivel))));
   $("btnTodosLocais").addEventListener("click", ()=> selecionar(centroAtual, true, true, null));
 
   // Busca: filtra sem acento; Enter seleciona o primeiro resultado; setas percorrem a lista
@@ -422,18 +450,72 @@ function montarPainel(){
   renderizarLista();
 }
 
+const dentroDe = (l, e) => l.nivel>=e.nivel && l.pre.split(".").slice(0,e.nivel).join(".")===e.cod;
+const nomeSecretariaDe = cod => (niveis[2].find(e=>e.cod===cod.split(".").slice(0,2).join("."))||{}).nome || "";
+const curto = n => String(n).replace(/^SECRETARIA MUNICIPAL D[AEO]S?\s+/i,"");
+
 function renderizarLista(){
+  $("buscaSecretaria").placeholder = NIVEIS[nivelAtual].busca;
   const termo = norm($("buscaSecretaria").value.trim().replace(/^secretaria\s+(municipal\s+)?(d[aeo]s?\s+)?/i,""));
-  const secs = secretarias.map((c,i)=>[c,i]).filter(([c])=>!termo || norm(c.nome).includes(termo));
+  const itens = secretarias.map((c,i)=>[c,i]).filter(([c])=>!termo || norm(c.nome).includes(termo));
   // Com algo digitado, a busca também procura nos objetos de custo (coluna Descrição) que estão no mapa
-  const locais = termo ? secretarias.flatMap((d,i)=>d.locais.map(l=>[l,i])).filter(([l])=>norm(l.nome).includes(termo)).slice(0,30) : [];
-  let html = secs.map(([c,i])=>`
-    <li><button type="button" data-i="${i}" aria-pressed="${i===centroAtual && !objetoSel}"><span class="bolinha"></span>${esc(c.nome.replace(/^Secretaria Municipal d[aeo]\s+/,""))}<span class="qtd">${c.locais.length ? c.locais.length+" no mapa" : ""}</span></button></li>`).join("");
-  if(locais.length) html += `<li class="grupo">Locais no mapa</li>` + locais.map(([l,i])=>`
-    <li><button type="button" data-i="${i}" data-cod="${esc(l.cod)}" aria-pressed="${l.cod===objetoSel}"><span class="bolinha"></span>${esc(l.nome)}</button></li>`).join("");
+  const locais = termo ? todosLocais.filter(l=>norm(l.nome).includes(termo)).slice(0,30) : [];
+  let html = itens.map(([c,i])=>`
+    <li><button type="button" data-i="${i}" title="${esc(c.nome)}" aria-pressed="${i===centroAtual && !objetoSel}"><span class="bolinha"></span>
+      <span class="txt"><span>${esc(nivelAtual===2 ? curto(c.nome) : c.nome)}</span>${nivelAtual>2 ? `<span class="pai">${esc(curto(nomeSecretariaDe(c.cod)))}</span>` : ""}</span>
+      <span class="qtd">${c.locais.length ? c.locais.length+" no mapa" : ""}</span></button></li>`).join("");
+  if(locais.length) html += `<li class="grupo">Locais no mapa</li>` + locais.map(l=>`
+    <li><button type="button" data-cod="${esc(l.cod)}" aria-pressed="${l.cod===objetoSel}"><span class="bolinha"></span><span class="txt"><span>${esc(l.nome)}</span></span></button></li>`).join("");
   $("listaSecretarias").innerHTML = html || `<li class="sem-resultado">${secretarias.length ? "Nada encontrado." : "Aguardando a planilha..."}</li>`;
+  const lista = $("listaSecretarias"), marcado = lista.querySelector('button[aria-pressed="true"]');
+  if(marcado) lista.scrollTop += marcado.getBoundingClientRect().top - lista.getBoundingClientRect().top - 40;   // mantém o item selecionado à vista
   $("listaSecretarias").querySelectorAll("button").forEach(b=>
-    b.addEventListener("click", ()=> selecionar(Number(b.dataset.i), true, false, b.dataset.cod || null)));
+    b.addEventListener("click", ()=>{
+      if(b.dataset.cod) selecionarLocal(todosLocais.find(l=>l.cod===b.dataset.cod), true);
+      else selecionar(Number(b.dataset.i), true, false, null);
+    }));
+}
+
+// Troca o nível (Secretaria / Departamento / Objeto), mantendo a seleção relacionada quando existir
+function mudarNivel(n, idxForcado){
+  const ref = refNivel;
+  nivelAtual = n;
+  secretarias = niveis[n];
+  $("painel").querySelectorAll(".niveis button").forEach(b=> b.setAttribute("aria-pressed", String(Number(b.dataset.nivel)===n)));
+  let idx = idxForcado;
+  if(idx===undefined && ref){
+    const p = ref.split(".");
+    idx = secretarias.findIndex(e=>e.cod===p.slice(0,n).join("."));             // ancestral (ou o próprio)
+    // descendente: a entidade mais volumosa dentro da seleção anterior; senão, da mesma secretaria
+    const maior = prefixo => { let melhor=-1, tam=-1; secretarias.forEach((e,k)=>{ if((e.cod===prefixo || e.cod.startsWith(prefixo+".")) && e.linhas.length>tam){ melhor=k; tam=e.linhas.length; } }); return melhor; };
+    if(idx<0) idx = maior(ref);
+    if(idx<0) idx = maior(p.slice(0,2).join("."));
+  }
+  centroAtual = -1; objetoSel = null;
+  $("buscaSecretaria").value = "";
+  if((idx===undefined || idx<0) && ref){   // a seleção anterior não tem nada neste nível
+    renderizarLista();
+    $("tituloSec").textContent = nomeSecretariaDe(ref) || "BI de Custos | Campo Largo";
+    $("subPeriodo").textContent = `Sem ${NIVEIS[n].nome.toLowerCase()} (nível ${n}) nesta secretaria`;
+    $("chipLocal").hidden = true;
+    $("avisoLocais").textContent = "";
+    $("estado").hidden = false; $("estado").classList.remove("erro");
+    $("estado").textContent = `Esta secretaria não tem lançamentos ou cadastro no nível ${NIVEIS[n].nome}. Escolha um item na lista acima.`;
+    $("conteudo").hidden = true;
+    marcadores.forEach(m=> destacarMarcador(m, false, false));
+    return;
+  }
+  if(idx===undefined || idx<0) idx = Math.max(0, secretarias.findIndex(e=>e.locais.length));
+  selecionar(idx, true, true, null);
+}
+
+// Seleciona um local (objeto com coordenadas): usa a entidade do nível atual que o contém; se não houver, muda de nível
+function selecionarLocal(l, voar){
+  if(!l) return;
+  let idx = secretarias.findIndex(e=>dentroDe(l, e));
+  if(idx<0){ mudarNivel(l.nivel, niveis[l.nivel].findIndex(e=>e.cod===l.pre)); idx = centroAtual; }
+  const e = secretarias[idx];
+  selecionar(idx, voar, true, l.cod===e.codCompleto ? null : l.cod);
 }
 
 // Seleciona uma secretaria (e, opcionalmente, um local dela): atualiza filtros, indicadores e marcadores
@@ -443,6 +525,7 @@ function selecionar(i, voar, manterFiltros, objeto){
   centroAtual = i;
   objetoSel = objeto === undefined ? (mudouSec ? null : objetoSel) : objeto;
   const d = secretarias[i];
+  refNivel = objetoSel ? prefixoObjeto(objetoSel) : d.cod;
   $("tituloSec").textContent = d.nome;
 
   const local = objetoSel ? d.locais.find(l=>l.cod===objetoSel) : null;
@@ -461,7 +544,7 @@ function selecionar(i, voar, manterFiltros, objeto){
   atualizarResultado();
   renderizarLista();
   atualizarAviso();
-  marcadores.forEach(m=> destacarMarcador(m, m.local.secIdx===i, m.local.cod===objetoSel));
+  marcadores.forEach(m=> destacarMarcador(m, dentroDe(m.local, d), m.local.cod===objetoSel));
 
   if(voar){
     const pontos = (local ? [local] : d.locais).map(l=>[l.lat,l.lng]);
@@ -623,15 +706,12 @@ function criarMarcadores(){
     maxClusterRadius:36, showCoverageOnHover:false, spiderfyOnMaxZoom:true, zoomToBoundsOnClick:true,
     iconCreateFunction: c => L.divIcon({ html:`<div>${c.getChildCount()}</div>`, className:"cluster", iconSize:[38,38] })
   });
-  secretarias.forEach((d,secIdx)=>{
-    d.locais.forEach(l=>{
-      l.secIdx = secIdx;
-      const m = L.marker([l.lat,l.lng], { icon:criarIcone(false,false), title:l.nome, keyboard:true });
-      m.local = l;
-      m.on("click", ()=> selecionar(secIdx, false, true, l.cod));
-      marcadores.push(m);
-      grupo.addLayer(m);
-    });
+  todosLocais.forEach(l=>{
+    const m = L.marker([l.lat,l.lng], { icon:criarIcone(false,false), title:l.nome, keyboard:true });
+    m.local = l;
+    m.on("click", ()=> selecionarLocal(l, false));
+    marcadores.push(m);
+    grupo.addLayer(m);
   });
   mapa.addLayer(grupo);
 }
@@ -641,7 +721,8 @@ async function iniciar(){
   $("estado").hidden = false; $("estado").classList.remove("erro");
   $("estado").textContent = "Carregando dados do BI...";
   try{
-    secretarias = await carregarPlanilha();
+    const dados = await carregarPlanilha();
+    niveis = dados.niveis; todosLocais = dados.locais; secretarias = niveis[nivelAtual];
   }catch(e){
     console.warn("Falha ao ler a planilha:", e);
     $("subPeriodo").textContent = "Dados indisponíveis";
