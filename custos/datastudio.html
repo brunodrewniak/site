@@ -306,7 +306,7 @@
    agora apresentada em formato de conversa.
    ===================================================================== */
 (function(){
-  const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=xlsx";
+  const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYZ2LbusfHY8Bhur33Rk5dU5knq3ZEJEJRluMoOpyDUG5Jt31o9Az3aT_9h5GN66Hlc-GAzaHdYc2a/pub?output=xlsx";
 
   const $ = id => document.getElementById(id);
   let dados = [];
@@ -572,9 +572,9 @@
 
   function htmlSugestoes(){
     const exemplos = [
-      "Quanto foi gasto em setembro?",
-      "Custo com merenda escolar",
-      "Gastos da Secretaria de Saúde em outubro"
+      "Custo total em julho?",
+      "Custo com merenda escolar no Reino da Loucinha",
+      "Custo da Secretaria de Saúde em outubro"
     ];
     return `<div class="sugestoes">${exemplos.map(e=>`<button type="button" data-sugestao="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join("")}</div>`;
   }
