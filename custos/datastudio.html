@@ -776,9 +776,9 @@
   function htmlSugestoes() {
     const exemplos = [
       "Custo total em julho de 2026?",
-      "Custo com merenda escolar no Reino da Loucinha",
-      "Custo da Secretaria de Saúde em outubro de 2026",
-      "Custo por departamento em setembro de 2026"
+      "Custo com merenda escolar no Reino da Loucinha em Outubro",
+      "Custo com limpeza e higiene na UBS Bateias",
+      "Custo com Manutenção, recapeamento, drenagem e tapa buracos no Itaqui"
     ];
     return `<div class="sugestoes">${exemplos.map(e => `<button type="button" data-sugestao="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join("")}</div>`;
   }
