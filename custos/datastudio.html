@@ -573,54 +573,77 @@
     return normalizada.split(" ").filter(p => p.length >= 3 && !STOPWORDS.has(p) && !Object.prototype.hasOwnProperty.call(MESES_BUSCA, p) && !/^20\d{2}$/.test(p));
   }
 
-  // Usa Fuse por termo e agrega evidências; só aceita resultado com evidência suficiente e evita empates duvidosos.
-  function melhorCorrespondenciaFuse(pergunta, index) {
+  // Pesquisa nomes com Fuse, exigindo evidência de mais de uma palavra quando o nome é composto.
+  // A busca usa todos os resultados por termo (não apenas os 12 primeiros), para não perder
+  // unidades que aparecem mais abaixo no ranking por conterem palavras pouco frequentes.
+  function melhorCorrespondenciaFuse(pergunta, index, opcoes = {}) {
     if (!index) return null;
-    const normalizada = normalizarBusca(pergunta);
-    if (!normalizada) return null;
+    const textoBusca = normalizarBusca(opcoes.textoBusca ?? pergunta);
+    if (!textoBusca) return null;
+
+    const termos = textoBusca.split(" ").filter(p => p.length >= 3 && !STOPWORDS.has(p) &&
+      !Object.prototype.hasOwnProperty.call(MESES_BUSCA, p) && !/^20\d{2}$/.test(p));
+    if (!termos.length) return null;
+
     const candidatos = new Map();
-    const termos = termosDaPergunta(pergunta);
-
-    // Busca da frase completa ajuda a priorizar nomes exatos ou quase exatos.
-    const frase = index.search(normalizada, { limit: 8 });
-    frase.forEach((r, pos) => {
-      const chave = r.item.valor;
+    const adicionar = (r, termo, frase = false) => {
+      const valor = r.item.valor;
       const score = typeof r.score === "number" ? r.score : 1;
-      const atual = candidatos.get(chave) || { valor: chave, hits: 0, somaScore: 0, melhorScore: 1, frase: false };
-      atual.frase = true;
-      atual.melhorScore = Math.min(atual.melhorScore, score);
-      atual.somaScore += score * 0.65;
-      candidatos.set(chave, atual);
-    });
+      if (score > 0.34) return;
+      const atual = candidatos.get(valor) || { valor, termos: new Set(), somaScore: 0, ocorrencias: 0, frase: false };
+      if (termo) atual.termos.add(termo);
+      atual.somaScore += score;
+      atual.ocorrencias++;
+      atual.frase = atual.frase || frase;
+      candidatos.set(valor, atual);
+    };
 
-    termos.forEach(termo => {
-      index.search(termo, { limit: 12 }).forEach(r => {
-        const score = typeof r.score === "number" ? r.score : 1;
-        if (score > 0.34) return;
-        const chave = r.item.valor;
-        const atual = candidatos.get(chave) || { valor: chave, hits: 0, somaScore: 0, melhorScore: 1, frase: false };
-        atual.hits += 1;
-        atual.somaScore += score;
-        atual.melhorScore = Math.min(atual.melhorScore, score);
-        candidatos.set(chave, atual);
-      });
-    });
+    index.search(textoBusca).forEach(r => adicionar(r, null, true));
+    termos.forEach(termo => index.search(termo).forEach(r => adicionar(r, termo)));
 
     if (!candidatos.size) return null;
-    const ranking = [...candidatos.values()].map(c => ({
-      ...c,
-      scoreFinal: c.somaScore / Math.max(1, c.hits + (c.frase ? 0.65 : 0))
-    })).sort((a, b) => b.hits - a.hits || a.scoreFinal - b.scoreFinal);
+    const ranking = [...candidatos.values()].map(c => {
+      const nomeNorm = normalizarBusca(c.valor);
+      const palavrasNome = [...new Set(nomeNorm.split(" ").filter(p => p.length >= 3 && !STOPWORDS.has(p)))];
+      const termosNomeEncontrados = palavrasNome.filter(p => termos.some(t => t === p || (t.length >= 5 && p.length >= 5 && (t.includes(p) || p.includes(t)))));
+      const coberturaConsulta = termos.length ? c.termos.size / termos.length : 0;
+      const coberturaNome = palavrasNome.length ? termosNomeEncontrados.length / palavrasNome.length : 0;
+      const scoreMedio = c.ocorrencias ? c.somaScore / c.ocorrencias : 1;
+      const exato = nomeNorm === textoBusca;
+      return { ...c, scoreMedio, coberturaConsulta, coberturaNome, exato, quantidadePalavrasNome: palavrasNome.length };
+    }).sort((a, b) => Number(b.exato) - Number(a.exato) || b.termos.size - a.termos.size || b.coberturaNome - a.coberturaNome || a.scoreMedio - b.scoreMedio);
 
     const primeiro = ranking[0];
     const segundo = ranking[1];
-    const quantidadeTermos = Math.max(1, termos.length);
-    const exato = normalizarBusca(primeiro.valor) === normalizada;
-    const cobertura = primeiro.hits / quantidadeTermos;
-    const temEvidencia = exato || primeiro.frase && primeiro.melhorScore <= 0.22 || primeiro.hits >= 1 && (cobertura >= 0.34 || primeiro.melhorScore <= 0.12);
-    if (!temEvidencia) return null;
-    if (segundo && segundo.hits === primeiro.hits && Math.abs(segundo.scoreFinal - primeiro.scoreFinal) < 0.035 && !exato) return null;
-    return { valor: primeiro.valor, score: primeiro.scoreFinal, hits: primeiro.hits };
+    const nomeComposto = primeiro.quantidadePalavrasNome >= 2;
+    const evidenciaSuficiente = primeiro.exato ||
+      (primeiro.termos.size >= (nomeComposto ? 2 : 1) && primeiro.coberturaNome >= 0.5) ||
+      (primeiro.frase && primeiro.scoreMedio <= 0.12);
+    if (!evidenciaSuficiente) return null;
+
+    // Se dois nomes têm evidência praticamente igual, não escolhe um deles arbitrariamente.
+    if (segundo && !primeiro.exato && primeiro.termos.size === segundo.termos.size &&
+        Math.abs(primeiro.scoreMedio - segundo.scoreMedio) < 0.025 &&
+        Math.abs(primeiro.coberturaNome - segundo.coberturaNome) < 0.15) return null;
+
+    return { valor: primeiro.valor, score: primeiro.scoreMedio, hits: primeiro.termos.size };
+  }
+
+  // Remove o item e o período da pergunta antes de procurar unidade/departamento/secretaria.
+  // Isso evita que palavras como "merenda" ou "escolar" influenciem a identificação da unidade.
+  function textoParaEntidade(pergunta, itemEncontrado, periodo) {
+    let texto = normalizarBusca(pergunta);
+    if (itemEncontrado) {
+      const palavrasItem = normalizarBusca(itemEncontrado.valor).split(" ").filter(Boolean);
+      for (const palavra of palavrasItem) {
+        texto = texto.replace(new RegExp("\\b" + palavra.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&") + "\\b", "g"), " ");
+      }
+    }
+    texto = texto.replace(/\b20\d{2}\b/g, " ");
+    for (const mes of Object.keys(MESES_BUSCA).sort((a, b) => b.length - a.length)) {
+      texto = texto.replace(new RegExp("\\b" + mes + "\\b", "g"), " ");
+    }
+    return texto.replace(/\s+/g, " ").trim();
   }
 
   function extrairPeriodo(queryNorm) {
@@ -647,10 +670,22 @@
 
     const periodo = extrairPeriodo(queryNorm);
     const itemEncontrado = melhorCorrespondenciaFuse(pergunta, indexesBusca.itemCusto);
-    const objetoEncontrado = melhorCorrespondenciaFuse(pergunta, indexesBusca.objetoNome);
-    const secretariaEncontrada = melhorCorrespondenciaFuse(pergunta, indexesBusca.secretaria);
-    const departamentoEncontrado = melhorCorrespondenciaFuse(pergunta, indexesBusca.departamento);
-    const localizacaoEncontrada = melhorCorrespondenciaFuse(pergunta, indexesBusca.localizacao);
+    const textoEntidade = textoParaEntidade(pergunta, itemEncontrado, periodo);
+    const objetoEncontrado = melhorCorrespondenciaFuse(pergunta, indexesBusca.objetoNome, { textoBusca: textoEntidade });
+    const secretariaEncontrada = melhorCorrespondenciaFuse(pergunta, indexesBusca.secretaria, { textoBusca: textoEntidade });
+    const departamentoEncontrado = melhorCorrespondenciaFuse(pergunta, indexesBusca.departamento, { textoBusca: textoEntidade });
+    const localizacaoEncontrada = melhorCorrespondenciaFuse(pergunta, indexesBusca.localizacao, { textoBusca: textoEntidade });
+
+    // Se a pergunta parece especificar uma unidade, mas nenhuma unidade foi reconhecida,
+    // não retorna o total amplo do item ignorando silenciosamente esse filtro.
+    const mencionaUnidade = /\b(?:na|no|unidade|escola|colegio|creche)\b/.test(queryNorm);
+    const reconheceuEntidade = objetoEncontrado || secretariaEncontrada || departamentoEncontrado || localizacaoEncontrada;
+    if (mencionaUnidade && !reconheceuEntidade && itemEncontrado) {
+      return {
+        html: `Identifiquei o item <b>${escapeHtml(itemEncontrado.valor)}</b>${periodo.mes !== null ? ` em <b>${NOMES_MES[periodo.mes]}${periodo.ano ? "/" + periodo.ano : ""}</b>` : ""}, mas não consegui identificar com segurança a unidade mencionada. Não somei os custos de outras unidades. Confira o nome da unidade na planilha ou tente informar o nome completo.`,
+        fala: "Identifiquei o item de custo, mas não consegui confirmar a unidade. Não somei outras unidades."
+      };
+    }
 
     let resultado = dados;
     if (periodo.ano) resultado = resultado.filter(d => d.data && d.data.getFullYear() === periodo.ano);
