@@ -9,6 +9,8 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' fill='%230d6efd' viewBox='0 0 16 16'><path d='M12 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z'/><path d='M4 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z'/></svg>">  
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<!-- SheetJS (leitura da planilha usada pelo chatbot) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   html, body {
     height: 100%;
@@ -77,6 +79,136 @@
       height: 100%;
     }
   }
+
+  /* ================= Chatbot (Busca Inteligente) ================= */
+  #chatFab {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 0;
+    background: #2e4b77;
+    color: #fff;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,.55);
+    cursor: pointer;
+    z-index: 2147483000;
+    transition: transform .15s ease, background .15s ease;
+  }
+  #chatFab:hover { transform: scale(1.08); background: #3a5f96; }
+  #chatFab.aberto { display: none; }
+
+  #chatPanel {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 380px;
+    max-width: calc(100vw - 24px);
+    height: 540px;
+    max-height: calc(100vh - 40px);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 2147483001;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    color: #212529;
+  }
+  #chatPanel.aberto { display: flex; }
+
+  .chat-header {
+    background: #2e4b77;
+    color: #fff;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .chat-header .titulo { flex: 1; font-weight: 600; font-size: .95rem; line-height: 1.15; }
+  .chat-header .titulo small { display:block; font-weight: 400; opacity: .75; font-size: .72rem; }
+  .chat-header button {
+    background: transparent; border: 0; color: #fff; font-size: 1.05rem;
+    opacity: .85; padding: 4px 6px; border-radius: 6px; cursor: pointer;
+  }
+  .chat-header button:hover { opacity: 1; background: rgba(255,255,255,.15); }
+  .chat-header button.ativo { background: rgba(255,255,255,.25); opacity: 1; }
+
+  #chatMensagens {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    background: #f1f3f6;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .msg {
+    max-width: 92%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: .86rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+  }
+  .msg.bot { background: #fff; align-self: flex-start; border-bottom-left-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .msg.user { background: #2e4b77; color: #fff; align-self: flex-end; border-bottom-right-radius: 3px; }
+  .msg .chip {
+    display: inline-block; background: #eef1f5; color: #495057; font-size: .7rem;
+    padding: 2px 8px; border-radius: 10px; margin: 0 4px 4px 0; border: 1px solid #dee2e6;
+  }
+  .msg .valor { font-size: 1.35rem; font-weight: 700; color: #2e4b77; }
+  .msg .sub { font-size: .75rem; color: #6c757d; }
+  .msg table { width: 100%; font-size: .72rem; margin-top: 8px; border-collapse: collapse; }
+  .msg table th, .msg table td { padding: 3px 4px; border-bottom: 1px solid #e9ecef; text-align: left; }
+  .msg table td.dir, .msg table th.dir { text-align: right; white-space: nowrap; }
+  .msg .sugestoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .msg .sugestoes button {
+    border: 1px solid #2e4b77; color: #2e4b77; background: #fff; border-radius: 14px;
+    font-size: .72rem; padding: 3px 10px; cursor: pointer;
+  }
+  .msg .sugestoes button:hover { background: #2e4b77; color: #fff; }
+  .digitando span {
+    display: inline-block; width: 6px; height: 6px; margin: 0 2px; border-radius: 50%;
+    background: #adb5bd; animation: pulsoDigitando 1s infinite ease-in-out;
+  }
+  .digitando span:nth-child(2) { animation-delay: .15s; }
+  .digitando span:nth-child(3) { animation-delay: .3s; }
+  @keyframes pulsoDigitando { 0%,80%,100% { transform: scale(.6); opacity: .5; } 40% { transform: scale(1); opacity: 1; } }
+
+  .chat-input {
+    display: flex; gap: 6px; padding: 10px; background: #fff;
+    border-top: 1px solid #e9ecef; flex-shrink: 0; position: relative;
+  }
+  .chat-input input {
+    flex: 1; border: 1px solid #ced4da; border-radius: 20px; padding: 7px 14px;
+    font-size: .86rem; outline: none; min-width: 0;
+  }
+  .chat-input input:focus { border-color: #2e4b77; }
+  .chat-input button {
+    width: 38px; height: 38px; border-radius: 50%; border: 0; flex-shrink: 0;
+    background: #2e4b77; color: #fff; cursor: pointer;
+  }
+  .chat-input button#chatMic { background: #e9ecef; color: #2e4b77; }
+  .chat-input button#chatMic.ouvindo { background: #dc3545; color: #fff; animation: pulsoMic 1.1s infinite; }
+  .chat-input button:disabled { opacity: .5; cursor: not-allowed; }
+  @keyframes pulsoMic {
+    0%   { box-shadow: 0 0 0 0 rgba(220,53,69,.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(220,53,69,0); }
+    100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+  }
+  #chatStatusDados { font-size: .7rem; color: #6c757d; padding: 0 12px 6px; background: #fff; flex-shrink: 0; }
+
+  @media (max-width: 480px) {
+    #chatPanel { right: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); max-height: none; }
+  }
 </style>
 </head>
 <body>
@@ -103,6 +235,27 @@
 <div class="main-container">
   <div class="iframe-wrapper" id="frameContainer">
     <iframe id="dataStudioIframe" src="https://datastudio.google.com/embed/reporting/a590a5d0-f15b-4dc5-8580-0c59d9ed20fa/page/kyd4F" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+
+    <!-- Chatbot de Busca Inteligente (dentro do container para continuar visível em Tela Cheia) -->
+    <button id="chatFab" type="button" title="Busca Inteligente" aria-label="Abrir Busca Inteligente">
+      <i class="bi bi-chat-dots-fill"></i>
+    </button>
+
+    <div id="chatPanel" role="dialog" aria-label="Busca Inteligente">
+      <div class="chat-header">
+        <i class="bi bi-robot fs-5"></i>
+        <div class="titulo">Busca Inteligente<small>Pergunte sobre os custos</small></div>
+        <button type="button" id="chatVozToggle" title="Responder por voz"><i class="bi bi-volume-mute-fill"></i></button>
+        <button type="button" id="chatFechar" title="Fechar"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div id="chatMensagens"></div>
+      <div id="chatStatusDados"><i class="bi bi-hourglass-split me-1"></i>Carregando dados...</div>
+      <div class="chat-input">
+        <button type="button" id="chatMic" title="Perguntar por voz"><i class="bi bi-mic-fill"></i></button>
+        <input type="text" id="chatCampo" placeholder="Digite ou fale sua pergunta..." autocomplete="off">
+        <button type="button" id="chatEnviar" title="Enviar"><i class="bi bi-send-fill"></i></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -144,6 +297,392 @@
       fullscreenIcon.className = 'bi bi-fullscreen';
     }
   }
+</script>
+
+<script>
+/* =====================================================================
+   CHATBOT — BUSCA INTELIGENTE
+   Mesma lógica de interpretação da pergunta do dashboard de custos,
+   agora apresentada em formato de conversa.
+   ===================================================================== */
+(function(){
+  const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=xlsx";
+
+  const $ = id => document.getElementById(id);
+  let dados = [];
+  let dadosCarregados = false;
+  let carregando = false;
+  let falarRespostas = false;
+
+  // ---------- Utilitários ----------
+  function moeda(v){ return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0); }
+
+  function numero(valor){
+    if(typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
+    if(!valor) return 0;
+    let texto = String(valor).replace("R$","").trim();
+    if(texto.includes(".") && texto.includes(",")) texto = texto.replace(/\./g,"").replace(",",".");
+    else if(texto.includes(",")) texto = texto.replace(",",".");
+    const n = Number(texto);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function paraData(valor){
+    if(valor instanceof Date && !isNaN(valor)) return valor;
+    if(typeof valor === "number"){
+      const epoch = new Date(Date.UTC(1899,11,30));
+      return new Date(epoch.getTime() + valor*86400000);
+    }
+    if(typeof valor === "string"){
+      const d = new Date(valor);
+      if(!isNaN(d)) return d;
+    }
+    return null;
+  }
+
+  function escapeHtml(v){
+    return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  function removerAcentos(t){
+    return String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  }
+
+  function normalizarBusca(t){
+    return removerAcentos(t).replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
+  }
+
+  // ---------- Carga dos dados (mesma planilha do dashboard) ----------
+  async function carregarDados(){
+    if(dadosCarregados || carregando) return;
+    carregando = true;
+    const status = $("chatStatusDados");
+    status.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Carregando dados...';
+    try{
+      const resp = await fetch(PUB_XLSX_URL);
+      if(!resp.ok) throw new Error("Erro " + resp.status);
+      const buffer = await resp.arrayBuffer();
+      const wb = XLSX.read(buffer, { type:"array", cellDates:true });
+      processarWorkbook(wb);
+      dadosCarregados = true;
+      status.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>${dados.length.toLocaleString("pt-BR")} lançamentos carregados.`;
+    }catch(e){
+      console.error("Chatbot: falha ao carregar dados", e);
+      status.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Não foi possível carregar os dados. <a href="#" id="chatTentarNovamente">Tentar novamente</a>';
+      const link = $("chatTentarNovamente");
+      if(link) link.addEventListener("click", ev=>{ ev.preventDefault(); carregarDados(); });
+    }finally{
+      carregando = false;
+    }
+  }
+
+  function processarWorkbook(wb){
+    const abaDados = wb.Sheets["Dados"];
+    if(!abaDados) throw new Error('Aba "Dados" não encontrada.');
+
+    const secMap = {}, deptMap = {}, objMap = {}, locMap = {};
+
+    if(wb.Sheets["Secretarias"]){
+      XLSX.utils.sheet_to_json(wb.Sheets["Secretarias"]).forEach(r=>{
+        const cod = r["Objeto de Custo - Secretaria"];
+        if(cod) secMap[String(cod).trim()] = { nome: r["Secretaria"] || "" };
+      });
+    }
+    if(wb.Sheets["Departamentos"]){
+      XLSX.utils.sheet_to_json(wb.Sheets["Departamentos"]).forEach(r=>{
+        const cod = r["Objeto de Custo - Departamento"];
+        if(cod) deptMap[String(cod).trim()] = r["Departamento"] || "";
+      });
+    }
+    if(wb.Sheets["Objetos"]){
+      XLSX.utils.sheet_to_json(wb.Sheets["Objetos"]).forEach(r=>{
+        const cod = r["Objeto de Custo"];
+        if(cod) objMap[String(cod).trim()] = r["Descrição"] || "";
+      });
+    }
+    if(wb.Sheets["Localização"]){
+      XLSX.utils.sheet_to_json(wb.Sheets["Localização"]).forEach(r=>{
+        const cod = r["Objeto de Custo"];
+        if(!cod) return;
+        const nome = String(r["Nome"] || "").trim();
+        locMap[String(cod).trim()] = { naoUtilizar: /^n[aã]o utilizar/i.test(nome) };
+      });
+    }
+
+    const linhas = XLSX.utils.sheet_to_json(abaDados, { defval:null });
+    dados = linhas.filter(r => r["Objeto de Custo"]).map(r=>{
+      const codigo = String(r["Objeto de Custo"]).trim();
+      const partes = codigo.split(".");
+      const secCod = partes.slice(0,2).join(".");
+      const deptCod = partes.slice(0,3).join(".");
+      return {
+        data: paraData(r["Data"]),
+        objetoCodigo: codigo,
+        objetoNome: objMap[codigo] || codigo,
+        secretaria: (secMap[secCod] || {}).nome || "Não identificado",
+        departamento: deptMap[deptCod] || "Não identificado",
+        itemCusto: r["Item de Custo"] || "Não informado",
+        valor: numero(r["Valor Apropriado"])
+      };
+    });
+  }
+
+  // ---------- Interpretação da pergunta (mesma lógica do dashboard) ----------
+  const MESES_BUSCA = {
+    "janeiro":0,"jan":0,"fevereiro":1,"fev":1,"marco":2,"mar":2,"abril":3,"abr":3,
+    "maio":4,"mai":4,"junho":5,"jun":5,"julho":6,"jul":6,"agosto":7,"ago":7,
+    "setembro":8,"set":8,"outubro":9,"out":9,"novembro":10,"nov":10,"dezembro":11,"dez":11
+  };
+  const NOMES_MES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const STOPWORDS_BUSCA = new Set([
+    "de","da","do","das","dos","em","no","na","nos","nas","para","com","sem",
+    "por","que","uma","um","uns","umas","e","a","o","as","os","ao","aos","à",
+    "quanto","quanta","quantos","quantas","foi","foram","qual","quais","custo",
+    "custos","valor","valores","total","gasto","gastos","gastou","gastaram",
+    "apropriado","apropriados","referente","referentes","mes","mês","ano","dia"
+  ]);
+
+  function melhorCorrespondenciaBusca(queryNorm, candidatos, minScore=0.5, minPalavras=1){
+    let melhor = null;
+    candidatos.forEach(original=>{
+      const candNorm = normalizarBusca(original);
+      const palavras = candNorm.split(" ").filter(p=>p.length>2 && !STOPWORDS_BUSCA.has(p));
+      const base = palavras.length ? palavras : candNorm.split(" ").filter(Boolean);
+      if(!base.length) return;
+      const encontradas = base.filter(p => queryNorm.includes(p));
+      const score = encontradas.length / base.length;
+      const necessario = Math.min(minPalavras, base.length);
+      if(encontradas.length < necessario) return;
+      if(score < minScore) return;
+      if(!melhor || score > melhor.score || (score === melhor.score && encontradas.length > melhor.encontradas)){
+        melhor = { valor: original, score, encontradas: encontradas.length };
+      }
+    });
+    return melhor;
+  }
+
+  // Retorna { html, fala }
+  function responderPergunta(pergunta){
+    const queryNorm = normalizarBusca(pergunta);
+
+    // Saudações / ajuda
+    if(/^(oi|ola|bom dia|boa tarde|boa noite|e ai|hello|hi)\b/.test(queryNorm) && queryNorm.split(" ").length <= 3){
+      return { html: "Olá! 👋 Pergunte sobre custos por item, unidade, secretaria ou mês.", fala: "Olá! Pergunte sobre custos por item, unidade, secretaria ou mês.", sugestoes: true };
+    }
+    if(/\b(ajuda|help|como funciona|o que voce faz|exemplos?)\b/.test(queryNorm)){
+      return { html: "Eu consulto os lançamentos de custo da planilha. Cite um <b>item de custo</b>, uma <b>unidade</b>, uma <b>secretaria</b> e/ou um <b>mês/ano</b>. Exemplo:<br><em>\"custo com merenda escolar na escola reino da loucinha em setembro\"</em>", fala: "Cite um item de custo, uma unidade, uma secretaria ou um mês, e eu somo os lançamentos para você.", sugestoes: false };
+    }
+
+    if(!dados.length){
+      return { html: "Os dados ainda não foram carregados. Aguarde um instante e tente novamente.", fala: "Os dados ainda não foram carregados." };
+    }
+
+    // Mês
+    let mesEncontrado = null;
+    for(const chave in MESES_BUSCA){
+      if(new RegExp(`\\b${chave}\\b`).test(queryNorm)){ mesEncontrado = MESES_BUSCA[chave]; break; }
+    }
+    // Ano
+    const matchAno = queryNorm.match(/\b(20\d{2})\b/);
+    const anoEncontrado = matchAno ? Number(matchAno[1]) : null;
+
+    const itemEncontrado = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.itemCusto).filter(Boolean))], 0.5, 2);
+    const objetoEncontrado = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.objetoNome).filter(Boolean))], 0.5, 2);
+    const secretariaEncontrada = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.secretaria).filter(Boolean))], 0.6, 2);
+
+    let resultado = dados;
+    if(anoEncontrado) resultado = resultado.filter(d => d.data && d.data.getFullYear() === anoEncontrado);
+    if(mesEncontrado !== null) resultado = resultado.filter(d => d.data && d.data.getMonth() === mesEncontrado);
+    if(itemEncontrado) resultado = resultado.filter(d => d.itemCusto === itemEncontrado.valor);
+    if(objetoEncontrado) resultado = resultado.filter(d => d.objetoNome === objetoEncontrado.valor);
+    if(secretariaEncontrada) resultado = resultado.filter(d => d.secretaria === secretariaEncontrada.valor);
+
+    const nenhumCriterio = mesEncontrado === null && !anoEncontrado && !itemEncontrado && !objetoEncontrado && !secretariaEncontrada;
+    if(nenhumCriterio){
+      return {
+        html: 'Não consegui identificar item de custo, unidade, secretaria ou mês na pergunta. Tente algo como:<br><em>"custo com merenda escolar na escola reino da loucinha em setembro"</em>',
+        fala: "Não consegui entender sua pergunta. Tente citar um item de custo, uma unidade ou um mês."
+      };
+    }
+
+    // Chips
+    const chips = [];
+    if(secretariaEncontrada) chips.push(`<span class="chip">Secretaria: <b>${escapeHtml(secretariaEncontrada.valor)}</b></span>`);
+    if(objetoEncontrado) chips.push(`<span class="chip">Unidade: <b>${escapeHtml(objetoEncontrado.valor)}</b></span>`);
+    if(itemEncontrado) chips.push(`<span class="chip">Item: <b>${escapeHtml(itemEncontrado.valor)}</b></span>`);
+    if(mesEncontrado !== null) chips.push(`<span class="chip">Mês: <b>${NOMES_MES[mesEncontrado]}${anoEncontrado ? "/"+anoEncontrado : ""}</b></span>`);
+    else if(anoEncontrado) chips.push(`<span class="chip">Ano: <b>${anoEncontrado}</b></span>`);
+
+    // Descrição falada
+    const partes = [];
+    if(itemEncontrado) partes.push(itemEncontrado.valor);
+    if(objetoEncontrado) partes.push(`na ${objetoEncontrado.valor}`);
+    else if(secretariaEncontrada) partes.push(`na ${secretariaEncontrada.valor}`);
+    if(mesEncontrado !== null) partes.push(`em ${NOMES_MES[mesEncontrado].toLowerCase()}${anoEncontrado ? " de "+anoEncontrado : ""}`);
+    else if(anoEncontrado) partes.push(`em ${anoEncontrado}`);
+    const descricaoFalada = partes.join(" ");
+
+    if(!resultado.length){
+      return {
+        html: `<div>${chips.join("")}</div><div class="sub">Nenhum lançamento encontrado para esses critérios.</div>`,
+        fala: `Não encontrei nenhum lançamento${descricaoFalada ? " de " + descricaoFalada : ""}.`
+      };
+    }
+
+    const total = resultado.reduce((t,d)=>t+d.valor,0);
+    const registros = resultado.length;
+    const limite = 8;
+    const linhas = resultado.slice()
+      .sort((a,b)=> (b.data?.getTime()||0) - (a.data?.getTime()||0))
+      .slice(0, limite)
+      .map(d=>`<tr>
+        <td>${d.data ? d.data.toLocaleDateString("pt-BR") : "—"}</td>
+        <td>${escapeHtml(d.objetoNome)}<br><span class="sub">${escapeHtml(d.itemCusto)}</span></td>
+        <td class="dir">${moeda(d.valor)}</td>
+      </tr>`).join("");
+
+    const html = `
+      <div>${chips.join("")}</div>
+      <div class="valor">${moeda(total)}</div>
+      <div class="sub">em ${registros.toLocaleString("pt-BR")} lançamento(s)</div>
+      <table>
+        <thead><tr><th>Data</th><th>Unidade / Item</th><th class="dir">Valor</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+      ${registros > limite ? `<div class="sub mt-1">Mostrando ${limite} de ${registros.toLocaleString("pt-BR")} lançamentos.</div>` : ""}`;
+
+    const registrosTexto = registros === 1 ? "1 lançamento" : `${registros.toLocaleString("pt-BR")} lançamentos`;
+    return { html, fala: `${descricaoFalada ? "Custo com " + descricaoFalada + ": " : ""}${moeda(total)}, em ${registrosTexto}.` };
+  }
+
+  // ---------- Interface do chat ----------
+  const fab = $("chatFab"), painel = $("chatPanel"), msgs = $("chatMensagens");
+  const campo = $("chatCampo"), btnEnviar = $("chatEnviar");
+
+  function rolarFim(){ msgs.scrollTop = msgs.scrollHeight; }
+
+  function adicionarMensagem(html, tipo){
+    const div = document.createElement("div");
+    div.className = "msg " + tipo;
+    div.innerHTML = html;
+    msgs.appendChild(div);
+    rolarFim();
+    return div;
+  }
+
+  function htmlSugestoes(){
+    const exemplos = [
+      "Quanto foi gasto em setembro?",
+      "Custo com merenda escolar",
+      "Gastos da Secretaria de Saúde em outubro"
+    ];
+    return `<div class="sugestoes">${exemplos.map(e=>`<button type="button" data-sugestao="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join("")}</div>`;
+  }
+
+  function mensagemBoasVindas(){
+    adicionarMensagem(
+      `Olá! Sou o assistente de <b>Busca Inteligente</b> de custos. Pergunte por voz ou digitando, citando item de custo, unidade, secretaria ou mês.${htmlSugestoes()}`,
+      "bot"
+    );
+  }
+
+  function abrirChat(){
+    painel.classList.add("aberto");
+    fab.classList.add("aberto");
+    if(!msgs.children.length) mensagemBoasVindas();
+    carregarDados();
+    setTimeout(()=>campo.focus(), 50);
+  }
+  function fecharChat(){
+    painel.classList.remove("aberto");
+    fab.classList.remove("aberto");
+    if("speechSynthesis" in window) window.speechSynthesis.cancel();
+  }
+
+  function enviarPergunta(textoOpcional, porVoz){
+    const pergunta = (textoOpcional ?? campo.value).trim();
+    if(!pergunta) return;
+    campo.value = "";
+    adicionarMensagem(escapeHtml(pergunta), "user");
+
+    const digitando = adicionarMensagem('<span class="digitando"><span></span><span></span><span></span></span>', "bot");
+
+    const processar = async ()=>{
+      if(!dadosCarregados) await carregarDados();
+      let resp;
+      try{ resp = responderPergunta(pergunta); }
+      catch(e){ console.error(e); resp = { html: "Ocorreu um erro ao processar a pergunta.", fala: "Ocorreu um erro ao processar a pergunta." }; }
+      digitando.remove();
+      adicionarMensagem(resp.html + (resp.sugestoes ? htmlSugestoes() : ""), "bot");
+      if(falarRespostas || porVoz) falar(resp.fala);
+    };
+    setTimeout(processar, 350);
+  }
+
+  // ---------- Voz: síntese ----------
+  let vozPtBR = null;
+  function carregarVozPtBR(){
+    if(!("speechSynthesis" in window)) return;
+    const vozes = window.speechSynthesis.getVoices();
+    vozPtBR = vozes.find(v=>v.lang === "pt-BR") || vozes.find(v=>v.lang && v.lang.startsWith("pt")) || null;
+  }
+  if("speechSynthesis" in window){
+    carregarVozPtBR();
+    window.speechSynthesis.onvoiceschanged = carregarVozPtBR;
+  }
+  function falar(texto){
+    if(!("speechSynthesis" in window) || !texto) return;
+    try{
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(texto);
+      u.lang = "pt-BR";
+      if(vozPtBR) u.voice = vozPtBR;
+      window.speechSynthesis.speak(u);
+    }catch(e){ console.warn("Não foi possível falar a resposta:", e); }
+  }
+
+  // ---------- Voz: reconhecimento ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let reconhecimento = null, ouvindo = false;
+  const btnMic = $("chatMic");
+
+  function iniciarVoz(){
+    if(!SR){ alert("Reconhecimento de voz não é suportado neste navegador. Use o Google Chrome ou o Microsoft Edge."); return; }
+    if(ouvindo){ reconhecimento && reconhecimento.stop(); return; }
+    reconhecimento = new SR();
+    reconhecimento.lang = "pt-BR";
+    reconhecimento.interimResults = false;
+    reconhecimento.maxAlternatives = 1;
+    reconhecimento.continuous = false;
+    reconhecimento.onstart = ()=>{ ouvindo = true; btnMic.classList.add("ouvindo"); campo.placeholder = "Ouvindo... fale sua pergunta"; };
+    reconhecimento.onresult = ev=>{ enviarPergunta(ev.results[0][0].transcript, true); };
+    reconhecimento.onerror = ev=>{ if(ev.error !== "no-speech" && ev.error !== "aborted") console.warn("Erro de voz:", ev.error); };
+    reconhecimento.onend = ()=>{ ouvindo = false; btnMic.classList.remove("ouvindo"); campo.placeholder = "Digite ou fale sua pergunta..."; };
+    try{ reconhecimento.start(); }catch(e){ console.warn(e); }
+  }
+
+  // ---------- Eventos ----------
+  fab.addEventListener("click", abrirChat);
+  $("chatFechar").addEventListener("click", fecharChat);
+  btnEnviar.addEventListener("click", ()=>enviarPergunta());
+  campo.addEventListener("keydown", ev=>{ if(ev.key === "Enter") enviarPergunta(); });
+  btnMic.addEventListener("click", iniciarVoz);
+  if(!SR){ btnMic.disabled = true; btnMic.title = "Reconhecimento de voz não suportado neste navegador"; }
+
+  $("chatVozToggle").addEventListener("click", ev=>{
+    falarRespostas = !falarRespostas;
+    const b = ev.currentTarget;
+    b.classList.toggle("ativo", falarRespostas);
+    b.innerHTML = falarRespostas ? '<i class="bi bi-volume-up-fill"></i>' : '<i class="bi bi-volume-mute-fill"></i>';
+    b.title = falarRespostas ? "Resposta por voz ativada" : "Responder por voz";
+    if(!falarRespostas && "speechSynthesis" in window) window.speechSynthesis.cancel();
+  });
+
+  msgs.addEventListener("click", ev=>{
+    const btn = ev.target.closest("[data-sugestao]");
+    if(btn) enviarPergunta(btn.dataset.sugestao);
+  });
+})();
 </script>
 
 </body>
