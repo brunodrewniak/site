@@ -442,39 +442,23 @@
     "apropriado","apropriados","referente","referentes","mes","mês","ano","dia"
   ]);
 
-  // Compara PALAVRAS INTEIRAS (e não trechos): "sete" não casa mais com "setembro".
-  // Retorna também as palavras reconhecidas, para que possam ser "consumidas" da pergunta.
   function melhorCorrespondenciaBusca(queryNorm, candidatos, minScore=0.5, minPalavras=1){
-    const tokensQuery = queryNorm.split(" ").filter(Boolean);
-    const conjuntoQuery = new Set(tokensQuery);
     let melhor = null;
     candidatos.forEach(original=>{
       const candNorm = normalizarBusca(original);
       const palavras = candNorm.split(" ").filter(p=>p.length>2 && !STOPWORDS_BUSCA.has(p));
       const base = palavras.length ? palavras : candNorm.split(" ").filter(Boolean);
       if(!base.length) return;
-      const encontradas = base.filter(p => conjuntoQuery.has(p));
+      const encontradas = base.filter(p => queryNorm.includes(p));
       const score = encontradas.length / base.length;
       const necessario = Math.min(minPalavras, base.length);
       if(encontradas.length < necessario) return;
       if(score < minScore) return;
       if(!melhor || score > melhor.score || (score === melhor.score && encontradas.length > melhor.encontradas)){
-        melhor = { valor: original, score, encontradas: encontradas.length, palavras: encontradas };
+        melhor = { valor: original, score, encontradas: encontradas.length };
       }
     });
     return melhor;
-  }
-
-  // Remove da pergunta (uma ocorrência de cada) as palavras que já foram usadas
-  // para identificar uma unidade/item/secretaria, evitando que "Sete de Setembro"
-  // seja lido também como o mês de setembro.
-  function consumirPalavras(tokens, palavrasUsadas){
-    const resto = [...tokens];
-    (palavrasUsadas || []).forEach(p=>{
-      const i = resto.indexOf(p);
-      if(i >= 0) resto.splice(i, 1);
-    });
-    return resto;
   }
 
   // Retorna { html, fala }
@@ -493,24 +477,18 @@
       return { html: "Os dados ainda não foram carregados. Aguarde um instante e tente novamente.", fala: "Os dados ainda não foram carregados." };
     }
 
-    // 1) Primeiro identifica nomes (unidade, item, secretaria)
+    // Mês
+    let mesEncontrado = null;
+    for(const chave in MESES_BUSCA){
+      if(new RegExp(`\\b${chave}\\b`).test(queryNorm)){ mesEncontrado = MESES_BUSCA[chave]; break; }
+    }
+    // Ano
+    const matchAno = queryNorm.match(/\b(20\d{2})\b/);
+    const anoEncontrado = matchAno ? Number(matchAno[1]) : null;
+
     const itemEncontrado = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.itemCusto).filter(Boolean))], 0.5, 2);
     const objetoEncontrado = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.objetoNome).filter(Boolean))], 0.5, 2);
     const secretariaEncontrada = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.secretaria).filter(Boolean))], 0.6, 2);
-
-    // 2) Retira da pergunta as palavras já usadas por esses nomes
-    let tokensRestantes = queryNorm.split(" ").filter(Boolean);
-    [objetoEncontrado, itemEncontrado, secretariaEncontrada].forEach(m=>{
-      if(m) tokensRestantes = consumirPalavras(tokensRestantes, m.palavras);
-    });
-
-    // 3) Mês e ano são procurados somente no que sobrou da pergunta
-    let mesEncontrado = null;
-    for(const t of tokensRestantes){
-      if(Object.prototype.hasOwnProperty.call(MESES_BUSCA, t)){ mesEncontrado = MESES_BUSCA[t]; break; }
-    }
-    const tokenAno = tokensRestantes.find(t => /^20\d{2}$/.test(t));
-    const anoEncontrado = tokenAno ? Number(tokenAno) : null;
 
     let resultado = dados;
     if(anoEncontrado) resultado = resultado.filter(d => d.data && d.data.getFullYear() === anoEncontrado);
