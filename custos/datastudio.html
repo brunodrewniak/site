@@ -11,6 +11,8 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <!-- SheetJS (leitura da planilha usada pelo chatbot) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- FuseJS (leitura da planilha usada pelo chatbot) -->
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 <style>
   html, body {
     height: 100%;
@@ -300,268 +302,421 @@
 </script>
 
 <script>
-/* =====================================================================
-   CHATBOT — BUSCA INTELIGENTE
-   Mesma lógica de interpretação da pergunta do dashboard de custos,
-   agora apresentada em formato de conversa.
-   ===================================================================== */
-(function(){
-  const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYZ2LbusfHY8Bhur33Rk5dU5knq3ZEJEJRluMoOpyDUG5Jt31o9Az3aT_9h5GN66Hlc-GAzaHdYc2a/pub?output=xlsx";
+/*
+ * CHATBOT DE CUSTOS — versão com Fuse.js 6.6.2
+ * Substitui os dois blocos <script> anteriores do arquivo original.
+ * Dependências já existentes no dashboard: XLSX (SheetJS), Bootstrap Icons e os IDs HTML usados abaixo.
+ * O Fuse.js é carregado automaticamente pelo CDN caso ainda não esteja disponível.
+ */
 
+(function () {
+  "use strict";
+
+  // ---------- Tela cheia ----------
+  const btnFullscreen = document.getElementById("btnFullscreen");
+  const containerFullscreen = document.getElementById("frameContainer");
+  const fullscreenIcon = document.getElementById("fullscreenIcon");
+
+  async function toggleFullscreen() {
+    if (!containerFullscreen) return;
+    try {
+      const estaEmTelaCheia = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+      if (!estaEmTelaCheia) {
+        const solicitar = containerFullscreen.requestFullscreen || containerFullscreen.webkitRequestFullscreen || containerFullscreen.msRequestFullscreen;
+        if (solicitar) await solicitar.call(containerFullscreen);
+      } else {
+        const sair = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+        if (sair) await sair.call(document);
+      }
+    } catch (erro) {
+      console.warn("Não foi possível alternar para tela cheia:", erro);
+    }
+  }
+
+  function updateButtonIcon() {
+    if (!fullscreenIcon) return;
+    const ativo = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+    fullscreenIcon.className = ativo ? "bi bi-fullscreen-exit" : "bi bi-fullscreen";
+    if (btnFullscreen) btnFullscreen.setAttribute("aria-label", ativo ? "Sair da tela cheia" : "Ativar tela cheia");
+  }
+
+  if (btnFullscreen) btnFullscreen.addEventListener("click", toggleFullscreen);
+  ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(evento => document.addEventListener(evento, updateButtonIcon));
+  updateButtonIcon();
+
+  // ---------- Chatbot ----------
+  const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYZ2LbusfHY8Bhur33Rk5dU5knq3ZEJEJRluMoOpyDUG5Jt31o9Az3aT_9h5GN66Hlc-GAzaHdYc2a/pub?output=xlsx";
+  const FUSE_CDN = "https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js";
   const $ = id => document.getElementById(id);
+
   let dados = [];
   let dadosCarregados = false;
-  let carregando = false;
+  let promessaCarregamento = null;
   let falarRespostas = false;
+  let indexesBusca = {};
+  let vozPtBR = null;
+  let reconhecimento = null;
+  let ouvindo = false;
+  let perguntasPendentes = 0;
 
-  // ---------- Utilitários ----------
-  function moeda(v){ return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0); }
+  const MESES_BUSCA = {
+    janeiro: 0, jan: 0, fevereiro: 1, fev: 1, marco: 2, mar: 2,
+    abril: 3, abr: 3, maio: 4, mai: 4, junho: 5, jun: 5,
+    julho: 6, jul: 6, agosto: 7, ago: 7, setembro: 8, set: 8,
+    outubro: 9, out: 9, novembro: 10, nov: 10, dezembro: 11, dez: 11
+  };
+  const NOMES_MES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const STOPWORDS = new Set([
+    "de", "da", "do", "das", "dos", "em", "no", "na", "nos", "nas", "para", "com", "sem", "por", "que",
+    "uma", "um", "uns", "umas", "e", "a", "o", "as", "os", "ao", "aos", "quanto", "quanta", "quantos",
+    "quantas", "foi", "foram", "qual", "quais", "custo", "custos", "valor", "valores", "total", "gasto", "gastos",
+    "gastou", "gastaram", "apropriado", "apropriados", "referente", "referentes", "mes", "ano", "dia", "me", "mostre",
+    "mostrar", "consulte", "consulta", "quero", "saber", "teve", "tem", "houve", "qual", "quanto", "quanto"
+  ]);
 
-  function numero(valor){
-    if(typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
-    if(!valor) return 0;
-    let texto = String(valor).replace("R$","").trim();
-    if(texto.includes(".") && texto.includes(",")) texto = texto.replace(/\./g,"").replace(",",".");
-    else if(texto.includes(",")) texto = texto.replace(",",".");
+  function moeda(valor) {
+    const n = Number(valor);
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number.isFinite(n) ? n : 0);
+  }
+
+  // Aceita número nativo, formato brasileiro (1.234,56) e formato decimal simples (1234.56).
+  function numero(valor) {
+    if (typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
+    if (valor === null || valor === undefined || valor === "") return 0;
+    let texto = String(valor).trim().replace(/\s/g, "").replace(/^R\$/i, "").replace(/\u00a0/g, "");
+    if (!texto) return 0;
+    const negativoParenteses = /^\(.*\)$/.test(texto);
+    texto = texto.replace(/[()]/g, "");
+    if (texto.includes(",") && texto.includes(".")) {
+      // O último separador é considerado decimal.
+      if (texto.lastIndexOf(",") > texto.lastIndexOf(".")) texto = texto.replace(/\./g, "").replace(",", ".");
+      else texto = texto.replace(/,/g, "");
+    } else if (texto.includes(",")) {
+      texto = texto.replace(/\./g, "").replace(",", ".");
+    }
+    texto = texto.replace(/[^\d.+-]/g, "");
     const n = Number(texto);
-    return Number.isFinite(n) ? n : 0;
+    if (!Number.isFinite(n)) return 0;
+    return negativoParenteses ? -Math.abs(n) : n;
   }
 
-  function paraData(valor){
-    if(valor instanceof Date && !isNaN(valor)) return valor;
-    if(typeof valor === "number"){
-      const epoch = new Date(Date.UTC(1899,11,30));
-      return new Date(epoch.getTime() + valor*86400000);
+  function paraData(valor) {
+    if (valor instanceof Date) return Number.isNaN(valor.getTime()) ? null : new Date(valor.getFullYear(), valor.getMonth(), valor.getDate());
+    if (typeof valor === "number" && Number.isFinite(valor)) {
+      // Data serial do Excel, mantida em data local para evitar deslocamento de dia por fuso horário.
+      const dias = Math.floor(valor);
+      const dataBase = new Date(1899, 11, 30);
+      dataBase.setDate(dataBase.getDate() + dias);
+      return dataBase;
     }
-    if(typeof valor === "string"){
-      const d = new Date(valor);
-      if(!isNaN(d)) return d;
+    if (typeof valor !== "string" || !valor.trim()) return null;
+    const texto = valor.trim();
+    let m = texto.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    if (m) {
+      let ano = Number(m[3]);
+      if (ano < 100) ano += ano >= 50 ? 1900 : 2000;
+      const d = new Date(ano, Number(m[2]) - 1, Number(m[1]));
+      return d.getFullYear() === ano && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[1]) ? d : null;
     }
-    return null;
+    // ISO YYYY-MM-DD é interpretado explicitamente como data local.
+    m = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+    if (m) {
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3]) ? d : null;
+    }
+    const d = new Date(texto);
+    return Number.isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
 
-  function escapeHtml(v){
-    return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  function escapeHtml(valor) {
+    return String(valor ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
-  function removerAcentos(t){
-    return String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  function removerAcentos(texto) {
+    return String(texto ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   }
 
-  function normalizarBusca(t){
-    return removerAcentos(t).replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
+  function normalizarBusca(texto) {
+    return removerAcentos(texto).replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
   }
 
-  // ---------- Carga dos dados (mesma planilha do dashboard) ----------
-  async function carregarDados(){
-    if(dadosCarregados || carregando) return;
-    carregando = true;
+  async function garantirFuse() {
+    if (window.Fuse) return window.Fuse;
+    if (window.__fuseLoaderPromise) return window.__fuseLoaderPromise;
+    window.__fuseLoaderPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = FUSE_CDN;
+      script.async = true;
+      script.onload = () => window.Fuse ? resolve(window.Fuse) : reject(new Error("Fuse.js foi carregado, mas não está disponível."));
+      script.onerror = () => reject(new Error("Não foi possível carregar Fuse.js pelo CDN."));
+      document.head.appendChild(script);
+    });
+    try { return await window.__fuseLoaderPromise; }
+    catch (erro) { window.__fuseLoaderPromise = null; throw erro; }
+  }
+
+  function construirIndex(campo, valores, Fuse) {
+    const unicos = [...new Set(valores.map(v => String(v ?? "").trim()).filter(v => v && !/^não identificado$/i.test(v) && !/^não informado$/i.test(v)))];
+    const documentos = unicos.map(valor => ({ valor, normalizado: normalizarBusca(valor) }));
+    return new Fuse(documentos, {
+      keys: [{ name: "normalizado", weight: 2 }, { name: "valor", weight: 1 }],
+      threshold: 0.36,
+      ignoreLocation: true,
+      includeScore: true,
+      minMatchCharLength: 2,
+      shouldSort: true,
+      findAllMatches: true
+    });
+  }
+
+  function construirIndexes(Fuse) {
+    indexesBusca = {
+      itemCusto: construirIndex("itemCusto", dados.map(d => d.itemCusto), Fuse),
+      objetoNome: construirIndex("objetoNome", dados.map(d => d.objetoNome), Fuse),
+      secretaria: construirIndex("secretaria", dados.map(d => d.secretaria), Fuse),
+      departamento: construirIndex("departamento", dados.map(d => d.departamento), Fuse),
+      localizacao: construirIndex("localizacao", dados.map(d => d.localizacao), Fuse)
+    };
+  }
+
+  async function carregarDados() {
+    if (dadosCarregados) return true;
+    if (promessaCarregamento) return promessaCarregamento;
     const status = $("chatStatusDados");
-    status.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Carregando dados...';
-    try{
-      const resp = await fetch(PUB_XLSX_URL);
-      if(!resp.ok) throw new Error("Erro " + resp.status);
-      const buffer = await resp.arrayBuffer();
-      const wb = XLSX.read(buffer, { type:"array", cellDates:true });
-      processarWorkbook(wb);
-      dadosCarregados = true;
-      status.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>${dados.length.toLocaleString("pt-BR")} lançamentos carregados.`;
-    }catch(e){
-      console.error("Chatbot: falha ao carregar dados", e);
-      status.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Não foi possível carregar os dados. <a href="#" id="chatTentarNovamente">Tentar novamente</a>';
-      const link = $("chatTentarNovamente");
-      if(link) link.addEventListener("click", ev=>{ ev.preventDefault(); carregarDados(); });
-    }finally{
-      carregando = false;
-    }
+    if (status) status.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Carregando dados...';
+
+    promessaCarregamento = (async () => {
+      try {
+        await garantirFuse();
+        if (!window.XLSX) throw new Error("A biblioteca XLSX/SheetJS não está carregada.");
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        let resp;
+        try { resp = await fetch(PUB_XLSX_URL, { signal: controller.signal, cache: "no-cache" }); }
+        finally { clearTimeout(timeout); }
+        if (!resp.ok) throw new Error("Erro HTTP " + resp.status);
+        const buffer = await resp.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: "array", cellDates: true });
+        processarWorkbook(wb);
+        construirIndexes(window.Fuse);
+        dadosCarregados = true;
+        if (status) status.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>${dados.length.toLocaleString("pt-BR")} lançamentos carregados.`;
+        return true;
+      } catch (erro) {
+        console.error("Chatbot: falha ao carregar dados", erro);
+        if (status) status.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Não foi possível carregar os dados. <a href="#" id="chatTentarNovamente">Tentar novamente</a>';
+        const link = $("chatTentarNovamente");
+        if (link) link.addEventListener("click", ev => { ev.preventDefault(); promessaCarregamento = null; carregarDados(); });
+        return false;
+      } finally {
+        promessaCarregamento = null;
+      }
+    })();
+    return promessaCarregamento;
   }
 
-  function processarWorkbook(wb){
+  function processarWorkbook(wb) {
     const abaDados = wb.Sheets["Dados"];
-    if(!abaDados) throw new Error('Aba "Dados" não encontrada.');
+    if (!abaDados) throw new Error('Aba "Dados" não encontrada.');
 
     const secMap = {}, deptMap = {}, objMap = {}, locMap = {};
-
-    if(wb.Sheets["Secretarias"]){
-      XLSX.utils.sheet_to_json(wb.Sheets["Secretarias"]).forEach(r=>{
+    if (wb.Sheets["Secretarias"]) {
+      XLSX.utils.sheet_to_json(wb.Sheets["Secretarias"], { defval: "" }).forEach(r => {
         const cod = r["Objeto de Custo - Secretaria"];
-        if(cod) secMap[String(cod).trim()] = { nome: r["Secretaria"] || "" };
+        if (cod) secMap[String(cod).trim()] = String(r["Secretaria"] || "").trim();
       });
     }
-    if(wb.Sheets["Departamentos"]){
-      XLSX.utils.sheet_to_json(wb.Sheets["Departamentos"]).forEach(r=>{
+    if (wb.Sheets["Departamentos"]) {
+      XLSX.utils.sheet_to_json(wb.Sheets["Departamentos"], { defval: "" }).forEach(r => {
         const cod = r["Objeto de Custo - Departamento"];
-        if(cod) deptMap[String(cod).trim()] = r["Departamento"] || "";
+        if (cod) deptMap[String(cod).trim()] = String(r["Departamento"] || "").trim();
       });
     }
-    if(wb.Sheets["Objetos"]){
-      XLSX.utils.sheet_to_json(wb.Sheets["Objetos"]).forEach(r=>{
+    if (wb.Sheets["Objetos"]) {
+      XLSX.utils.sheet_to_json(wb.Sheets["Objetos"], { defval: "" }).forEach(r => {
         const cod = r["Objeto de Custo"];
-        if(cod) objMap[String(cod).trim()] = r["Descrição"] || "";
+        if (cod) objMap[String(cod).trim()] = String(r["Descrição"] || "").trim();
       });
     }
-    if(wb.Sheets["Localização"]){
-      XLSX.utils.sheet_to_json(wb.Sheets["Localização"]).forEach(r=>{
+    if (wb.Sheets["Localização"]) {
+      XLSX.utils.sheet_to_json(wb.Sheets["Localização"], { defval: "" }).forEach(r => {
         const cod = r["Objeto de Custo"];
-        if(!cod) return;
+        if (!cod) return;
         const nome = String(r["Nome"] || "").trim();
-        locMap[String(cod).trim()] = { naoUtilizar: /^n[aã]o utilizar/i.test(nome) };
+        if (!locMap[String(cod).trim()]) locMap[String(cod).trim()] = [];
+        if (nome && !/^n[aã]o utilizar/i.test(nome)) locMap[String(cod).trim()].push(nome);
       });
     }
 
-    const linhas = XLSX.utils.sheet_to_json(abaDados, { defval:null });
-    dados = linhas.filter(r => r["Objeto de Custo"]).map(r=>{
+    const linhas = XLSX.utils.sheet_to_json(abaDados, { defval: null });
+    dados = linhas.filter(r => r["Objeto de Custo"]).map(r => {
       const codigo = String(r["Objeto de Custo"]).trim();
       const partes = codigo.split(".");
-      const secCod = partes.slice(0,2).join(".");
-      const deptCod = partes.slice(0,3).join(".");
+      const secCod = partes.slice(0, 2).join(".");
+      const deptCod = partes.slice(0, 3).join(".");
+      const locais = locMap[codigo] || [];
       return {
         data: paraData(r["Data"]),
         objetoCodigo: codigo,
         objetoNome: objMap[codigo] || codigo,
-        secretaria: (secMap[secCod] || {}).nome || "Não identificado",
+        secretaria: secMap[secCod] || "Não identificado",
         departamento: deptMap[deptCod] || "Não identificado",
-        itemCusto: r["Item de Custo"] || "Não informado",
+        localizacao: locais.join(" / "),
+        itemCusto: String(r["Item de Custo"] || "Não informado").trim(),
         valor: numero(r["Valor Apropriado"])
       };
     });
   }
 
-  // ---------- Interpretação da pergunta (mesma lógica do dashboard) ----------
-  const MESES_BUSCA = {
-    "janeiro":0,"jan":0,"fevereiro":1,"fev":1,"marco":2,"mar":2,"abril":3,"abr":3,
-    "maio":4,"mai":4,"junho":5,"jun":5,"julho":6,"jul":6,"agosto":7,"ago":7,
-    "setembro":8,"set":8,"outubro":9,"out":9,"novembro":10,"nov":10,"dezembro":11,"dez":11
-  };
-  const NOMES_MES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-  const STOPWORDS_BUSCA = new Set([
-    "de","da","do","das","dos","em","no","na","nos","nas","para","com","sem",
-    "por","que","uma","um","uns","umas","e","a","o","as","os","ao","aos","à",
-    "quanto","quanta","quantos","quantas","foi","foram","qual","quais","custo",
-    "custos","valor","valores","total","gasto","gastos","gastou","gastaram",
-    "apropriado","apropriados","referente","referentes","mes","mês","ano","dia"
-  ]);
-
-  function melhorCorrespondenciaBusca(queryNorm, candidatos, minScore=0.5, minPalavras=1){
-    let melhor = null;
-    candidatos.forEach(original=>{
-      const candNorm = normalizarBusca(original);
-      const palavras = candNorm.split(" ").filter(p=>p.length>2 && !STOPWORDS_BUSCA.has(p));
-      const base = palavras.length ? palavras : candNorm.split(" ").filter(Boolean);
-      if(!base.length) return;
-      const encontradas = base.filter(p => queryNorm.includes(p));
-      const score = encontradas.length / base.length;
-      const necessario = Math.min(minPalavras, base.length);
-      if(encontradas.length < necessario) return;
-      if(score < minScore) return;
-      if(!melhor || score > melhor.score || (score === melhor.score && encontradas.length > melhor.encontradas)){
-        melhor = { valor: original, score, encontradas: encontradas.length };
-      }
-    });
-    return melhor;
+  function termosDaPergunta(pergunta) {
+    const normalizada = normalizarBusca(pergunta);
+    return normalizada.split(" ").filter(p => p.length >= 3 && !STOPWORDS.has(p) && !Object.prototype.hasOwnProperty.call(MESES_BUSCA, p) && !/^20\d{2}$/.test(p));
   }
 
-  // Retorna { html, fala }
-  function responderPergunta(pergunta){
-    const queryNorm = normalizarBusca(pergunta);
+  // Usa Fuse por termo e agrega evidências; só aceita resultado com evidência suficiente e evita empates duvidosos.
+  function melhorCorrespondenciaFuse(pergunta, index) {
+    if (!index) return null;
+    const normalizada = normalizarBusca(pergunta);
+    if (!normalizada) return null;
+    const candidatos = new Map();
+    const termos = termosDaPergunta(pergunta);
 
-    // Saudações / ajuda
-    if(/^(oi|ola|bom dia|boa tarde|boa noite|e ai|hello|hi)\b/.test(queryNorm) && queryNorm.split(" ").length <= 3){
-      return { html: "Olá! 👋 Pergunte sobre custos por item, unidade, secretaria ou mês.", fala: "Olá! Pergunte sobre custos por item, unidade, secretaria ou mês.", sugestoes: true };
-    }
-    if(/\b(ajuda|help|como funciona|o que voce faz|exemplos?)\b/.test(queryNorm)){
-      return { html: "Eu consulto os lançamentos de custo da planilha. Cite um <b>item de custo</b>, uma <b>unidade</b>, uma <b>secretaria</b> e/ou um <b>mês/ano</b>. Exemplo:<br><em>\"custo com merenda escolar na escola reino da loucinha em setembro\"</em>", fala: "Cite um item de custo, uma unidade, uma secretaria ou um mês, e eu somo os lançamentos para você.", sugestoes: false };
-    }
+    // Busca da frase completa ajuda a priorizar nomes exatos ou quase exatos.
+    const frase = index.search(normalizada, { limit: 8 });
+    frase.forEach((r, pos) => {
+      const chave = r.item.valor;
+      const score = typeof r.score === "number" ? r.score : 1;
+      const atual = candidatos.get(chave) || { valor: chave, hits: 0, somaScore: 0, melhorScore: 1, frase: false };
+      atual.frase = true;
+      atual.melhorScore = Math.min(atual.melhorScore, score);
+      atual.somaScore += score * 0.65;
+      candidatos.set(chave, atual);
+    });
 
-    if(!dados.length){
-      return { html: "Os dados ainda não foram carregados. Aguarde um instante e tente novamente.", fala: "Os dados ainda não foram carregados." };
-    }
+    termos.forEach(termo => {
+      index.search(termo, { limit: 12 }).forEach(r => {
+        const score = typeof r.score === "number" ? r.score : 1;
+        if (score > 0.34) return;
+        const chave = r.item.valor;
+        const atual = candidatos.get(chave) || { valor: chave, hits: 0, somaScore: 0, melhorScore: 1, frase: false };
+        atual.hits += 1;
+        atual.somaScore += score;
+        atual.melhorScore = Math.min(atual.melhorScore, score);
+        candidatos.set(chave, atual);
+      });
+    });
 
-    // Mês
-    let mesEncontrado = null;
-    for(const chave in MESES_BUSCA){
-      if(new RegExp(`\\b${chave}\\b`).test(queryNorm)){ mesEncontrado = MESES_BUSCA[chave]; break; }
+    if (!candidatos.size) return null;
+    const ranking = [...candidatos.values()].map(c => ({
+      ...c,
+      scoreFinal: c.somaScore / Math.max(1, c.hits + (c.frase ? 0.65 : 0))
+    })).sort((a, b) => b.hits - a.hits || a.scoreFinal - b.scoreFinal);
+
+    const primeiro = ranking[0];
+    const segundo = ranking[1];
+    const quantidadeTermos = Math.max(1, termos.length);
+    const exato = normalizarBusca(primeiro.valor) === normalizada;
+    const cobertura = primeiro.hits / quantidadeTermos;
+    const temEvidencia = exato || primeiro.frase && primeiro.melhorScore <= 0.22 || primeiro.hits >= 1 && (cobertura >= 0.34 || primeiro.melhorScore <= 0.12);
+    if (!temEvidencia) return null;
+    if (segundo && segundo.hits === primeiro.hits && Math.abs(segundo.scoreFinal - primeiro.scoreFinal) < 0.035 && !exato) return null;
+    return { valor: primeiro.valor, score: primeiro.scoreFinal, hits: primeiro.hits };
+  }
+
+  function extrairPeriodo(queryNorm) {
+    let mes = null;
+    // Primeiro testa nomes completos; depois abreviações, evitando colisões por ordem do objeto.
+    const mesesOrdenados = Object.keys(MESES_BUSCA).sort((a, b) => b.length - a.length);
+    for (const chave of mesesOrdenados) {
+      if (new RegExp("\\b" + chave + "\\b").test(queryNorm)) { mes = MESES_BUSCA[chave]; break; }
     }
-    // Ano
     const matchAno = queryNorm.match(/\b(20\d{2})\b/);
-    const anoEncontrado = matchAno ? Number(matchAno[1]) : null;
+    const ano = matchAno ? Number(matchAno[1]) : null;
+    return { mes, ano };
+  }
 
-    const itemEncontrado = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.itemCusto).filter(Boolean))], 0.5, 2);
-    const objetoEncontrado = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.objetoNome).filter(Boolean))], 0.5, 2);
-    const secretariaEncontrada = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.secretaria).filter(Boolean))], 0.6, 2);
+  function responderPergunta(pergunta) {
+    const queryNorm = normalizarBusca(pergunta);
+    if (/^(oi|ola|bom dia|boa tarde|boa noite|e ai|hello|hi)\b/.test(queryNorm) && queryNorm.split(" ").length <= 3) {
+      return { html: "Olá! 👋 Pergunte sobre custos por item, unidade, departamento, secretaria, localização ou mês.", fala: "Olá! Pergunte sobre custos por item, unidade, departamento, secretaria, localização ou mês.", sugestoes: true };
+    }
+    if (/\b(ajuda|help|como funciona|o que voce faz|exemplos?)\b/.test(queryNorm)) {
+      return { html: 'Eu consulto os lançamentos de custo da planilha. Cite um <b>item de custo</b>, uma <b>unidade</b>, um <b>departamento</b>, uma <b>secretaria</b>, uma <b>localização</b> e/ou um <b>mês/ano</b>. Exemplo:<br><em>"custo com merenda escolar na escola reino da loucinha em setembro de 2026"</em>', fala: "Cite item, unidade, departamento, secretaria, localização ou mês e ano.", sugestoes: false };
+    }
+    if (!dados.length) return { html: "Os dados ainda não foram carregados. Aguarde um instante e tente novamente.", fala: "Os dados ainda não foram carregados." };
+
+    const periodo = extrairPeriodo(queryNorm);
+    const itemEncontrado = melhorCorrespondenciaFuse(pergunta, indexesBusca.itemCusto);
+    const objetoEncontrado = melhorCorrespondenciaFuse(pergunta, indexesBusca.objetoNome);
+    const secretariaEncontrada = melhorCorrespondenciaFuse(pergunta, indexesBusca.secretaria);
+    const departamentoEncontrado = melhorCorrespondenciaFuse(pergunta, indexesBusca.departamento);
+    const localizacaoEncontrada = melhorCorrespondenciaFuse(pergunta, indexesBusca.localizacao);
 
     let resultado = dados;
-    if(anoEncontrado) resultado = resultado.filter(d => d.data && d.data.getFullYear() === anoEncontrado);
-    if(mesEncontrado !== null) resultado = resultado.filter(d => d.data && d.data.getMonth() === mesEncontrado);
-    if(itemEncontrado) resultado = resultado.filter(d => d.itemCusto === itemEncontrado.valor);
-    if(objetoEncontrado) resultado = resultado.filter(d => d.objetoNome === objetoEncontrado.valor);
-    if(secretariaEncontrada) resultado = resultado.filter(d => d.secretaria === secretariaEncontrada.valor);
+    if (periodo.ano) resultado = resultado.filter(d => d.data && d.data.getFullYear() === periodo.ano);
+    if (periodo.mes !== null) resultado = resultado.filter(d => d.data && d.data.getMonth() === periodo.mes);
+    if (itemEncontrado) resultado = resultado.filter(d => d.itemCusto === itemEncontrado.valor);
+    if (objetoEncontrado) resultado = resultado.filter(d => d.objetoNome === objetoEncontrado.valor);
+    if (secretariaEncontrada) resultado = resultado.filter(d => d.secretaria === secretariaEncontrada.valor);
+    if (departamentoEncontrado) resultado = resultado.filter(d => d.departamento === departamentoEncontrado.valor);
+    if (localizacaoEncontrada) resultado = resultado.filter(d => d.localizacao.split(" / ").includes(localizacaoEncontrada.valor) || d.localizacao === localizacaoEncontrada.valor);
 
-    const nenhumCriterio = mesEncontrado === null && !anoEncontrado && !itemEncontrado && !objetoEncontrado && !secretariaEncontrada;
-    if(nenhumCriterio){
-      return {
-        html: 'Não consegui identificar item de custo, unidade, secretaria ou mês na pergunta. Tente algo como:<br><em>"custo com merenda escolar na escola reino da loucinha em setembro"</em>',
-        fala: "Não consegui entender sua pergunta. Tente citar um item de custo, uma unidade ou um mês."
-      };
+    const nenhumCriterio = periodo.mes === null && !periodo.ano && !itemEncontrado && !objetoEncontrado && !secretariaEncontrada && !departamentoEncontrado && !localizacaoEncontrada;
+    if (nenhumCriterio) {
+      return { html: 'Não consegui identificar com segurança um filtro na pergunta. Tente algo como:<br><em>"custo com merenda escolar na escola reino da loucinha em setembro de 2026"</em>', fala: "Não consegui identificar com segurança os filtros. Tente citar um item, unidade, secretaria ou mês." };
     }
 
-    // Chips
     const chips = [];
-    if(secretariaEncontrada) chips.push(`<span class="chip">Secretaria: <b>${escapeHtml(secretariaEncontrada.valor)}</b></span>`);
-    if(objetoEncontrado) chips.push(`<span class="chip">Unidade: <b>${escapeHtml(objetoEncontrado.valor)}</b></span>`);
-    if(itemEncontrado) chips.push(`<span class="chip">Item: <b>${escapeHtml(itemEncontrado.valor)}</b></span>`);
-    if(mesEncontrado !== null) chips.push(`<span class="chip">Mês: <b>${NOMES_MES[mesEncontrado]}${anoEncontrado ? "/"+anoEncontrado : ""}</b></span>`);
-    else if(anoEncontrado) chips.push(`<span class="chip">Ano: <b>${anoEncontrado}</b></span>`);
+    if (secretariaEncontrada) chips.push(`<span class="chip">Secretaria: <b>${escapeHtml(secretariaEncontrada.valor)}</b></span>`);
+    if (departamentoEncontrado) chips.push(`<span class="chip">Departamento: <b>${escapeHtml(departamentoEncontrado.valor)}</b></span>`);
+    if (objetoEncontrado) chips.push(`<span class="chip">Unidade: <b>${escapeHtml(objetoEncontrado.valor)}</b></span>`);
+    if (localizacaoEncontrada) chips.push(`<span class="chip">Localização: <b>${escapeHtml(localizacaoEncontrada.valor)}</b></span>`);
+    if (itemEncontrado) chips.push(`<span class="chip">Item: <b>${escapeHtml(itemEncontrado.valor)}</b></span>`);
+    if (periodo.mes !== null) chips.push(`<span class="chip">Mês: <b>${NOMES_MES[periodo.mes]}${periodo.ano ? "/" + periodo.ano : ""}</b></span>`);
+    else if (periodo.ano) chips.push(`<span class="chip">Ano: <b>${periodo.ano}</b></span>`);
 
-    // Descrição falada
-    const partes = [];
-    if(itemEncontrado) partes.push(itemEncontrado.valor);
-    if(objetoEncontrado) partes.push(`na ${objetoEncontrado.valor}`);
-    else if(secretariaEncontrada) partes.push(`na ${secretariaEncontrada.valor}`);
-    if(mesEncontrado !== null) partes.push(`em ${NOMES_MES[mesEncontrado].toLowerCase()}${anoEncontrado ? " de "+anoEncontrado : ""}`);
-    else if(anoEncontrado) partes.push(`em ${anoEncontrado}`);
-    const descricaoFalada = partes.join(" ");
+    const partesFala = [];
+    if (itemEncontrado) partesFala.push(itemEncontrado.valor);
+    if (objetoEncontrado) partesFala.push(`na unidade ${objetoEncontrado.valor}`);
+    if (departamentoEncontrado) partesFala.push(`no departamento ${departamentoEncontrado.valor}`);
+    if (secretariaEncontrada) partesFala.push(`na secretaria ${secretariaEncontrada.valor}`);
+    if (localizacaoEncontrada) partesFala.push(`na localização ${localizacaoEncontrada.valor}`);
+    if (periodo.mes !== null) partesFala.push(`em ${NOMES_MES[periodo.mes].toLowerCase()}${periodo.ano ? " de " + periodo.ano : ""}`);
+    else if (periodo.ano) partesFala.push(`em ${periodo.ano}`);
+    const descricaoFalada = partesFala.join(" ");
 
-    if(!resultado.length){
-      return {
-        html: `<div>${chips.join("")}</div><div class="sub">Nenhum lançamento encontrado para esses critérios.</div>`,
-        fala: `Não encontrei nenhum lançamento${descricaoFalada ? " de " + descricaoFalada : ""}.`
-      };
+    if (!resultado.length) {
+      return { html: `<div>${chips.join("")}</div><div class="sub">Nenhum lançamento encontrado para esses critérios.</div>`, fala: `Não encontrei lançamentos${descricaoFalada ? " para " + descricaoFalada : ""}.` };
     }
 
-    const total = resultado.reduce((t,d)=>t+d.valor,0);
+    const total = resultado.reduce((soma, d) => soma + d.valor, 0);
     const registros = resultado.length;
     const limite = 8;
-    const linhas = resultado.slice()
-      .sort((a,b)=> (b.data?.getTime()||0) - (a.data?.getTime()||0))
-      .slice(0, limite)
-      .map(d=>`<tr>
-        <td>${d.data ? d.data.toLocaleDateString("pt-BR") : "—"}</td>
-        <td>${escapeHtml(d.objetoNome)}<br><span class="sub">${escapeHtml(d.itemCusto)}</span></td>
-        <td class="dir">${moeda(d.valor)}</td>
-      </tr>`).join("");
+    const linhas = resultado.slice().sort((a, b) => (b.data ? b.data.getTime() : 0) - (a.data ? a.data.getTime() : 0)).slice(0, limite).map(d => `<tr>
+      <td>${d.data ? d.data.toLocaleDateString("pt-BR") : "—"}</td>
+      <td>${escapeHtml(d.objetoNome)}<br><span class="sub">${escapeHtml(d.itemCusto)}</span></td>
+      <td class="dir">${moeda(d.valor)}</td>
+    </tr>`).join("");
 
-    const html = `
-      <div>${chips.join("")}</div>
+    const html = `<div>${chips.join("")}</div>
       <div class="valor">${moeda(total)}</div>
       <div class="sub">em ${registros.toLocaleString("pt-BR")} lançamento(s)</div>
-      <table>
-        <thead><tr><th>Data</th><th>Unidade / Item</th><th class="dir">Valor</th></tr></thead>
-        <tbody>${linhas}</tbody>
-      </table>
+      <table><thead><tr><th>Data</th><th>Unidade / Item</th><th class="dir">Valor</th></tr></thead><tbody>${linhas}</tbody></table>
       ${registros > limite ? `<div class="sub mt-1">Mostrando ${limite} de ${registros.toLocaleString("pt-BR")} lançamentos.</div>` : ""}`;
-
     const registrosTexto = registros === 1 ? "1 lançamento" : `${registros.toLocaleString("pt-BR")} lançamentos`;
-    return { html, fala: `${descricaoFalada ? "Custo com " + descricaoFalada + ": " : ""}${moeda(total)}, em ${registrosTexto}.` };
+    return { html, fala: `${descricaoFalada ? "Custo para " + descricaoFalada + ": " : "Total encontrado: "}${moeda(total)}, em ${registrosTexto}.` };
   }
 
   // ---------- Interface do chat ----------
   const fab = $("chatFab"), painel = $("chatPanel"), msgs = $("chatMensagens");
-  const campo = $("chatCampo"), btnEnviar = $("chatEnviar");
+  const campo = $("chatCampo"), btnEnviar = $("chatEnviar"), btnMic = $("chatMic");
+  if (!fab || !painel || !msgs || !campo || !btnEnviar) {
+    console.error("Chatbot: não foram encontrados todos os elementos HTML necessários.");
+    return;
+  }
 
-  function rolarFim(){ msgs.scrollTop = msgs.scrollHeight; }
-
-  function adicionarMensagem(html, tipo){
+  function rolarFim() { msgs.scrollTop = msgs.scrollHeight; }
+  function adicionarMensagem(html, tipo) {
     const div = document.createElement("div");
     div.className = "msg " + tipo;
     div.innerHTML = html;
@@ -569,120 +724,123 @@
     rolarFim();
     return div;
   }
-
-  function htmlSugestoes(){
+  function htmlSugestoes() {
     const exemplos = [
-      "Custo total em julho?",
+      "Custo total em julho de 2026?",
       "Custo com merenda escolar no Reino da Loucinha",
-      "Custo da Secretaria de Saúde em outubro"
+      "Custo da Secretaria de Saúde em outubro de 2026",
+      "Custo por departamento em setembro de 2026"
     ];
-    return `<div class="sugestoes">${exemplos.map(e=>`<button type="button" data-sugestao="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join("")}</div>`;
+    return `<div class="sugestoes">${exemplos.map(e => `<button type="button" data-sugestao="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join("")}</div>`;
   }
-
-  function mensagemBoasVindas(){
-    adicionarMensagem(
-      `Olá! Sou o assistente de <b>Busca Inteligente</b> de custos. Pergunte por voz ou digitando, citando item de custo, unidade, secretaria ou mês.${htmlSugestoes()}`,
-      "bot"
-    );
+  function mensagemBoasVindas() {
+    adicionarMensagem(`Olá! Sou o assistente de <b>Busca Inteligente</b> de custos. Pergunte por voz ou digitando. A busca tolera erros de digitação e procura por item, unidade, departamento, secretaria, localização ou período.${htmlSugestoes()}`, "bot");
   }
-
-  function abrirChat(){
+  function abrirChat() {
     painel.classList.add("aberto");
     fab.classList.add("aberto");
-    if(!msgs.children.length) mensagemBoasVindas();
+    if (!msgs.children.length) mensagemBoasVindas();
     carregarDados();
-    setTimeout(()=>campo.focus(), 50);
+    setTimeout(() => campo.focus(), 50);
   }
-  function fecharChat(){
+  function fecharChat() {
     painel.classList.remove("aberto");
     fab.classList.remove("aberto");
-    if("speechSynthesis" in window) window.speechSynthesis.cancel();
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (ouvindo && reconhecimento) reconhecimento.stop();
   }
 
-  function enviarPergunta(textoOpcional, porVoz){
-    const pergunta = (textoOpcional ?? campo.value).trim();
-    if(!pergunta) return;
+  async function enviarPergunta(textoOpcional, porVoz) {
+    const pergunta = String(textoOpcional ?? campo.value).trim();
+    if (!pergunta) return;
     campo.value = "";
     adicionarMensagem(escapeHtml(pergunta), "user");
-
     const digitando = adicionarMensagem('<span class="digitando"><span></span><span></span><span></span></span>', "bot");
-
-    const processar = async ()=>{
-      if(!dadosCarregados) await carregarDados();
-      let resp;
-      try{ resp = responderPergunta(pergunta); }
-      catch(e){ console.error(e); resp = { html: "Ocorreu um erro ao processar a pergunta.", fala: "Ocorreu um erro ao processar a pergunta." }; }
+    perguntasPendentes++;
+    btnEnviar.disabled = true;
+    try {
+      const ok = await carregarDados();
+      let resposta;
+      if (!ok) resposta = { html: "Não consegui carregar a planilha. Verifique a conexão e tente novamente.", fala: "Não consegui carregar os dados. Tente novamente." };
+      else resposta = responderPergunta(pergunta);
       digitando.remove();
-      adicionarMensagem(resp.html + (resp.sugestoes ? htmlSugestoes() : ""), "bot");
-      if(falarRespostas || porVoz) falar(resp.fala);
-    };
-    setTimeout(processar, 350);
+      adicionarMensagem(resposta.html + (resposta.sugestoes ? htmlSugestoes() : ""), "bot");
+      if (falarRespostas || porVoz) falar(resposta.fala);
+    } catch (erro) {
+      console.error("Erro ao processar pergunta:", erro);
+      digitando.remove();
+      adicionarMensagem("Ocorreu um erro ao processar a pergunta. Tente novamente.", "bot");
+    } finally {
+      perguntasPendentes = Math.max(0, perguntasPendentes - 1);
+      btnEnviar.disabled = perguntasPendentes > 0;
+    }
   }
 
   // ---------- Voz: síntese ----------
-  let vozPtBR = null;
-  function carregarVozPtBR(){
-    if(!("speechSynthesis" in window)) return;
+  function carregarVozPtBR() {
+    if (!("speechSynthesis" in window)) return;
     const vozes = window.speechSynthesis.getVoices();
-    vozPtBR = vozes.find(v=>v.lang === "pt-BR") || vozes.find(v=>v.lang && v.lang.startsWith("pt")) || null;
+    vozPtBR = vozes.find(v => v.lang === "pt-BR") || vozes.find(v => v.lang && v.lang.toLowerCase().startsWith("pt")) || null;
   }
-  if("speechSynthesis" in window){
+  if ("speechSynthesis" in window) {
     carregarVozPtBR();
-    window.speechSynthesis.onvoiceschanged = carregarVozPtBR;
+    window.speechSynthesis.addEventListener?.("voiceschanged", carregarVozPtBR);
   }
-  function falar(texto){
-    if(!("speechSynthesis" in window) || !texto) return;
-    try{
+  function falar(texto) {
+    if (!("speechSynthesis" in window) || !texto) return;
+    try {
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(texto);
-      u.lang = "pt-BR";
-      if(vozPtBR) u.voice = vozPtBR;
-      window.speechSynthesis.speak(u);
-    }catch(e){ console.warn("Não foi possível falar a resposta:", e); }
+      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance.lang = "pt-BR";
+      if (vozPtBR) utterance.voice = vozPtBR;
+      window.speechSynthesis.speak(utterance);
+    } catch (erro) { console.warn("Não foi possível falar a resposta:", erro); }
   }
 
   // ---------- Voz: reconhecimento ----------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let reconhecimento = null, ouvindo = false;
-  const btnMic = $("chatMic");
-
-  function iniciarVoz(){
-    if(!SR){ alert("Reconhecimento de voz não é suportado neste navegador. Use o Google Chrome ou o Microsoft Edge."); return; }
-    if(ouvindo){ reconhecimento && reconhecimento.stop(); return; }
+  function iniciarVoz() {
+    if (!SR) { alert("Reconhecimento de voz não é suportado neste navegador. Use o Google Chrome ou o Microsoft Edge."); return; }
+    if (ouvindo) { if (reconhecimento) reconhecimento.stop(); return; }
     reconhecimento = new SR();
     reconhecimento.lang = "pt-BR";
     reconhecimento.interimResults = false;
     reconhecimento.maxAlternatives = 1;
     reconhecimento.continuous = false;
-    reconhecimento.onstart = ()=>{ ouvindo = true; btnMic.classList.add("ouvindo"); campo.placeholder = "Ouvindo... fale sua pergunta"; };
-    reconhecimento.onresult = ev=>{ enviarPergunta(ev.results[0][0].transcript, true); };
-    reconhecimento.onerror = ev=>{ if(ev.error !== "no-speech" && ev.error !== "aborted") console.warn("Erro de voz:", ev.error); };
-    reconhecimento.onend = ()=>{ ouvindo = false; btnMic.classList.remove("ouvindo"); campo.placeholder = "Digite ou fale sua pergunta..."; };
-    try{ reconhecimento.start(); }catch(e){ console.warn(e); }
+    reconhecimento.onstart = () => { ouvindo = true; if (btnMic) btnMic.classList.add("ouvindo"); campo.placeholder = "Ouvindo... fale sua pergunta"; };
+    reconhecimento.onresult = ev => enviarPergunta(ev.results[0][0].transcript, true);
+    reconhecimento.onerror = ev => {
+      if (ev.error !== "no-speech" && ev.error !== "aborted") console.warn("Erro de reconhecimento de voz:", ev.error);
+      if (ev.error === "not-allowed" || ev.error === "service-not-allowed") adicionarMensagem("Permissão de microfone negada. Autorize o uso do microfone no navegador.", "bot");
+    };
+    reconhecimento.onend = () => { ouvindo = false; if (btnMic) btnMic.classList.remove("ouvindo"); campo.placeholder = "Digite ou fale sua pergunta..."; };
+    try { reconhecimento.start(); } catch (erro) { console.warn("Não foi possível iniciar o reconhecimento de voz:", erro); }
   }
 
-  // ---------- Eventos ----------
   fab.addEventListener("click", abrirChat);
-  $("chatFechar").addEventListener("click", fecharChat);
-  btnEnviar.addEventListener("click", ()=>enviarPergunta());
-  campo.addEventListener("keydown", ev=>{ if(ev.key === "Enter") enviarPergunta(); });
-  btnMic.addEventListener("click", iniciarVoz);
-  if(!SR){ btnMic.disabled = true; btnMic.title = "Reconhecimento de voz não suportado neste navegador"; }
-
-  $("chatVozToggle").addEventListener("click", ev=>{
+  const btnFechar = $("chatFechar");
+  if (btnFechar) btnFechar.addEventListener("click", fecharChat);
+  btnEnviar.addEventListener("click", () => enviarPergunta());
+  campo.addEventListener("keydown", ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); enviarPergunta(); } });
+  if (btnMic) {
+    btnMic.addEventListener("click", iniciarVoz);
+    if (!SR) { btnMic.disabled = true; btnMic.title = "Reconhecimento de voz não suportado neste navegador"; }
+  }
+  const btnVoz = $("chatVozToggle");
+  if (btnVoz) btnVoz.addEventListener("click", ev => {
     falarRespostas = !falarRespostas;
-    const b = ev.currentTarget;
-    b.classList.toggle("ativo", falarRespostas);
-    b.innerHTML = falarRespostas ? '<i class="bi bi-volume-up-fill"></i>' : '<i class="bi bi-volume-mute-fill"></i>';
-    b.title = falarRespostas ? "Resposta por voz ativada" : "Responder por voz";
-    if(!falarRespostas && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    const botao = ev.currentTarget;
+    botao.classList.toggle("ativo", falarRespostas);
+    botao.innerHTML = falarRespostas ? '<i class="bi bi-volume-up-fill"></i>' : '<i class="bi bi-volume-mute-fill"></i>';
+    botao.title = falarRespostas ? "Resposta por voz ativada" : "Responder por voz";
+    if (!falarRespostas && "speechSynthesis" in window) window.speechSynthesis.cancel();
   });
-
-  msgs.addEventListener("click", ev=>{
-    const btn = ev.target.closest("[data-sugestao]");
-    if(btn) enviarPergunta(btn.dataset.sugestao);
+  msgs.addEventListener("click", ev => {
+    const botao = ev.target.closest("[data-sugestao]");
+    if (botao) enviarPergunta(botao.dataset.sugestao);
   });
 })();
+  
 </script>
 
 </body>
