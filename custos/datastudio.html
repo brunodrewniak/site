@@ -601,6 +601,20 @@
     index.search(textoBusca).forEach(r => adicionar(r, null, true));
     termos.forEach(termo => index.search(termo).forEach(r => adicionar(r, termo)));
 
+    // Fallback lexical determinístico: Fuse pode ranquear mal consultas compostas como
+    // "Secretaria de Saúde" quando o cadastro contém nomes mais longos, por exemplo
+    // "Secretaria Municipal de Saúde". Conferimos também os documentos do índice por
+    // palavras completas, sem depender exclusivamente do score fuzzy.
+    const documentosIndex = Array.isArray(index._docs) ? index._docs : [];
+    documentosIndex.forEach(doc => {
+      const valor = String(doc.valor ?? "");
+      const palavrasDoc = new Set(normalizarBusca(doc.normalizado || valor).split(" ").filter(Boolean));
+      const termosCoincidentes = termos.filter(termo => palavrasDoc.has(termo));
+      if (termosCoincidentes.length) {
+        termosCoincidentes.forEach(termo => adicionar({ item: doc, score: 0.05 }, termo, false));
+      }
+    });
+
     if (!candidatos.size) return null;
     const ranking = [...candidatos.values()].map(c => {
       const nomeNorm = normalizarBusca(c.valor);
@@ -874,8 +888,7 @@
     const botao = ev.target.closest("[data-sugestao]");
     if (botao) enviarPergunta(botao.dataset.sugestao);
   });
-})();
-  
+})();  
 </script>
 
 </body>
