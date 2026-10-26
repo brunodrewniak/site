@@ -11,8 +11,6 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <!-- SheetJS (leitura da planilha usada pelo chatbot) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<!-- FuseJS (leitura da planilha usada pelo chatbot) -->
-<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 <style>
   html, body {
     height: 100%;
@@ -301,26 +299,20 @@
   }
 </script>
 
-<!-- Certifique-se de incluir a CDN do Fuse.js no seu HTML (antes deste script): -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script> -->
-
 <script>
 /* =====================================================================
-   CHATBOT — BUSCA INTELIGENTE (COM FUSE.JS)
+   CHATBOT — BUSCA INTELIGENTE
+   Mesma lógica de interpretação da pergunta do dashboard de custos,
+   agora apresentada em formato de conversa.
    ===================================================================== */
 (function(){
-  const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYZ2LbusfHY8Bhur33Rk5dU5knq3ZEJEJRluMoOpyDUG5Jt31o9Az3aT_9h5GN66Hlc-GAzaHdYc2a/pub?output=xlsx";
+  const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRBRpSH89dOIrPczxtgztNVYgzyfFt_8XxMvtw_OgIkp0ZWkO51UvySHCz0-j3l_Eu2sOVQ2Wat2riy/pub?output=xlsx";
 
   const $ = id => document.getElementById(id);
   let dados = [];
   let dadosCarregados = false;
   let carregando = false;
   let falarRespostas = false;
-
-  // Instâncias do Fuse.js
-  let fuseItens = null;
-  let fuseObjetos = null;
-  let fuseSecretarias = null;
 
   // ---------- Utilitários ----------
   function moeda(v){ return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0); }
@@ -360,7 +352,7 @@
     return removerAcentos(t).replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
   }
 
-  // ---------- Carga dos dados ----------
+  // ---------- Carga dos dados (mesma planilha do dashboard) ----------
   async function carregarDados(){
     if(dadosCarregados || carregando) return;
     carregando = true;
@@ -372,7 +364,6 @@
       const buffer = await resp.arrayBuffer();
       const wb = XLSX.read(buffer, { type:"array", cellDates:true });
       processarWorkbook(wb);
-      inicializarFuse(); // Inicializa os índices de busca tolerante a falhas
       dadosCarregados = true;
       status.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>${dados.length.toLocaleString("pt-BR")} lançamentos carregados.`;
     }catch(e){
@@ -436,42 +427,39 @@
     });
   }
 
-  // ---------- Configuração do Fuse.js ----------
-  function inicializarFuse(){
-    if(typeof Fuse === "undefined"){
-      console.warn("Fuse.js não foi carregado. Certifique-se de incluir a biblioteca no HTML.");
-      return;
-    }
-
-    const opcoesFuse = {
-      includeScore: true,
-      threshold: 0.4, // Tolerância a erros (0.0 = exato, 1.0 = aceita tudo)
-      ignoreLocation: true,
-      minMatchCharLength: 3,
-      keys: ["nomeNorm"]
-    };
-
-    const extrairListaUnica = (prop) => [...new Set(dados.map(d => d[prop]).filter(Boolean))]
-      .map(v => ({ original: v, nomeNorm: normalizarBusca(v) }));
-
-    fuseItens = new Fuse(extrairListaUnica("itemCusto"), opcoesFuse);
-    fuseObjetos = new Fuse(extrairListaUnica("objetoNome"), opcoesFuse);
-    fuseSecretarias = new Fuse(extrairListaUnica("secretaria"), opcoesFuse);
-  }
-
-  function buscarComFuse(fuseInstance, queryNorm){
-    if(!fuseInstance) return null;
-    const res = fuseInstance.search(queryNorm);
-    return res.length > 0 ? res[0].item.original : null;
-  }
-
-  // ---------- Interpretação da pergunta ----------
+  // ---------- Interpretação da pergunta (mesma lógica do dashboard) ----------
   const MESES_BUSCA = {
     "janeiro":0,"jan":0,"fevereiro":1,"fev":1,"marco":2,"mar":2,"abril":3,"abr":3,
     "maio":4,"mai":4,"junho":5,"jun":5,"julho":6,"jul":6,"agosto":7,"ago":7,
     "setembro":8,"set":8,"outubro":9,"out":9,"novembro":10,"nov":10,"dezembro":11,"dez":11
   };
   const NOMES_MES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const STOPWORDS_BUSCA = new Set([
+    "de","da","do","das","dos","em","no","na","nos","nas","para","com","sem",
+    "por","que","uma","um","uns","umas","e","a","o","as","os","ao","aos","à",
+    "quanto","quanta","quantos","quantas","foi","foram","qual","quais","custo",
+    "custos","valor","valores","total","gasto","gastos","gastou","gastaram",
+    "apropriado","apropriados","referente","referentes","mes","mês","ano","dia"
+  ]);
+
+  function melhorCorrespondenciaBusca(queryNorm, candidatos, minScore=0.5, minPalavras=1){
+    let melhor = null;
+    candidatos.forEach(original=>{
+      const candNorm = normalizarBusca(original);
+      const palavras = candNorm.split(" ").filter(p=>p.length>2 && !STOPWORDS_BUSCA.has(p));
+      const base = palavras.length ? palavras : candNorm.split(" ").filter(Boolean);
+      if(!base.length) return;
+      const encontradas = base.filter(p => queryNorm.includes(p));
+      const score = encontradas.length / base.length;
+      const necessario = Math.min(minPalavras, base.length);
+      if(encontradas.length < necessario) return;
+      if(score < minScore) return;
+      if(!melhor || score > melhor.score || (score === melhor.score && encontradas.length > melhor.encontradas)){
+        melhor = { valor: original, score, encontradas: encontradas.length };
+      }
+    });
+    return melhor;
+  }
 
   // Retorna { html, fala }
   function responderPergunta(pergunta){
@@ -498,17 +486,16 @@
     const matchAno = queryNorm.match(/\b(20\d{2})\b/);
     const anoEncontrado = matchAno ? Number(matchAno[1]) : null;
 
-    // Busca de Entidades via Fuse.js (Fuzzy Search)
-    const itemEncontrado = buscarComFuse(fuseItens, queryNorm);
-    const objetoEncontrado = buscarComFuse(fuseObjetos, queryNorm);
-    const secretariaEncontrada = buscarComFuse(fuseSecretarias, queryNorm);
+    const itemEncontrado = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.itemCusto).filter(Boolean))], 0.5, 2);
+    const objetoEncontrado = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.objetoNome).filter(Boolean))], 0.5, 2);
+    const secretariaEncontrada = melhorCorrespondenciaBusca(queryNorm, [...new Set(dados.map(d=>d.secretaria).filter(Boolean))], 0.6, 2);
 
     let resultado = dados;
     if(anoEncontrado) resultado = resultado.filter(d => d.data && d.data.getFullYear() === anoEncontrado);
     if(mesEncontrado !== null) resultado = resultado.filter(d => d.data && d.data.getMonth() === mesEncontrado);
-    if(itemEncontrado) resultado = resultado.filter(d => d.itemCusto === itemEncontrado);
-    if(objetoEncontrado) resultado = resultado.filter(d => d.objetoNome === objetoEncontrado);
-    if(secretariaEncontrada) resultado = resultado.filter(d => d.secretaria === secretariaEncontrada);
+    if(itemEncontrado) resultado = resultado.filter(d => d.itemCusto === itemEncontrado.valor);
+    if(objetoEncontrado) resultado = resultado.filter(d => d.objetoNome === objetoEncontrado.valor);
+    if(secretariaEncontrada) resultado = resultado.filter(d => d.secretaria === secretariaEncontrada.valor);
 
     const nenhumCriterio = mesEncontrado === null && !anoEncontrado && !itemEncontrado && !objetoEncontrado && !secretariaEncontrada;
     if(nenhumCriterio){
@@ -520,17 +507,17 @@
 
     // Chips
     const chips = [];
-    if(secretariaEncontrada) chips.push(`<span class="chip">Secretaria: <b>${escapeHtml(secretariaEncontrada)}</b></span>`);
-    if(objetoEncontrado) chips.push(`<span class="chip">Unidade: <b>${escapeHtml(objetoEncontrado)}</b></span>`);
-    if(itemEncontrado) chips.push(`<span class="chip">Item: <b>${escapeHtml(itemEncontrado)}</b></span>`);
+    if(secretariaEncontrada) chips.push(`<span class="chip">Secretaria: <b>${escapeHtml(secretariaEncontrada.valor)}</b></span>`);
+    if(objetoEncontrado) chips.push(`<span class="chip">Unidade: <b>${escapeHtml(objetoEncontrado.valor)}</b></span>`);
+    if(itemEncontrado) chips.push(`<span class="chip">Item: <b>${escapeHtml(itemEncontrado.valor)}</b></span>`);
     if(mesEncontrado !== null) chips.push(`<span class="chip">Mês: <b>${NOMES_MES[mesEncontrado]}${anoEncontrado ? "/"+anoEncontrado : ""}</b></span>`);
     else if(anoEncontrado) chips.push(`<span class="chip">Ano: <b>${anoEncontrado}</b></span>`);
 
     // Descrição falada
     const partes = [];
-    if(itemEncontrado) partes.push(itemEncontrado);
-    if(objetoEncontrado) partes.push(`na ${objetoEncontrado}`);
-    else if(secretariaEncontrada) partes.push(`na ${secretariaEncontrada}`);
+    if(itemEncontrado) partes.push(itemEncontrado.valor);
+    if(objetoEncontrado) partes.push(`na ${objetoEncontrado.valor}`);
+    else if(secretariaEncontrada) partes.push(`na ${secretariaEncontrada.valor}`);
     if(mesEncontrado !== null) partes.push(`em ${NOMES_MES[mesEncontrado].toLowerCase()}${anoEncontrado ? " de "+anoEncontrado : ""}`);
     else if(anoEncontrado) partes.push(`em ${anoEncontrado}`);
     const descricaoFalada = partes.join(" ");
