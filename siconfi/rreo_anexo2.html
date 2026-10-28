@@ -24,6 +24,7 @@ body{background:var(--fundo);font-family:system-ui,-apple-system,"Segoe UI",Robo
 .kpi{border-left:5px solid var(--azul)}
 .kpi.kpi-verde{border-left-color:var(--verde)}
 .kpi.kpi-vermelho{border-left-color:var(--vermelho)}
+.kpi.kpi-secondary{border-left-color:#6c757d}
 .kpi .valor{font-size:1.25rem;font-weight:700;color:var(--azul-escuro)}
 .chart-box{height:320px;position:relative;}
 .chart-box.chart-box-sm{height:260px;}
@@ -122,7 +123,7 @@ Relatório Resumido da Execução Orçamentária consultado diretamente na API d
 <option value="1">1º Bimestre (Jan-Fev)</option>
 <option value="2">2º Bimestre (Mar-Abr)</option>
 <option value="3">3º Bimestre (Mai-Jun)</option>
-<option value="4">4º Bimestre (Jul-Ago)</option>
+<option value="4" selected>4º Bimestre (Jul-Ago)</option>
 <option value="5">5º Bimestre (Set-Out)</option>
 <option value="6">6º Bimestre (Nov-Dez)</option>
 </select>
@@ -399,10 +400,28 @@ function ordinalAtual(){
   return (BIMESTRE_INFO[p] || BIMESTRE_INFO[1]).ordinal.replace("º","");
 }
 
-function montarUrl(){
+const temDados = () => Object.keys(dadosPorConta).length > 0;
+
+// Último bimestre já encerrado em relação à data de hoje
+// (meses 1-2 => 0 bimestres fechados no ano; 3-4 => 1; ... 11-12 => 5)
+function ultimoPeriodoFechado(hoje = new Date()){
+  const mes = hoje.getMonth() + 1, ano = hoje.getFullYear();
+  const fechados = Math.floor((mes - 1) / 2);
+  return fechados >= 1 ? { exercicio: ano, periodo: fechados } : { exercicio: ano - 1, periodo: 6 };
+}
+function periodoAnterior({ exercicio, periodo }){
+  return periodo > 1 ? { exercicio, periodo: periodo - 1 } : { exercicio: exercicio - 1, periodo: 6 };
+}
+function aplicarFiltros({ exercicio, periodo }){
+  $("filtroExercicio").value = exercicio;
+  $("filtroPeriodo").value = String(periodo);
+}
+
+function montarUrl(exercicio = $("filtroExercicio").value.trim(),
+                   periodo = $("filtroPeriodo").value.trim()){
   const params = new URLSearchParams({
-    an_exercicio: $("filtroExercicio").value.trim(),
-    nr_periodo: $("filtroPeriodo").value.trim(),
+    an_exercicio: exercicio,
+    nr_periodo: periodo,
     co_tipo_demonstrativo: $("filtroTipo").value.trim(),
     no_anexo: $("filtroAnexo").value.trim(),
     co_esfera: $("filtroEsfera").value.trim(),
@@ -411,22 +430,70 @@ function montarUrl(){
   return `${API_BASE}?${params.toString()}`;
 }
 
-async function consultarAPI(){
-  const url = montarUrl();
+async function buscarLista(url){
+  const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
+  if(!response.ok) throw new Error(`HTTP ${response.status}`);
+  const json = await response.json();
+  const lista = Array.isArray(json) ? json : json.items;
+  if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
+  return lista;
+}
+
+const MSG_ERRO_API = err => `Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`;
+
+// Consulta manual (botão de busca): usa exatamente o que foi escolhido; sem dados => zera o relatório
+async function consultarManual(){
+  const exercicio = $("filtroExercicio").value.trim();
+  const periodo = $("filtroPeriodo").value.trim();
+  const url = montarUrl(exercicio, periodo);
   $("urlApiTexto").textContent = url;
+
   mostrarLoading(true);
   mostrarStatus(`Buscando URL: ${url}`);
-  try {
-    const response = await fetch(url, { method:"GET", headers:{ "Accept":"application/json" } });
-    if(!response.ok) throw new Error(`HTTP ${response.status}`);
-    const json = await response.json();
-    const lista = Array.isArray(json) ? json : json.items;
-    if(!Array.isArray(lista)) throw new Error("Estrutura de resposta inesperada.");
-    processarDados(lista);
-    mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
-  } catch (err) {
-    mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`, "warning");
-  } finally {
+  try{
+    const lista = await buscarLista(url);
+    processarDados(lista); // lista vazia => relatório zerado
+    if(lista.length){
+      mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados via API do Tesouro Nacional (Siconfi).`, "success");
+    }else{
+      mostrarStatus(`Nenhum dado encontrado para o ${periodo}º Bimestre/${exercicio} e o ente informado.`, "warning");
+    }
+  }catch(err){
+    mostrarStatus(MSG_ERRO_API(err), "warning");
+  }finally{
+    mostrarLoading(false);
+  }
+}
+
+// Consulta automática ao abrir: começa no último bimestre fechado e volta até achar dados
+async function consultarAutomatica(){
+  const LIMITE_TENTATIVAS = 24; // até 4 anos para trás
+  const inicial = ultimoPeriodoFechado();
+  let alvo = inicial;
+
+  mostrarLoading(true);
+  try{
+    for(let i = 0; i < LIMITE_TENTATIVAS; i++){
+      aplicarFiltros(alvo);
+      const url = montarUrl(alvo.exercicio, alvo.periodo);
+      $("urlApiTexto").textContent = url;
+      mostrarStatus(`Buscando ${alvo.periodo}º Bimestre/${alvo.exercicio}...`);
+
+      const lista = await buscarLista(url);
+      if(lista.length){
+        processarDados(lista);
+        mostrarStatus(`${lista.length.toLocaleString("pt-BR")} registros carregados — ${alvo.periodo}º Bimestre/${alvo.exercicio} (período mais recente com dados).`, "success");
+        return;
+      }
+      alvo = periodoAnterior(alvo);
+    }
+    aplicarFiltros(inicial);
+    $("urlApiTexto").textContent = montarUrl(inicial.exercicio, inicial.periodo);
+    processarDados([]);
+    mostrarStatus(`Nenhum dado encontrado nos últimos períodos consultados. Exibindo o ${inicial.periodo}º Bimestre/${inicial.exercicio} zerado.`, "warning");
+  }catch(err){
+    mostrarStatus(MSG_ERRO_API(err), "warning");
+  }finally{
     mostrarLoading(false);
   }
 }
@@ -444,7 +511,24 @@ function processarDados(lista){
     }
   });
 
-  if(!colunasEncontradas.length){ mostrarStatus("A consulta não retornou registros para os parâmetros informados.","warning"); return; }
+  if(!colunasEncontradas.length){
+    colunasEncontradas = [
+      "DOTAÇÃO INICIAL", "DOTAÇÃO ATUALIZADA",
+      "DESPESAS EMPENHADAS NO BIMESTRE", "DESPESAS EMPENHADAS ATÉ O BIMESTRE",
+      "DESPESAS LIQUIDADAS NO BIMESTRE", "DESPESAS LIQUIDADAS ATÉ O BIMESTRE"
+    ];
+    metaConsulta = {
+      instituicao: null, populacao: 0,
+      exercicio: Number($("filtroExercicio").value), periodo: Number($("filtroPeriodo").value),
+      uf: "", cod_ibge: $("filtroEnte").value.trim()
+    };
+    mapearColunasChave();
+    atualizarCabecalho();
+    atualizarKPIs();
+    renderizarTabelas();
+    renderizarGraficos();
+    return;
+  }
 
   // Monta a ordem oficial (função/subfunção, com seção e nível) a partir da 1ª coluna encontrada.
   const primeira = porColuna[colunasEncontradas[0]];
@@ -502,7 +586,7 @@ function mapearColunasChave(){
 
 function atualizarCabecalho(){
   const info = BIMESTRE_INFO[metaConsulta.periodo] || BIMESTRE_INFO[1];
-  $("navInstituicao").textContent = metaConsulta.instituicao || "-";
+  $("navInstituicao").textContent = metaConsulta.instituicao || `Ente ${metaConsulta.cod_ibge || "-"} (sem dados)`;
   $("printInstituicao").textContent = (metaConsulta.instituicao || "MUNICÍPIO DE CAMPO LARGO - PR").toUpperCase();
   $("printEntidade").textContent = `Entidade: ${metaConsulta.cod_ibge || "-"}`;
   $("printPeriodo").textContent = `Período de Referência: Janeiro a ${info.meses.split(" a ")[1]} de ${metaConsulta.exercicio || "-"} / Bimestre ${info.meses}`;
@@ -575,6 +659,13 @@ function renderizarTabelas(){
   renderizarCabecalho("printTheadPrincipal");
   renderizarCabecalho("printTheadIntra");
   renderizarCabecalho("printTheadTotal");
+
+  if(!temDados()){
+    const vazio = `<tr><td colspan="${colunasEncontradas.length + 1}" class="text-center text-muted py-3">Sem dados para o período selecionado.</td></tr>`;
+    ["tbodyPrincipal","tbodyIntra","tbodyTotal","printTbodyPrincipal","printTbodyIntra","printTbodyTotal"]
+      .forEach(id => { $(id).innerHTML = vazio; });
+    return;
+  }
 
   $("tbodyPrincipal").innerHTML = ordemPrincipal.map(k=>linhaHtml(k)).join("");
   $("tbodyIntra").innerHTML = ordemIntra.map(k=>linhaHtml(k)).join("");
@@ -773,10 +864,11 @@ function prepararEImprimir(){
 }
 
 $("btnImprimir").addEventListener("click", prepararEImprimir);
-$("btnConsultar").addEventListener("click", consultarAPI);
+$("btnConsultar").addEventListener("click", consultarManual);
 $("btnCsv").addEventListener("click", exportarCSV);
 
-consultarAPI();
+// Inicia consulta ao carregar a página (último bimestre fechado, recuando se necessário)
+consultarAutomatica();
 </script>
 
 </body>
