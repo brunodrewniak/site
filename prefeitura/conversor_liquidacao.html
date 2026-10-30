@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Erros de Liquidação (PDF para Excel)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 760px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        h2 {
+            color: #1155cc;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .file-input-wrapper {
+            margin: 25px 0 15px 0;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn-upload {
+            background-color: #1155cc;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(17, 85, 204, 0.3);
+        }
+        .btn-upload:hover {
+            background-color: #0b3c94;
+        }
+        .container.arrastando {
+            outline: 3px dashed #1155cc;
+            outline-offset: -10px;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #666;
+            padding: 12px;
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+        .aviso {
+            margin-top: 10px;
+            font-size: 13px;
+            font-weight: normal;
+            color: #664d03;
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: left;
+        }
+        #previa {
+            margin-top: 20px;
+            overflow-x: auto;
+            display: none;
+        }
+        #previa table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 13px;
+            text-align: left;
+        }
+        #previa th, #previa td {
+            border: 1px solid #dde2ea;
+            padding: 6px 10px;
+            white-space: nowrap;
+        }
+        #previa th {
+            background-color: #eef2ff;
+            color: #1155cc;
+        }
+        #previa caption {
+            caption-side: bottom;
+            color: #888;
+            font-size: 12px;
+            padding-top: 6px;
+        }
+        #btnBaixar {
+            display: none;
+            margin-top: 15px;
+            background-color: #198754;
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        #btnBaixar:hover { background-color: #146c43; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="areaDrop">
+    <h2>Conversor de Erros de Liquidação</h2>
+    <p>Selecione (ou arraste) o <strong>PDF</strong> do relatório de erros de liquidação.<br>
+       O sistema extrairá <strong>Centro de Custo, Funcionário, Verba, Local de Trabalho e Empenho</strong>,
+       ordenará de forma crescente por <strong>Centro de Custo → Funcionário → Verba</strong> e gerará o arquivo <strong>Excel</strong>.</p>
+    <p>Configurações » Consistência de Base de Dados » Impeditivas (Report - ERROS DE LIQUIDAÇÃO)</p>
+
+    <div class="file-input-wrapper">
+        <label for="pdfFile" class="btn-upload">Selecionar PDF e Converter para Excel</label>
+        <input type="file" id="pdfFile" accept=".pdf,application/pdf">
+    </div>
+
+    <div id="status">Aguardando seleção do arquivo...</div>
+    <button id="btnBaixar" type="button">Baixar Excel novamente</button>
+    <div id="previa"></div>
+</div>
+
+<script>
+if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// <<PARSER
+const COLUNAS = ['Centro de Custo', 'Funcionário', 'Verba', 'Local de Trabalho', 'Empenho'];
+
+// Lê todas as páginas do PDF e devolve o texto na ordem de leitura (linha a linha)
+async function lerPdf(arrayBuffer) {
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let texto = '';
+    for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const tc = await page.getTextContent();
+        const itens = tc.items
+            .filter(i => i.str && i.str.trim() !== '')
+            .map(i => ({ s: i.str, x: i.transform[4], y: i.transform[5] }))
+            .sort((a, b) => b.y - a.y);
+
+        // agrupa itens da mesma linha (tolerância de 3 unidades em y)
+        const linhas = [];
+        for (const it of itens) {
+            const ultima = linhas[linhas.length - 1];
+            if (ultima && Math.abs(ultima.y - it.y) <= 3) ultima.itens.push(it);
+            else linhas.push({ y: it.y, itens: [it] });
+        }
+        for (const l of linhas) {
+            l.itens.sort((a, b) => a.x - b.x);
+            texto += l.itens.map(i => i.s).join(' ') + '\n';
+        }
+    }
+    return texto;
+}
+
+// Percorre o texto mantendo o contexto atual de Empenho e Centro de Custo
+function extrairRegistros(textoBruto) {
+    const texto = textoBruto.normalize('NFC');
+    const re = /liquidar\s+o\s+empenho\s+(\d+)\s*\/\s*(\d{4})|Centro\s+de\s+Custo:\s*([\d.]+)|Funcion[áa]rio\s*\/\s*Verba:\s*(\d+\s*\/\s*\d+)\s*-\s*(\d+)\s*Local\s+de\s+Trabalho:\s*(\d+)/gi;
+
+    const brutos = [];
+    let empenho = null;
+    let cc = null;
+    let m;
+    while ((m = re.exec(texto)) !== null) {
+        if (m[1]) {
+            empenho = m[1] + '/' + m[2];
+            cc = null;
+        } else if (m[3]) {
+            cc = m[3];
+        } else {
+            brutos.push({
+                cc: cc,
+                func: m[4].replace(/\s+/g, ''),
+                verba: m[5],
+                local: m[6],
+                emp: empenho
+            });
+        }
+    }
+
+    const ocorrenciasNoTexto = (texto.match(/Funcion[áa]rio\s*\/\s*Verba:/gi) || []).length;
+
+    // remove linhas 100% idênticas (mesmo CC, funcionário, verba, local e empenho)
+    const vistos = new Set();
+    const registros = [];
+    for (const r of brutos) {
+        const chave = [r.cc, r.func, r.verba, r.local, r.emp].join('|');
+        if (vistos.has(chave)) continue;
+        vistos.add(chave);
+        registros.push(r);
+    }
+
+    return {
+        registros,
+        totalBrutos: brutos.length,
+        duplicadosRemovidos: brutos.length - registros.length,
+        ocorrenciasNoTexto,
+        semContexto: brutos.filter(r => !r.cc || !r.emp).length
+    };
+}
+
+// Comparadores numéricos (evita "1000" < "200")
+function cmpSegmentos(a, b, sep) {
+    const A = String(a).split(sep).map(Number);
+    const B = String(b).split(sep).map(Number);
+    const n = Math.max(A.length, B.length);
+    for (let i = 0; i < n; i++) {
+        if (A[i] === undefined) return -1;
+        if (B[i] === undefined) return 1;
+        if (A[i] !== B[i]) return A[i] - B[i];
+    }
+    return 0;
+}
+
+// Ordem: Centro de Custo → Funcionário → Verba → (desempate) Empenho
+function ordenarRegistros(registros) {
+    return registros.slice().sort((a, b) =>
+        cmpSegmentos(a.cc || '0', b.cc || '0', '.') ||
+        cmpSegmentos(a.func, b.func, '/') ||
+        (Number(a.verba) - Number(b.verba)) ||
+        cmpSegmentos(a.emp || '0/0', b.emp || '0/0', '/')
+    );
+}
+// PARSER>>
+
+async function gerarExcel(registros) {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Erros organizados');
+
+    ws.columns = [
+        { header: COLUNAS[0], key: 'cc',    width: 25 },
+        { header: COLUNAS[1], key: 'func',  width: 15 },
+        { header: COLUNAS[2], key: 'verba', width: 13.5 },
+        { header: COLUNAS[3], key: 'local', width: 18 },
+        { header: COLUNAS[4], key: 'emp',   width: 16 }
+    ];
+    ws.getRow(1).font = { bold: true };
+
+    registros.forEach(r => ws.addRow({
+        cc: r.cc, func: r.func, verba: r.verba, local: r.local, emp: r.emp
+    }));
+
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    ws.autoFilter = { from: 'A1', to: 'E' + (registros.length + 1) };
+
+    return await wb.xlsx.writeBuffer();
+}
+
+function baixarBlob(buffer, nome) {
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nome;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(function () {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 150);
+}
+
+function mostrarPrevia(registros) {
+    const div = document.getElementById('previa');
+    const limite = 15;
+    let html = '<table><thead><tr>' + COLUNAS.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>';
+    registros.slice(0, limite).forEach(r => {
+        html += '<tr><td>' + (r.cc || '') + '</td><td>' + r.func + '</td><td>' + r.verba +
+                '</td><td>' + r.local + '</td><td>' + (r.emp || '') + '</td></tr>';
+    });
+    html += '</tbody>';
+    if (registros.length > limite) {
+        html += '<caption>Exibindo as primeiras ' + limite + ' de ' + registros.length + ' linhas. O Excel contém todas.</caption>';
+    }
+    html += '</table>';
+    div.innerHTML = html;
+    div.style.display = 'block';
+}
+
+let ultimoExcel = null;
+
+async function processarArquivo(file) {
+    const statusDiv = document.getElementById('status');
+    const previa = document.getElementById('previa');
+    const btn = document.getElementById('btnBaixar');
+    previa.style.display = 'none';
+    btn.style.display = 'none';
+
+    if (!window.pdfjsLib || !window.ExcelJS) {
+        statusDiv.style.backgroundColor = "#f8d7da";
+        statusDiv.style.color = '#842029';
+        statusDiv.innerHTML = "<b>Erro:</b> não foi possível carregar as bibliotecas (pdf.js / ExcelJS).<br>Verifique a conexão com a internet e recarregue a página.";
+        return;
+    }
+
+    statusDiv.style.backgroundColor = "#eef2ff";
+    statusDiv.style.color = '#1155cc';
+    statusDiv.innerText = "Processando arquivo PDF...";
+
+    try {
+        const buffer = await file.arrayBuffer();
+        const texto = await lerPdf(buffer);
+        const resultado = extrairRegistros(texto);
+
+        if (resultado.registros.length === 0) {
+            statusDiv.style.backgroundColor = "#f8d7da";
+            statusDiv.style.color = '#842029';
+            statusDiv.innerHTML = "<b>Atenção:</b> Nenhum registro válido foi encontrado no PDF.<br>Verifique se é o relatório de <i>Consistência de Base de Dados - Impeditivas</i> (texto selecionável, não digitalizado).";
+            return;
+        }
+
+        const ordenados = ordenarRegistros(resultado.registros);
+        const empenhos = new Set(ordenados.map(r => r.emp)).size;
+        const centros = new Set(ordenados.map(r => r.cc)).size;
+        const funcionarios = new Set(ordenados.map(r => r.func)).size;
+
+        ultimoExcel = await gerarExcel(ordenados);
+        baixarBlob(ultimoExcel, 'Erros_Liquidacao_Organizado.xlsx');
+
+        statusDiv.style.backgroundColor = "#d1e7dd";
+        statusDiv.style.color = '#0f5132';
+        statusDiv.innerHTML = '<b>Sucesso!</b> ' + ordenados.length + ' registros organizados (' +
+            centros + ' centros de custo, ' + funcionarios + ' funcionários, ' + empenhos + ' empenhos).<br>' +
+            'O arquivo <b>Erros_Liquidacao_Organizado.xlsx</b> foi gerado e baixado!';
+
+        const avisos = [];
+        if (resultado.ocorrenciasNoTexto !== resultado.totalBrutos) {
+            avisos.push('O PDF contém ' + resultado.ocorrenciasNoTexto + ' linhas "Funcionário/Verba", mas ' +
+                resultado.totalBrutos + ' foram lidas. Confira o resultado.');
+        }
+        if (resultado.semContexto > 0) {
+            avisos.push(resultado.semContexto + ' registro(s) ficaram sem Centro de Custo ou Empenho. Confira o resultado.');
+        }
+        if (resultado.duplicadosRemovidos > 0) {
+            avisos.push(resultado.duplicadosRemovidos + ' linha(s) totalmente idêntica(s) foram removidas.');
+        }
+        if (avisos.length) {
+            statusDiv.innerHTML += '<div class="aviso">' + avisos.join('<br>') + '</div>';
+        }
+
+        mostrarPrevia(ordenados);
+        btn.style.display = 'inline-block';
+    } catch (error) {
+        statusDiv.style.backgroundColor = "#f8d7da";
+        statusDiv.style.color = '#842029';
+        statusDiv.innerText = "Erro ao processar o arquivo: " + error.message;
+        console.error(error);
+    }
+}
+
+document.getElementById('pdfFile').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (file) processarArquivo(file);
+    e.target.value = '';
+});
+
+document.getElementById('btnBaixar').addEventListener('click', function () {
+    if (ultimoExcel) baixarBlob(ultimoExcel, 'Erros_Liquidacao_Organizado.xlsx');
+});
+
+// Arrastar e soltar
+const areaDrop = document.getElementById('areaDrop');
+['dragenter', 'dragover'].forEach(ev => areaDrop.addEventListener(ev, function (e) {
+    e.preventDefault();
+    areaDrop.classList.add('arrastando');
+}));
+['dragleave', 'drop'].forEach(ev => areaDrop.addEventListener(ev, function (e) {
+    e.preventDefault();
+    areaDrop.classList.remove('arrastando');
+}));
+areaDrop.addEventListener('drop', function (e) {
+    const file = e.dataTransfer.files[0];
+    if (file) processarArquivo(file);
+});
+</script>
+
+</body>
+</html>
