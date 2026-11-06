@@ -560,7 +560,7 @@ $("btnVerGraficos").addEventListener("click", ()=>{
   $("btnVerGraficos").classList.add("active"); $("btnVerTabelas").classList.remove("active");
   Object.values(graficos).forEach(g => g && g.resize && g.resize());
 });
-
+  
 $("inputJson").addEventListener("change", e=>{
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
