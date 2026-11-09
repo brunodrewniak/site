@@ -644,10 +644,10 @@ Dívida Consolidada Líquida (cruzamento) — RGF Anexo 2: <code id="urlRgfTexto
 <details class="card mb-3" open>
 <summary class="card-body fw-semibold" style="cursor:pointer"><i class="bi bi-database"></i> Fontes desta consulta</summary>
 <div class="card-body pt-0">
-<div class="small-muted mb-2">Cada linha informa se o dado veio da API do Siconfi ou de um JSON anexado, e quantas contas foram lidas. O link abre a mesma consulta, para conferência.</div>
+<div class="small-muted mb-2">Cada linha informa se o dado veio da API do Siconfi ou de um JSON anexado, qual período foi encontrado (na busca automática cada anexo recua sozinho até achar dados) e quantas contas foram lidas. O link abre a mesma consulta, para conferência.</div>
 <div class="table-responsive" style="max-height:420px">
 <table class="table table-bordered table-sm rf-table">
-<thead class="table-dark"><tr><th>Demonstrativo</th><th>Origem</th><th class="valor">Contas lidas</th><th>Conferência</th></tr></thead>
+<thead class="table-dark"><tr><th>Demonstrativo</th><th>Origem</th><th>Período encontrado</th><th class="valor">Contas lidas</th><th>Conferência</th></tr></thead>
 <tbody id="tbodyFontes"></tbody>
 </table>
 </div>
@@ -840,8 +840,52 @@ function bimestreParaQuadrimestre(bimestre){
   return Math.ceil(Number(bimestre) / 2);
 }
 
-function montarUrlRREO(bimestre, anexo = "RREO-Anexo 14"){
-  const exercicio = $("filtroExercicio").value.trim();
+
+// -------------------- Período padrão e recuo automático --------------------
+// O painel trabalha por quadrimestre (RGF) e usa o bimestre de fechamento dele no RREO
+// (1º quad = 2º bim, 2º quad = 4º bim, 3º quad = 6º bim).
+let periodoFonte = {};      // chave -> { ano, q, url, recuou, vazio }  (período realmente encontrado)
+let modoAutomatico = false; // true: abriu a página (recua se não houver dados); false: busca manual (zera se não houver)
+
+const TIPO_FONTE = { rreo:"RREO", rreo1:"RREO", rreo7:"RREO", rgf1:"RGF", rgf2:"RGF", rgf5:"RGF" };
+const NOME_FONTE = { rreo:"RREO Anexo 14", rgf2:"RGF Anexo 2", rgf1:"RGF Anexo 1", rreo1:"RREO Anexo 01", rreo7:"RREO Anexo 07", rgf5:"RGF Anexo 5" };
+
+// Último quadrimestre já encerrado em relação à data de hoje
+function ultimoQuadrimestreFechado(hoje = new Date()){
+  const mes = hoje.getMonth() + 1, ano = hoje.getFullYear();
+  if(mes >= 9) return { ano, q:2 };   // jan-ago fechado
+  if(mes >= 5) return { ano, q:1 };   // jan-abr fechado
+  return { ano: ano - 1, q:3 };       // exercício anterior inteiro
+}
+function quadAnterior({ ano, q }){ return q > 1 ? { ano, q: q - 1 } : { ano: ano - 1, q: 3 }; }
+function aplicarFiltros({ ano, q }){
+  $("filtroExercicio").value = ano;
+  $("filtroBimestre").value = String(q * 2);
+}
+// Quadrimestre efetivamente encontrado para o RGF Anexo 2 (colunas "Até o Nº Quadrimestre")
+function qDiv(){ const p = periodoFonte.rgf2; return p && !p.vazio ? p.q : (metaConsulta.quadrimestre || 1); }
+function textoPeriodo(chave, p){
+  return TIPO_FONTE[chave] === "RREO" ? `${p.q * 2}º Bimestre/${p.ano}` : `${p.q}º Quadrimestre/${p.ano}`;
+}
+
+// Busca uma fonte a partir de "inicio". No modo automático recua quadrimestre a quadrimestre
+// (e de ano em ano) até achar dados; no manual consulta só o período escolhido.
+async function buscarFonte(chave, anexo, inicio, paginado){
+  const tipo = TIPO_FONTE[chave];
+  const max = modoAutomatico ? 12 : 1; // até 4 exercícios para trás
+  const urlDe = a => tipo === "RREO" ? montarUrlRREO(a.q * 2, anexo, a.ano) : montarUrlRGF(a.q, anexo, a.ano);
+  let alvo = inicio;
+  for(let i = 0; i < max; i++){
+    const url = urlDe(alvo);
+    const lista = paginado ? await buscarTodos(url) : await buscarJson(url);
+    if(lista.length){ periodoFonte[chave] = { ano:alvo.ano, q:alvo.q, url, recuou: i > 0 }; return lista; }
+    alvo = quadAnterior(alvo);
+  }
+  periodoFonte[chave] = { ano:inicio.ano, q:inicio.q, url:urlDe(inicio), vazio:true };
+  return [];
+}
+
+function montarUrlRREO(bimestre, anexo = "RREO-Anexo 14", exercicio = $("filtroExercicio").value.trim()){
   const esfera = $("filtroEsfera").value.trim();
   const ente = $("filtroEnte").value.trim();
   const params = new URLSearchParams({
@@ -855,8 +899,7 @@ function montarUrlRREO(bimestre, anexo = "RREO-Anexo 14"){
   return `${API_RREO}?${params.toString()}`;
 }
 
-function montarUrlRGF(quadrimestre, anexo = "RGF-Anexo 02"){
-  const exercicio = $("filtroExercicio").value.trim();
+function montarUrlRGF(quadrimestre, anexo = "RGF-Anexo 02", exercicio = $("filtroExercicio").value.trim()){
   const esfera = $("filtroEsfera").value.trim();
   const poder = $("filtroPoder").value.trim();
   const ente = $("filtroEnte").value.trim();
@@ -896,23 +939,31 @@ function indexarPorConta(lista){
   return { mapa, meta };
 }
 
-async function consultarTudo(){
+async function consultarTudo(automatico){
+  modoAutomatico = automatico === true; // o clique do botão passa um evento: só "true" liga o modo automático
+  periodoFonte = {};
   dataConsulta = new Date().toLocaleString("pt-BR",{ dateStyle:"short", timeStyle:"short" });
-  const bimestreAtual = Number($("filtroBimestre").value);
-  const quadrimestreAtual = bimestreParaQuadrimestre(bimestreAtual);
-  const urlRreo = montarUrlRREO(bimestreAtual);
-  const urlRgf = montarUrlRGF(quadrimestreAtual);
-  $("urlRreoTexto").textContent = urlRreo;
-  $("urlRgfTexto").textContent = urlRgf;
+  const inicio = modoAutomatico
+    ? ultimoQuadrimestreFechado()
+    : { ano: Number($("filtroExercicio").value), q: bimestreParaQuadrimestre(Number($("filtroBimestre").value)) };
+  if(modoAutomatico) aplicarFiltros(inicio);
 
   mostrarLoading(true, "Consultando RREO (Resultado Primário/Nominal) e RGF (Dívida Consolidada)...");
-  mostrarStatus(`Buscando dados do ${bimestreAtual}º bimestre (RREO) e do ${quadrimestreAtual}º quadrimestre (RGF)...`);
+  mostrarStatus(`Buscando RREO Anexo 14 — ${inicio.q * 2}º bimestre/${inicio.ano}...`);
 
   try {
-    const [listaRreo, listaRgf] = await Promise.all([
-      buscarJson(urlRreo),
-      buscarJson(urlRgf),
-    ]);
+    // 1) A fonte principal (RREO Anexo 14) define o período exibido pelo painel
+    const listaRreo = await buscarFonte("rreo", "RREO-Anexo 14", inicio, false);
+    const pr = periodoFonte.rreo;
+    const alvo = pr.vazio ? inicio : { ano:pr.ano, q:pr.q };
+    aplicarFiltros(alvo);
+    const bimestreAtual = alvo.q * 2, quadrimestreAtual = alvo.q;
+    $("urlRreoTexto").textContent = pr.url;
+
+    // 2) RGF Anexo 2 a partir do período principal (recua sozinho se o quadrimestre ainda não saiu)
+    mostrarStatus(`Buscando RGF Anexo 2 — ${alvo.q}º quadrimestre/${alvo.ano}...`);
+    const listaRgf = await buscarFonte("rgf2", "RGF-Anexo 02", alvo, false);
+    $("urlRgfTexto").textContent = periodoFonte.rgf2.url;
 
     const idxRreo = indexarPorConta(listaRreo);
     const idxRgf = indexarPorConta(listaRgf);
@@ -920,21 +971,35 @@ async function consultarTudo(){
     dadosDivida = idxRgf.mapa;
     if(manuais.rreo) dadosAnexo14 = manuais.rreo;
     if(manuais.rgf2) dadosDivida = manuais.rgf2;
-    metaConsulta = Object.assign({}, idxRreo.meta, { quadrimestre: quadrimestreAtual, bimestre: bimestreAtual });
+    // Sem dados: o relatório é zerado, mas o ente informado continua identificado
+    metaConsulta = Object.assign({ instituicao:null, cod_ibge:$("filtroEnte").value.trim() }, idxRgf.meta, idxRreo.meta,
+      { exercicio: alvo.ano, quadrimestre: quadrimestreAtual, bimestre: bimestreAtual });
 
     mostrarStatus("Buscando evolução bimestral do exercício...");
     await carregarEvolucaoBimestral(bimestreAtual);
 
-    await carregarPosicao(quadrimestreAtual);
-    await carregarIndicadores(bimestreAtual, quadrimestreAtual);
+    await carregarPosicao(alvo);
+    await carregarIndicadores(alvo);
     atualizarCabecalho();
     atualizarKPIs();
     renderizarTabelas();
     renderizarGraficos();
     renderizarExtras();
 
-    if(falhasExtras.length) mostrarStatus(`Dados principais carregados (${bimestreAtual}º bimestre de ${$("filtroExercicio").value}). Sem dados em: ${falhasExtras.join("; ")}. Os indicadores dependentes ficam em cinza; é possível anexar o JSON correspondente.`, "warning");
-    else mostrarStatus(`Dados carregados com sucesso — ${bimestreAtual}º bimestre de ${$("filtroExercicio").value}.`, "success");
+    const rotAlvo = `${quadrimestreAtual}º quadrimestre (${bimestreAtual}º bimestre) de ${alvo.ano}`;
+    const recuaram = Object.entries(periodoFonte).filter(([k,p]) => p.recuou && !(manuais[k]))
+      .map(([k,p]) => `${NOME_FONTE[k]} (${textoPeriodo(k,p)})`);
+    if(!Object.keys(dadosAnexo14).length){
+      mostrarStatus(modoAutomatico
+        ? `Nenhum dado encontrado nos últimos períodos consultados. Exibindo o ${rotAlvo} zerado.`
+        : `Nenhum dado encontrado para o ${rotAlvo} e o ente informado. Relatório zerado.`, "warning");
+    } else if(falhasExtras.length){
+      mostrarStatus(`Dados principais carregados (${rotAlvo}). Sem dados em: ${falhasExtras.join("; ")}. Os indicadores dependentes ficam em cinza; é possível anexar o JSON correspondente.`, "warning");
+    } else {
+      const ref = modoAutomatico && pr.recuou ? ` (último período com dados; o ${inicio.q}º quadrimestre de ${inicio.ano} ainda não tem dados)` : "";
+      const rec = recuaram.length ? ` Anexos com período anterior ao principal: ${recuaram.join("; ")}.` : "";
+      mostrarStatus(`Dados carregados com sucesso — ${rotAlvo}${ref}.${rec}`, recuaram.length ? "warning" : "success");
+    }
   } catch (err) {
     mostrarStatus(`Não foi possível consultar a API diretamente (${err.message}). Isso costuma acontecer por bloqueio de CORS do navegador para este domínio.`, "warning");
     if(manuais.rreo || manuais.rgf1 || manuais.rgf2){ aplicarManuais(); mostrarStatus("API indisponível: exibindo os dados anexados manualmente.", "warning"); }
@@ -968,11 +1033,11 @@ async function carregarEvolucaoBimestral(bimestreAtual){
 }
 
 function atualizarCabecalho(){
-  if(!metaConsulta.instituicao) return;
-  $("navInstituicao").textContent = `${metaConsulta.instituicao}`;
-  $("kpiEnte").textContent = `${metaConsulta.instituicao} — ${metaConsulta.bimestre}º Bimestre/${metaConsulta.exercicio}`;
-  $("printInstituicao").textContent = String(metaConsulta.instituicao || "").toUpperCase();
-  $("printPeriodo").textContent = `Entidade: ${metaConsulta.instituicao} (IBGE ${metaConsulta.cod_ibge || "-"}) — ${metaConsulta.bimestre}º Bimestre / ${metaConsulta.quadrimestre}º Quadrimestre de ${metaConsulta.exercicio}`;
+  const inst = metaConsulta.instituicao || `Ente ${metaConsulta.cod_ibge || "-"} (sem dados)`;
+  $("navInstituicao").textContent = inst;
+  $("kpiEnte").textContent = `${inst} — ${metaConsulta.bimestre}º Bimestre/${metaConsulta.exercicio}`;
+  $("printInstituicao").textContent = String(metaConsulta.instituicao || "MUNICÍPIO DE CAMPO LARGO").toUpperCase();
+  $("printPeriodo").textContent = `Entidade: ${inst} (IBGE ${metaConsulta.cod_ibge || "-"}) — ${metaConsulta.bimestre}º Bimestre / ${metaConsulta.quadrimestre}º Quadrimestre de ${metaConsulta.exercicio}`;
 }
 
 function situacaoResultado(valor, tipo){
@@ -994,7 +1059,7 @@ function atualizarKPIs(){
   const nominalPerc = getValor(dadosAnexo14, COD_NOMINAL, COL_PERC);
   const rcl = getValor(dadosAnexo14, COD_RCL, COL_RCL_VALOR);
 
-  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(metaConsulta.quadrimestre || 1));
+  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(qDiv()));
   const dclAnterior = getValor(dadosDivida, COD_DCL, COL_SALDO_ANTERIOR);
   const variacaoDcl = dclAtual - dclAnterior;
 
@@ -1039,13 +1104,10 @@ function vexato(item, coluna){ return item && typeof item.valores[coluna] === "n
 const pct = n => n === null || n === undefined ? "-" : Number(n).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%";
 const ROTULO = { verde:"Confortável", amarelo:"Atenção", vermelho:"Crítico", cinza:"Sem dados" };
 
-async function carregarPosicao(quadrimestre){
+async function carregarPosicao(alvo){
   dadosPessoal = {};
   try{
-    const exercicio = $("filtroExercicio").value.trim();
-    const params = new URLSearchParams({ an_exercicio:exercicio, in_periodicidade:"Q", nr_periodo:quadrimestre, co_tipo_demonstrativo:"RGF",
-      no_anexo:"RGF-Anexo 01", co_esfera:$("filtroEsfera").value.trim(), co_poder:$("filtroPoder").value.trim(), id_ente:$("filtroEnte").value.trim() });
-    dadosPessoal = indexarPorConta(await buscarJson(`${API_RGF}?${params}`)).mapa;
+    dadosPessoal = indexarPorConta(await buscarFonte("rgf1", "RGF-Anexo 01", alvo, false)).mapa;
   }catch(e){ dadosPessoal = {}; }
   if(manuais.rgf1) dadosPessoal = manuais.rgf1;
   renderizarPosicao();
@@ -1071,7 +1133,8 @@ function cardPosicao(tema, icone, status, destaque, linhas){
 
 function renderizarPosicao(){
   const q = metaConsulta.quadrimestre || 1;
-  const qCol = colQuad(q), qAnt = q === 1 ? COL_SALDO_ANTERIOR : colQuad(q-1);
+  const qd = qDiv(); // quadrimestre em que o RGF Anexo 2 foi encontrado (pode ser anterior ao principal)
+  const qCol = colQuad(qd), qAnt = qd === 1 ? COL_SALDO_ANTERIOR : colQuad(qd-1);
   const rcl = getValor(dadosAnexo14, COD_RCL, COL_RCL_VALOR);
   const cards = []; const alertas = []; let pior = "verde";
   const ordem = { cinza:0, verde:1, amarelo:2, vermelho:3 };
@@ -1217,7 +1280,7 @@ function renderizarTabelas(){
   $("printTbodyPrimario").innerHTML = htmlPrimario;
   $("printTbodyNominal").innerHTML = htmlNominal;
 
-  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(metaConsulta.quadrimestre || 1));
+  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(qDiv()));
   const dclAnterior = getValor(dadosDivida, COD_DCL, COL_SALDO_ANTERIOR);
   const variacaoDcl = dclAtual - dclAnterior;
   const nominalApurado = getValor(dadosAnexo14, COD_NOMINAL, COL_APURADO);
@@ -1225,7 +1288,7 @@ function renderizarTabelas(){
 
   const htmlValidacao = `
     <tr><td>Dívida Consolidada Líquida — Saldo do Exercício Anterior</td><td class="valor">${moedaContabil(dclAnterior)}</td></tr>
-    <tr><td>Dívida Consolidada Líquida — Até o ${metaConsulta.quadrimestre || "-"}º Quadrimestre</td><td class="valor">${moedaContabil(dclAtual)}</td></tr>
+    <tr><td>Dívida Consolidada Líquida — Até o ${qDiv()}º Quadrimestre</td><td class="valor">${moedaContabil(dclAtual)}</td></tr>
     <tr class="total"><td>Variação da DCL no Exercício (independente, via RGF)</td><td class="valor">${moedaContabil(variacaoDcl)}</td></tr>
     <tr><td>Resultado Nominal Apurado (RREO - Anexo 14)</td><td class="valor">${moedaContabil(nominalApurado)}</td></tr>
     <tr class="total"><td>Divergência entre as duas fontes</td><td class="valor">${moedaContabil(divergencia)}</td></tr>
@@ -1322,7 +1385,7 @@ function graficoEvolucao(){
 // 4. Convergência: Resultado Nominal x Variação da DCL
 function graficoConvergencia(){
   const nominalApurado = getValor(dadosAnexo14, COD_NOMINAL, COL_APURADO);
-  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(metaConsulta.quadrimestre || 1));
+  const dclAtual = getValor(dadosDivida, COD_DCL, colQuad(qDiv()));
   const dclAnterior = getValor(dadosDivida, COD_DCL, COL_SALDO_ANTERIOR);
   const variacaoDcl = dclAtual - dclAnterior;
   const divergencia = nominalApurado + variacaoDcl;
@@ -1437,7 +1500,7 @@ function prepararEImprimir(){
 }
 
 $("btnImprimir").addEventListener("click", prepararEImprimir);
-$("btnConsultar").addEventListener("click", consultarTudo);
+$("btnConsultar").addEventListener("click", () => consultarTudo(false));
 $("btnCsv").addEventListener("click", exportarCSV);
 
 // =====================================================================
@@ -1521,10 +1584,17 @@ function montarUrlDCA(exercicio, anexo){
   return `${API_DCA}?${new URLSearchParams({ an_exercicio:exercicio, no_anexo:anexo, id_ente:$("filtroEnte").value.trim() })}`;
 }
 
-async function carregarIndicadores(bimestre, quadrimestre){
+async function carregarIndicadores(alvo){
   falhasExtras = [];
-  const ano = Number($("filtroExercicio").value);
-  const tentar = async (rotulo, url) => {
+  const ano = alvo.ano;
+  const tentar = async (rotulo, chave, anexo) => {
+    try{
+      const mapa = indexarPorConta(await buscarFonte(chave, anexo, alvo, true)).mapa;
+      if(!Object.keys(mapa).length) falhasExtras.push(`${rotulo} (sem dados)`);
+      return mapa;
+    }catch(e){ falhasExtras.push(`${rotulo} (${e.message})`); return {}; }
+  };
+  const tentarDca = async (rotulo, url) => { // DCA é anual: não há período para recuar
     try{
       const mapa = indexarPorConta(await buscarTodos(url)).mapa;
       if(!Object.keys(mapa).length) falhasExtras.push(`${rotulo} (sem dados)`);
@@ -1534,10 +1604,10 @@ async function carregarIndicadores(bimestre, quadrimestre){
   mostrarLoading(true, "Consultando RREO Anexos 01 e 07, RGF Anexo 5 e DCA...");
   const jobs = [["ab",ano-1],["ab",ano-3],["c",ano-1],["c",ano-2],["c",ano-3]];
   const [r1, r7, g5, ...dcas] = await Promise.all([
-    tentar("RREO Anexo 01", montarUrlRREO(bimestre, "RREO-Anexo 01")),
-    tentar("RREO Anexo 07", montarUrlRREO(bimestre, "RREO-Anexo 07")),
-    tentar("RGF Anexo 5", montarUrlRGF(quadrimestre, "RGF-Anexo 05")),
-    ...jobs.map(([k,a]) => tentar(`DCA ${k === "ab" ? "I-AB" : "I-C"}/${a}`, montarUrlDCA(a, k === "ab" ? "DCA-Anexo I-AB" : "DCA-Anexo I-C")))
+    tentar("RREO Anexo 01", "rreo1", "RREO-Anexo 01"),
+    tentar("RREO Anexo 07", "rreo7", "RREO-Anexo 07"),
+    tentar("RGF Anexo 5", "rgf5", "RGF-Anexo 05"),
+    ...jobs.map(([k,a]) => tentarDca(`DCA ${k === "ab" ? "I-AB" : "I-C"}/${a}`, montarUrlDCA(a, k === "ab" ? "DCA-Anexo I-AB" : "DCA-Anexo I-C")))
   ]);
   dadosRreo1 = manuais.rreo1 || r1;
   dadosRreo7 = manuais.rreo7 || r7;
@@ -1695,7 +1765,7 @@ function lerAnexo7(){
 }
 
 function renderRp(){
-  const q = metaConsulta.quadrimestre || 1, qCol = colQuad(q);
+  const qCol = colQuad(qDiv());
   let c = lerAnexo5(), fonte = "RGF Anexo 5";
   // Alternativa: o Anexo 2 do RGF (já carregado) traz caixa bruta e RP processados
   const cx2 = vexato(achar(dadosDivida, /disponibilidade de caixa bruta/), qCol);
@@ -2092,22 +2162,37 @@ function renderAvisoParcial(){
 function renderFontes(){
   const c = ctx();
   const linhas = []; let api = 0, man = 0, sem = 0;
-  const add = (rot, mapa, manual, arquivo, url) => {
+  const principal = periodoFonte.rreo && !periodoFonte.rreo.vazio ? periodoFonte.rreo : null;
+  const add = (rot, mapa, manual, arquivo, chave, urlFallback, periodoFixo) => {
     const n = Object.keys(mapa || {}).length;
+    const p = chave ? periodoFonte[chave] : null;
     let origem, cls;
     if(manual){ origem = `JSON anexado: ${escapeHtml(arquivo || "")}`; cls = "text-bg-primary"; man++; }
     else if(n){ origem = "API Siconfi"; cls = "text-bg-success"; api++; }
     else { origem = "Sem dados"; cls = "text-bg-secondary"; sem++; }
-    linhas.push(`<tr><td>${escapeHtml(rot)}</td><td><span class="badge ${cls}">${origem}</span></td><td class="valor">${n}</td><td class="small"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">abrir consulta</a></td></tr>`);
+
+    let periodo;
+    if(periodoFixo) periodo = periodoFixo;                                   // DCA: exercício
+    else if(manual) periodo = `<span class="text-muted">conforme o arquivo anexado</span>`;
+    else if(!p) periodo = `<span class="text-muted">—</span>`;
+    else if(p.vazio) periodo = `<span class="text-muted">nenhum${modoAutomatico ? " nos últimos 12 quadrimestres" : ""} (consultado: ${escapeHtml(textoPeriodo(chave, p))})</span>`;
+    else {
+      const difere = principal && chave !== "rreo" && (p.ano !== principal.ano || p.q !== principal.q);
+      periodo = `<strong>${escapeHtml(textoPeriodo(chave, p))}</strong>` +
+        (p.recuou ? ` <span class="badge text-bg-warning" title="O período pedido ainda não tinha dados; foi usado o anterior mais recente">recuou</span>`
+                  : difere ? ` <span class="badge text-bg-warning" title="Período diferente do anexo principal">≠ principal</span>` : "");
+    }
+    const url = p && p.url ? p.url : urlFallback;
+    linhas.push(`<tr><td>${escapeHtml(rot)}</td><td><span class="badge ${cls}">${origem}</span></td><td>${periodo}</td><td class="valor">${n}</td><td class="small"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">abrir consulta</a></td></tr>`);
   };
-  add("RREO Anexo 14 (primário, nominal, RCL)", dadosAnexo14, manuais.rreo, manuaisArquivo.rreo, montarUrlRREO(c.b));
-  add("RGF Anexo 2 (dívida consolidada líquida)", dadosDivida, manuais.rgf2, manuaisArquivo.rgf2, montarUrlRGF(c.q));
-  add("RGF Anexo 1 (despesa com pessoal)", dadosPessoal, manuais.rgf1, manuaisArquivo.rgf1, montarUrlRGF(c.q, "RGF-Anexo 01"));
-  add("RREO Anexo 01 (balanço orçamentário)", dadosRreo1, manuais.rreo1, manuaisArquivo.rreo1, montarUrlRREO(c.b, "RREO-Anexo 01"));
-  add("RREO Anexo 07 (restos a pagar por poder)", dadosRreo7, manuais.rreo7, manuaisArquivo.rreo7, montarUrlRREO(c.b, "RREO-Anexo 07"));
-  add("RGF Anexo 5 (caixa e restos a pagar)", dadosRgf5, manuais.rgf5, manuaisArquivo.rgf5, montarUrlRGF(c.q, "RGF-Anexo 05"));
+  add("RREO Anexo 14 (primário, nominal, RCL)", dadosAnexo14, manuais.rreo, manuaisArquivo.rreo, "rreo", montarUrlRREO(c.b));
+  add("RGF Anexo 2 (dívida consolidada líquida)", dadosDivida, manuais.rgf2, manuaisArquivo.rgf2, "rgf2", montarUrlRGF(c.q));
+  add("RGF Anexo 1 (despesa com pessoal)", dadosPessoal, manuais.rgf1, manuaisArquivo.rgf1, "rgf1", montarUrlRGF(c.q, "RGF-Anexo 01"));
+  add("RREO Anexo 01 (balanço orçamentário)", dadosRreo1, manuais.rreo1, manuaisArquivo.rreo1, "rreo1", montarUrlRREO(c.b, "RREO-Anexo 01"));
+  add("RREO Anexo 07 (restos a pagar por poder)", dadosRreo7, manuais.rreo7, manuaisArquivo.rreo7, "rreo7", montarUrlRREO(c.b, "RREO-Anexo 07"));
+  add("RGF Anexo 5 (caixa e restos a pagar)", dadosRgf5, manuais.rgf5, manuaisArquivo.rgf5, "rgf5", montarUrlRGF(c.q, "RGF-Anexo 05"));
   [["ab","DCA Anexo I-AB","DCA-Anexo I-AB"],["c","DCA Anexo I-C","DCA-Anexo I-C"]].forEach(([k, rot, anexo]) => {
-    Object.keys(dadosDca[k] || {}).sort().forEach(a => add(`${rot} / ${a}`, dadosDca[k][a], !!manuaisDca[k][a], manuaisDcaArquivo[k][a], montarUrlDCA(a, anexo)));
+    Object.keys(dadosDca[k] || {}).sort().forEach(a => add(`${rot} / ${a}`, dadosDca[k][a], !!manuaisDca[k][a], manuaisDcaArquivo[k][a], null, montarUrlDCA(a, anexo), `exercício ${a} (anual)`));
   });
   $("tbodyFontes").innerHTML = linhas.join("");
   const ente = metaConsulta.instituicao || "Campo Largo";
@@ -2139,8 +2224,8 @@ function renderTransparencia(){
 })();
 
 
-// Inicia consulta ao carregar a página
-consultarTudo();
+// Inicia consulta ao carregar a página: último quadrimestre fechado, recuando por anexo se não houver dados
+consultarTudo(true);
 </script>
 
 </body>
