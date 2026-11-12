@@ -133,6 +133,29 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
 }
 .card.flash { animation:flash 2.4s ease-out 1; }
 
+/* Cards clicáveis + pop-up de detalhamento */
+.card[data-filtro] { cursor:pointer; transition:border-color .2s; }
+.card[data-filtro]:hover, .card[data-filtro]:focus-visible { border-color:var(--c); outline:none; }
+.modal-bg { position:fixed; inset:0; z-index:10000; background:rgba(8,14,22,.62); display:none; align-items:center; justify-content:center; }
+.modal-bg.aberto { display:flex; }
+.modal-box { width:1780px; height:920px; background:var(--card); border:1px solid var(--linha); border-radius:14px; display:flex; flex-direction:column; box-shadow:0 24px 70px rgba(0,0,0,.45); overflow:hidden; }
+.modal-hd { display:flex; align-items:center; gap:18px; padding:16px 24px; border-bottom:1px solid var(--linha); }
+.modal-hd h2 { margin:0; font-size:21px; font-weight:600; color:var(--navy); display:flex; align-items:center; gap:10px; }
+.modal-hd h2::before { content:""; width:10px; height:10px; border-radius:3px; background:var(--c); }
+.modal-res { font-size:14px; color:var(--mut); }
+.modal-busca { margin-left:auto; width:340px; font-size:15px; padding:7px 12px; border:1px solid var(--linha); border-radius:8px; background:var(--fundo); color:var(--txt); }
+.modal-x { flex:none; width:40px; height:40px; border-radius:50%; border:1px solid var(--linha); background:var(--card); color:var(--navy); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+.modal-x:hover { background:var(--ic-bg); }
+.modal-bd { flex:1; overflow:auto; }
+table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-numeric:tabular-nums; }
+.mt th { position:sticky; top:0; z-index:1; background:var(--card); text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--mut); padding:10px 12px; border-bottom:1px solid var(--linha); white-space:nowrap; }
+.mt td { padding:8px 12px; border-bottom:1px solid var(--linha2); color:var(--txt); vertical-align:top; }
+.mt .n { text-align:right; white-space:nowrap; }
+.mt th.n { text-align:right; }
+.mt th.on, .mt td.on { color:var(--c); font-weight:600; }
+.mt tfoot td { position:sticky; bottom:0; background:var(--card); border-top:2px solid var(--linha); border-bottom:0; font-weight:600; color:var(--navy); }
+.mt-vazio { padding:60px 24px; text-align:center; color:var(--mut); font-size:17px; }
+
 /* Indicadores de receita */
 .kpi { display:flex; flex-direction:row; align-items:center; gap:16px; height:116px; }
 .kpi .ic { font-size:20px; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:var(--ic-bg); color:var(--navy); flex:none; }
@@ -268,22 +291,22 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
       <span class="tag-sim tag-org">Atualiza a cada <span id="hojeCada">10</span> min · última leitura: <span id="hojeUpd">--</span></span>
     </div>
     <div class="grid4">
-      <div class="card pad stage hoje" style="--c:var(--c-orc)">
+      <div class="card pad stage hoje" data-filtro="todos" tabindex="0" role="button" title="Clique para ver os registros" style="--c:var(--c-orc)">
         <div class="lbl"><span>Registros do dia</span></div>
         <div class="val" id="hReg">—</div>
         <div class="sub" id="hRegSub">&nbsp;</div>
       </div>
-      <div class="card pad stage hoje" style="--c:var(--c-emp)">
+      <div class="card pad stage hoje" data-filtro="emp" tabindex="0" role="button" title="Clique para ver os empenhos" style="--c:var(--c-emp)">
         <div class="lbl"><span>Empenhado hoje</span><span class="pill" id="hEmpDelta"></span></div>
         <div class="val" id="hEmp">—</div>
         <div class="sub" id="hEmpSub">&nbsp;</div>
       </div>
-      <div class="card pad stage hoje" style="--c:var(--c-liq)">
+      <div class="card pad stage hoje" data-filtro="liq" tabindex="0" role="button" title="Clique para ver as liquidações" style="--c:var(--c-liq)">
         <div class="lbl"><span>Liquidado hoje</span><span class="pill" id="hLiqDelta"></span></div>
         <div class="val" id="hLiq">—</div>
         <div class="sub" id="hLiqSub">&nbsp;</div>
       </div>
-      <div class="card pad stage hoje" style="--c:var(--c-pag)">
+      <div class="card pad stage hoje" data-filtro="pago" tabindex="0" role="button" title="Clique para ver os pagamentos" style="--c:var(--c-pag)">
         <div class="lbl"><span>Pago hoje</span><span class="pill" id="hPagDelta"></span></div>
         <div class="val" id="hPag">—</div>
         <div class="sub" id="hPagSub">&nbsp;</div>
@@ -299,6 +322,19 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
     </div>
   </section>
 
+</div>
+
+<!-- POP-UP: detalhamento do movimento do dia -->
+<div class="modal-bg" id="modalHoje" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="mTitulo" id="modalBox">
+    <div class="modal-hd">
+      <h2 id="mTitulo">Registros do dia</h2>
+      <span class="modal-res" id="mRes"></span>
+      <input class="modal-busca" id="mBusca" type="search" placeholder="Buscar credor, CPF/CNPJ, unidade ou fonte…" autocomplete="off">
+      <button class="modal-x" id="mFechar" type="button" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-bd" id="mCorpo"></div>
+  </div>
 </div>
 
 <script>
@@ -877,6 +913,7 @@ let HOJE_ANT = null;   // última leitura do dia { dia, t }
 
 function somarDia(lista){
   const t = somar(lista);
+  t.lista = lista;
   t.nEmp = lista.filter(i=>numero(i.valorEmpenhado)>0).length;
   t.nLiq = lista.filter(i=>numero(i.valorLiquidado)>0).length;
   t.nPag = lista.filter(i=>numero(i.valorPago)>0).length;
@@ -921,6 +958,7 @@ async function atualizarHoje(){
     HOJE_ANT = { dia, t };
     const tg = $('tagHoje'); tg.className = 'tag-live'; tg.textContent = 'API ao vivo · Poder Executivo';
     $('hojeUpd').textContent = new Date().toLocaleTimeString('pt-BR');
+    if(MODAL.f) renderModal();   // pop-up aberto: acompanha a atualização
     if(mudou) tremerTela();
     return true;
   }catch(e){
@@ -931,6 +969,78 @@ async function atualizarHoje(){
     return false;
   }
 }
+
+/* =====================================================
+   POP-UP DE DETALHAMENTO (registros do dia / empenhado / liquidado / pago)
+   ===================================================== */
+const MODAL_FILTROS = {
+  todos: { titulo:'Registros do dia', col:null,             cor:'--c-orc', regra:'todos os registros' },
+  emp:   { titulo:'Empenhado hoje',   col:'valorEmpenhado', cor:'--c-emp', regra:'com valor empenhado' },
+  liq:   { titulo:'Liquidado hoje',   col:'valorLiquidado', cor:'--c-liq', regra:'com valor liquidado' },
+  pago:  { titulo:'Pago hoje',        col:'valorPago',      cor:'--c-pag', regra:'com valor pago' }
+};
+const MODAL_MAX_LINHAS = 1500, MODAL_OCIOSO_S = 120;   // TV: fecha sozinho após 2 min sem uso
+let MODAL = { f:null, busca:'', ocioso:null };
+
+/* Os nomes dos campos de unidade / fonte / documento vêm da API; procura por padrão no nome da chave */
+function campoTxt(i, reDesc, reCod){
+  const ks = Object.keys(i);
+  const kd = ks.find(k => reDesc.test(k)), kc = ks.find(k => reCod.test(k) && k !== kd);
+  const d = kd ? String(i[kd] ?? '').trim() : '', c = kc ? String(i[kc] ?? '').trim() : '';
+  return d && c && !d.startsWith(c) ? c+' - '+d : (d || c || '—');
+}
+const mUnidade = i => campoTxt(i, /unidade.*(descri|nome)|^unidade$/i, /unidade.*(cod|id)/i);
+const mFonte   = i => campoTxt(i, /fonte.*(descri|nome)|^fonte$/i,     /fonte.*(cod|id)/i);
+const mDoc     = i => { const k = Object.keys(i).find(k => /cpf|cnpj|documento/i.test(k)); return k && i[k] ? String(i[k]) : '—'; };
+
+function renderModal(){
+  const f = MODAL_FILTROS[MODAL.f]; if(!f) return;
+  const box = $('modalBox'); box.style.setProperty('--c', 'var('+f.cor+')');
+  $('mTitulo').textContent = f.titulo+' · '+(HOJE_ANT ? HOJE_ANT.dia : dataBR(new Date()));
+  const lista = (HOJE_ANT && HOJE_ANT.t.lista) || [];
+  let linhas = lista.filter(i => !f.col || numero(i[f.col]) > 0);
+  const q = normTxt(MODAL.busca);
+  const base = linhas.length;
+  if(q) linhas = linhas.filter(i => normTxt([mUnidade(i), mFonte(i), mDoc(i), i.nomeCredor].join(' ')).includes(q));
+  linhas.sort((a,b) => f.col ? numero(b[f.col]) - numero(a[f.col]) : numero(b.valorEmpenhado) - numero(a.valorEmpenhado));
+  const tot = { e:0, a:0, l:0, p:0 };
+  linhas.forEach(i => { tot.e += numero(i.valorEmpenhado); tot.a += numero(i.valorAnulado); tot.l += numero(i.valorLiquidado); tot.p += numero(i.valorPago); });
+  $('mRes').textContent = `${linhas.length.toLocaleString('pt-BR')}${q ? ' de '+base.toLocaleString('pt-BR') : ''} registro(s) · ${f.regra}`;
+  const corpo = $('mCorpo');
+  if(!linhas.length){
+    corpo.innerHTML = '<div class="mt-vazio">'+(HOJE_ANT ? (q ? 'Nenhum registro encontrado para a busca.' : 'Nenhum registro '+f.regra+' hoje.') : 'Dados do dia ainda não carregados.')+'</div>';
+    return;
+  }
+  const on = c => f.col === c ? ' on' : '';
+  const vis = linhas.slice(0, MODAL_MAX_LINHAS);
+  corpo.innerHTML = '<table class="mt"><thead><tr><th>Unidade</th><th>Fonte de recurso</th><th>CPF/CNPJ</th><th>Credor</th>'
+    + `<th class="n${on('valorEmpenhado')}">Empenhado</th><th class="n">Anulado</th><th class="n${on('valorLiquidado')}">Liquidado</th><th class="n${on('valorPago')}">Pago</th></tr></thead><tbody>`
+    + vis.map(i => `<tr><td>${escN(mUnidade(i))}</td><td>${escN(mFonte(i))}</td><td class="n">${escN(mDoc(i))}</td><td>${escN(i.nomeCredor || '—')}</td>`
+      + `<td class="n${on('valorEmpenhado')}">${brl2(numero(i.valorEmpenhado))}</td><td class="n">${brl2(numero(i.valorAnulado))}</td>`
+      + `<td class="n${on('valorLiquidado')}">${brl2(numero(i.valorLiquidado))}</td><td class="n${on('valorPago')}">${brl2(numero(i.valorPago))}</td></tr>`).join('')
+    + `</tbody><tfoot><tr><td colspan="4">Total${linhas.length > vis.length ? ' (inclui '+(linhas.length-vis.length).toLocaleString('pt-BR')+' linhas não exibidas)' : ''}</td>`
+    + `<td class="n${on('valorEmpenhado')}">${brl2(tot.e)}</td><td class="n">${brl2(tot.a)}</td><td class="n${on('valorLiquidado')}">${brl2(tot.l)}</td><td class="n${on('valorPago')}">${brl2(tot.p)}</td></tr></tfoot></table>`;
+}
+function reiniciaOcioso(){ clearTimeout(MODAL.ocioso); if(MODAL.f) MODAL.ocioso = setTimeout(fecharModal, MODAL_OCIOSO_S*1000); }
+function abrirModal(f){
+  MODAL.f = f; MODAL.busca = ''; $('mBusca').value = '';
+  renderModal();
+  $('modalHoje').classList.add('aberto'); $('modalHoje').setAttribute('aria-hidden','false');
+  $('mCorpo').scrollTop = 0; reiniciaOcioso();
+}
+function fecharModal(){
+  MODAL.f = null; clearTimeout(MODAL.ocioso);
+  $('modalHoje').classList.remove('aberto'); $('modalHoje').setAttribute('aria-hidden','true');
+}
+document.addEventListener('click', e => { const c = e.target.closest('.card[data-filtro]'); if(c) abrirModal(c.dataset.filtro); });
+document.addEventListener('keydown', e => {
+  if(MODAL.f){ if(e.key === 'Escape') fecharModal(); else reiniciaOcioso(); return; }
+  if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.card[data-filtro]')){ e.preventDefault(); abrirModal(e.target.dataset.filtro); }
+});
+$('mFechar').addEventListener('click', fecharModal);
+$('modalHoje').addEventListener('click', e => { if(e.target.id === 'modalHoje') fecharModal(); else reiniciaOcioso(); });
+$('modalHoje').addEventListener('mousemove', reiniciaOcioso);
+$('mBusca').addEventListener('input', e => { MODAL.busca = e.target.value; renderModal(); });
 
 /* =====================================================
    TEMA CLARO / ESCURO
@@ -944,7 +1054,7 @@ function aplicarTema(tema, salvar){
 }
 const alternarTema = () => aplicarTema(temaAtual()==='dark' ? 'light' : 'dark', true);
 $('btnTema').addEventListener('click', alternarTema);
-document.addEventListener('keydown', e => { if((e.key==='t' || e.key==='T') && !e.ctrlKey && !e.metaKey && !e.altKey) alternarTema(); });
+document.addEventListener('keydown', e => { if((e.key==='t' || e.key==='T') && !(e.target.closest && e.target.closest('input')) && !e.ctrlKey && !e.metaKey && !e.altKey) alternarTema(); });
 aplicarTema(temaAtual(), false);
 
 /* =====================================================
