@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-bs-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1920, initial-scale=1">
@@ -12,23 +12,33 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<script>try{var _t=localStorage.getItem('fzcl1:tema');if(_t==='dark'||_t==='light')document.documentElement.setAttribute('data-bs-theme',_t);}catch(e){}</script>
 <style>
-/* ===== Tema minimalista sobre Bootstrap 5 ===== */
+/* ===== Tema minimalista sobre Bootstrap 5 (claro / escuro) ===== */
 :root{
   --bs-primary:#0b2f57; --bs-primary-rgb:11,47,87;
   --bs-success:#1f8f5f; --bs-danger:#c0392b; --bs-warning:#d39a1c;
   --bs-body-font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   --azul:#2f6fdb; --navy:#0b2f57; --fundo:#f5f6f8; --linha:#e6e8ec; --txt:#1f2937; --mut:#6b7280;
+  --card:#fff; --linha2:#f0f1f4; --prog:#eef0f3; --ic-bg:#f1f4f9; --dot:#c4c9d2; --grid:#eef0f3; --bar:#c9d9f5; --upd:#9ca3af;
+  --ok:#1f8f5f; --ko:#c0392b; --sol:#c98a00;
   --c-orc:#2f6fdb; --c-emp:#0f8fa3; --c-liq:#d39a1c; --c-pag:#1f8f5f;
+}
+/* Tema escuro: Bootstrap 5.3 já troca as variáveis dele via data-bs-theme; aqui trocamos as do painel */
+:root[data-bs-theme="dark"]{
+  --navy:#dce8f8; --fundo:#0d131a; --linha:#263142; --txt:#e5e9f0; --mut:#9aa6b6;
+  --card:#151c26; --linha2:#1f2937; --prog:#263142; --ic-bg:#1d2836; --dot:#4a5568; --grid:#212c3b; --bar:#2c4b7c; --upd:#7c8797;
+  --ok:#3ecf8e; --ko:#ff7a6b; --sol:#f0b429;
+  --c-orc:#5b92f0; --c-emp:#2bb3c9; --c-liq:#e6ad2e; --c-pag:#34b27d;
 }
 html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; background:var(--fundo); font-family:var(--bs-body-font-family); color:var(--txt); -webkit-font-smoothing:antialiased; }
 #app { width:1920px; height:1080px; padding:12px 20px; display:flex; flex-direction:column; gap:12px; box-sizing:border-box; }
-.text-success{ color:#1f8f5f !important; } .text-danger{ color:#c0392b !important; }
+.text-success{ color:var(--ok) !important; } .text-danger{ color:var(--ko) !important; }
 
-.card{ border:1px solid var(--linha); box-shadow:none; border-radius:10px; background:#fff; }
+.card{ border:1px solid var(--linha); box-shadow:none; border-radius:10px; background:var(--card); color:var(--txt); }
 
 /* CABEÇALHO */
-.hdr { flex:0 0 88px; height:88px; background:#fff; border:1px solid var(--linha); border-radius:10px; display:grid; grid-template-columns:1fr 440px 1fr; align-items:center; padding:0 28px; position:relative; }
+.hdr { flex:0 0 88px; height:88px; background:var(--card); border:1px solid var(--linha); border-radius:10px; display:grid; grid-template-columns:1fr 440px 1fr; align-items:center; padding:0 28px; position:relative; }
 .hdr::before { content:""; position:absolute; left:0; top:16px; bottom:16px; width:3px; background:var(--navy); border-radius:0 3px 3px 0; }
 .brand { display:flex; align-items:center; gap:18px; }
 .brasao-box { height:66px; display:flex; align-items:center; }
@@ -36,25 +46,40 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
 .brand h1 { font-size:25px; font-weight:600; margin:0; line-height:1.15; color:var(--navy); letter-spacing:-.01em; }
 .brand p { margin:2px 0 0; font-size:15px; color:var(--mut); }
 .brand .cidade { display:none; }
-.weather { display:flex; align-items:center; justify-content:center; gap:14px; border-left:1px solid var(--linha); border-right:1px solid var(--linha); height:52px; padding:0 20px; }
-.weather i { font-size:30px; color:#c98a00; }
-.weather .temp { font-size:30px; font-weight:600; line-height:1; color:var(--navy); }
-.weather .desc { font-size:14px; line-height:1.25; color:var(--mut); }
-.weather .desc b { font-size:15px; font-weight:600; color:var(--txt); }
+
+/* Clima rotativo: hoje + próximos 3 dias */
+.weather { position:relative; display:flex; align-items:center; justify-content:center; border-left:1px solid var(--linha); border-right:1px solid var(--linha); height:52px; padding:0 20px; }
+.w-stage { display:grid; width:100%; }
+.w-slide { grid-area:1/1; display:flex; align-items:center; justify-content:center; gap:14px; opacity:0; transform:translateY(8px); transition:opacity .6s ease, transform .6s ease; pointer-events:none; }
+.w-slide.ativo { opacity:1; transform:none; }
+.w-slide > i { font-size:30px; color:var(--sol); }
+.w-slide .temp { font-size:30px; font-weight:600; line-height:1; color:var(--navy); white-space:nowrap; }
+.w-slide .temp small { font-size:17px; font-weight:500; color:var(--mut); margin-left:5px; }
+.w-slide .desc { font-size:14px; line-height:1.25; color:var(--mut); white-space:nowrap; }
+.w-slide .desc b { font-size:15px; font-weight:600; color:var(--txt); }
+.w-dots { position:absolute; left:0; right:0; bottom:-9px; display:flex; justify-content:center; gap:6px; }
+.w-dots span { width:6px; height:6px; border-radius:50%; background:var(--dot); transition:background .4s, transform .4s; }
+.w-dots span.ativo { background:var(--navy); transform:scale(1.25); }
+
+.hdr-right { display:flex; align-items:center; justify-content:flex-end; gap:24px; }
+.btn-tema { flex:none; width:44px; height:44px; padding:0; border-radius:50%; border:1px solid var(--linha); background:var(--card); color:var(--navy); font-size:19px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .2s; }
+.btn-tema:hover { background:var(--ic-bg); }
+.btn-tema:focus-visible { outline:2px solid var(--azul); outline-offset:2px; }
 .clock-box { text-align:right; }
 .clock { font-size:40px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; color:var(--navy); letter-spacing:-.01em; }
 .date { font-size:15px; text-transform:capitalize; color:var(--mut); margin-top:2px; }
-.upd { font-size:12px; color:#9ca3af; }
+.upd { font-size:12px; color:var(--upd); }
 
 /* SEÇÕES */
 .sec-title { font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--mut); margin:0 0 8px 2px; display:flex; align-items:center; gap:10px; }
 .sec-title > i { font-size:14px; }
-.tag-sim, .tag-live { font-size:11px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--mut); background:#fff; border:1px solid var(--linha); border-radius:999px; padding:1px 10px 1px 8px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.tag-sim, .tag-live { font-size:11px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--mut); background:var(--card); border:1px solid var(--linha); border-radius:999px; padding:1px 10px 1px 8px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
 .tag-sim::before, .tag-live::before { content:""; width:6px; height:6px; border-radius:50%; background:#d39a1c; }
 .tag-live::before { background:#1f8f5f; }
 .tag-org::before { background:var(--navy) !important; }
 .row-budget { flex:0 0 156px; }
 .row-kpi { flex:0 0 140px; }
+.row-hoje { flex:0 0 136px; }
 .row-center { flex:1 1 0; min-height:0; display:grid; grid-template-columns:60fr 40fr; gap:12px; }
 .row-news { flex:0 0 56px; }
 .news { height:56px; display:flex; flex-direction:row; align-items:center; overflow:hidden; }
@@ -66,11 +91,10 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
 .news-item { display:inline-flex; align-items:baseline; gap:10px; font-size:19px; }
 .news-item .dt { font-size:14px; color:var(--mut); font-variant-numeric:tabular-nums; }
 .news-item .tt { font-weight:500; color:var(--txt); }
-.news-item::after { content:""; width:5px; height:5px; border-radius:50%; background:#c4c9d2; margin:0 32px; align-self:center; }
+.news-item::after { content:""; width:5px; height:5px; border-radius:50%; background:var(--dot); margin:0 32px; align-self:center; }
 .news-item .fn { font-size:14px; color:var(--mut); }
 .news-msg { font-size:15px; color:var(--mut); }
 @keyframes news-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
-.row-foot { flex:0 0 232px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
 .pad { padding:14px 20px; position:relative; }
 
@@ -79,14 +103,39 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
 .stage .lbl { font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); display:flex; justify-content:space-between; align-items:center; }
 .stage .lbl > span:first-child::before { content:""; display:inline-block; width:8px; height:8px; border-radius:2px; background:var(--c); margin-right:8px; vertical-align:1px; }
 .stage .val { font-size:36px; font-weight:600; line-height:1.05; font-variant-numeric:tabular-nums; color:var(--navy); letter-spacing:-.02em; }
-.pill { font-size:12px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--c); background:color-mix(in srgb, var(--c) 10%, #fff); border-radius:6px; padding:3px 8px; }
-.progress { height:4px; background:#eef0f3; border-radius:2px; }
+.pill { font-size:12px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--c); background:color-mix(in srgb, var(--c) 12%, var(--card)); border-radius:6px; padding:3px 8px; }
+.pill:empty { display:none; }
+.progress { height:4px; background:var(--prog); border-radius:2px; }
 .progress-bar { background-color:var(--c); border-radius:2px; }
 .stage .sub { font-size:13px; color:var(--mut); }
 
+/* Movimento do dia */
+.stage.hoje { height:106px; }
+.stage.hoje .val { font-size:30px; }
+
+/* Atualização do dia: a tela treme e o cartão alterado pisca */
+@keyframes tremer {
+  0%,100% { transform:translate(0,0) rotate(0); }
+  8%  { transform:translate(-10px,4px)  rotate(-.25deg); }
+  16% { transform:translate(9px,-5px)   rotate(.25deg); }
+  24% { transform:translate(-8px,-3px) rotate(-.2deg); }
+  32% { transform:translate(8px,4px)    rotate(.2deg); }
+  40% { transform:translate(-6px,3px)   rotate(-.15deg); }
+  50% { transform:translate(6px,-3px)   rotate(.15deg); }
+  60% { transform:translate(-4px,2px); }
+  72% { transform:translate(3px,-2px); }
+  85% { transform:translate(-2px,1px); }
+}
+#app.tremer { animation:tremer .9s cubic-bezier(.36,.07,.19,.97) 1; }
+@keyframes flash {
+  0%   { box-shadow:0 0 0 0 color-mix(in srgb, var(--c) 60%, transparent); border-color:var(--c); }
+  100% { box-shadow:0 0 0 22px transparent; border-color:var(--linha); }
+}
+.card.flash { animation:flash 2.4s ease-out 1; }
+
 /* Indicadores de receita */
 .kpi { display:flex; flex-direction:row; align-items:center; gap:16px; height:116px; }
-.kpi .ic { font-size:20px; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:#f1f4f9; color:var(--navy); flex:none; }
+.kpi .ic { font-size:20px; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:var(--ic-bg); color:var(--navy); flex:none; }
 .kpi .t { font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); }
 .kpi .v { font-size:32px; font-weight:600; line-height:1.15; font-variant-numeric:tabular-nums; color:var(--navy); letter-spacing:-.02em; }
 .kpi .s { font-size:13px; color:var(--mut); }
@@ -95,23 +144,9 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
 
 /* Gráficos */
 .chart-card { display:flex; flex-direction:column; min-height:0; padding:14px 20px 12px; }
-.chart-card h3, .foot-card h3 { font-size:16px; font-weight:600; margin:0 0 6px; color:var(--navy); display:flex; align-items:center; gap:10px; }
-.chart-card h3 i, .foot-card h3 i { color:var(--mut) !important; font-size:16px; }
+.chart-card h3 { font-size:16px; font-weight:600; margin:0 0 6px; color:var(--navy); display:flex; align-items:center; gap:10px; }
+.chart-card h3 i { color:var(--mut) !important; font-size:16px; }
 .chart-wrap { position:relative; flex:1; min-height:0; }
-
-/* Rodapé */
-.foot-card { padding:12px 20px; overflow:hidden; }
-table.tbl { --bs-table-bg:transparent; --bs-table-striped-bg:transparent; font-size:15px; margin:0; }
-table.tbl th { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--mut); padding:4px 8px; border-bottom:1px solid var(--linha); }
-table.tbl td { padding:6px 8px; vertical-align:middle; border-bottom:1px solid #f0f1f4; font-variant-numeric:tabular-nums; }
-table.tbl tr:last-child td { border-bottom:0; }
-.st { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--txt); }
-.st i { width:7px; height:7px; border-radius:50%; background:var(--c); display:inline-block; }
-.alert-item { display:flex; align-items:center; gap:12px; padding:7px 4px; border-bottom:1px solid #f0f1f4; font-size:15px; }
-.alert-item:last-child { border-bottom:0; }
-.alert-item i { font-size:18px; width:26px; text-align:center; }
-.alert-item .d { margin-left:auto; font-weight:600; font-size:14px; white-space:nowrap; }
-.alert-item small { display:block; color:var(--mut); font-size:12.5px; line-height:1.15; }
 </style>
 </head>
 <body>
@@ -134,15 +169,23 @@ table.tbl tr:last-child td { border-bottom:0; }
         <div class="cidade">Campo Largo - PR</div>
       </div>
     </div>
-    <div class="weather">
-      <i id="wIcon" class="bi bi-cloud-sun-fill"></i>
-      <div class="temp" id="wTemp">--°C</div>
-      <div class="desc"><b>Campo Largo</b><br><span id="wDesc">--</span></div>
+    <div class="weather" id="weather">
+      <div class="w-stage" id="wStage">
+        <div class="w-slide ativo" id="wHoje">
+          <i id="wIcon" class="bi bi-cloud-sun-fill"></i>
+          <div class="temp" id="wTemp">--°C</div>
+          <div class="desc"><b>Hoje · Campo Largo</b><br><span id="wDesc">--</span></div>
+        </div>
+      </div>
+      <div class="w-dots" id="wDots"></div>
     </div>
-    <div class="clock-box">
-      <div class="clock" id="clock">00:00:00</div>
-      <div class="date" id="date">--</div>
-      <div class="upd"><i class="bi bi-clock-history me-1"></i>Última atualização: <span id="lastUpdate">--</span></div>
+    <div class="hdr-right">
+      <button id="btnTema" class="btn-tema" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema (tecla T)"><i class="bi bi-moon-stars-fill"></i></button>
+      <div class="clock-box">
+        <div class="clock" id="clock">00:00:00</div>
+        <div class="date" id="date">--</div>
+        <div class="upd"><i class="bi bi-clock-history me-1"></i>Última atualização: <span id="lastUpdate">--</span></div>
+      </div>
     </div>
   </header>
 
@@ -218,7 +261,37 @@ table.tbl tr:last-child td { border-bottom:0; }
     </div>
   </section>
 
-  <!-- 4b. NOTÍCIAS (faixa rolante) -->
+  <!-- 4a. MOVIMENTO DO DIA (empenhado / liquidado / pago de hoje) -->
+  <section class="row-hoje">
+    <div class="sec-title"><i class="bi bi-lightning-charge"></i>Movimento do Dia · <span id="hojeData">--/--/----</span>
+      <span id="tagHoje" class="tag-sim">carregando...</span>
+      <span class="tag-sim tag-org">Atualiza a cada <span id="hojeCada">10</span> min · última leitura: <span id="hojeUpd">--</span></span>
+    </div>
+    <div class="grid4">
+      <div class="card pad stage hoje" style="--c:var(--c-orc)">
+        <div class="lbl"><span>Registros do dia</span></div>
+        <div class="val" id="hReg">—</div>
+        <div class="sub" id="hRegSub">&nbsp;</div>
+      </div>
+      <div class="card pad stage hoje" style="--c:var(--c-emp)">
+        <div class="lbl"><span>Empenhado hoje</span><span class="pill" id="hEmpDelta"></span></div>
+        <div class="val" id="hEmp">—</div>
+        <div class="sub" id="hEmpSub">&nbsp;</div>
+      </div>
+      <div class="card pad stage hoje" style="--c:var(--c-liq)">
+        <div class="lbl"><span>Liquidado hoje</span><span class="pill" id="hLiqDelta"></span></div>
+        <div class="val" id="hLiq">—</div>
+        <div class="sub" id="hLiqSub">&nbsp;</div>
+      </div>
+      <div class="card pad stage hoje" style="--c:var(--c-pag)">
+        <div class="lbl"><span>Pago hoje</span><span class="pill" id="hPagDelta"></span></div>
+        <div class="val" id="hPag">—</div>
+        <div class="sub" id="hPagSub">&nbsp;</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4b. NOTÍCIAS (faixa rolante, fim da página) -->
   <section class="row-news">
     <div class="card news">
       <div class="news-lab"><i class="bi bi-newspaper"></i>Notícias <span class="tag-sim" id="tagNews">carregando...</span></div>
@@ -226,20 +299,6 @@ table.tbl tr:last-child td { border-bottom:0; }
     </div>
   </section>
 
-  <!-- 5. RODAPÉ -->
-  <section class="row-foot">
-    <div class="card foot-card">
-      <h3><i class="bi bi-table"></i>Status dos Serviços da Secretaria <span class="tag-sim">simulado</span></h3>
-      <table class="table table-sm tbl">
-        <thead><tr><th>Serviço</th><th class="text-end">Hoje</th><th class="text-end">Mês</th><th class="text-center">Status</th></tr></thead>
-        <tbody id="tbServ"></tbody>
-      </table>
-    </div>
-    <div class="card foot-card">
-      <h3><i class="bi bi-bell"></i>Alertas Regulatórios · LRF / SICONFI <span class="tag-sim">simulado</span></h3>
-      <div id="alertas"></div>
-    </div>
-  </section>
 </div>
 
 <script>
@@ -262,9 +321,11 @@ const FONTE_TOP = 5;       // fatias exibidas; o restante vai para "Outras"
 const ORGAO_FILTRO = "PODER EXECUTIVO MUNICIPAL DE CAMPO LARGO - PR";
 const normTxt = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toUpperCase();
 const soExecutivo = lista => lista.filter(i => normTxt(i.orgaoDescricao) === normTxt(ORGAO_FILTRO));
-const CLIMA_URL = "https://api.open-meteo.com/v1/forecast?latitude=-25.4595&longitude=-49.5279&current=temperature_2m,weather_code&timezone=America%2FSao_Paulo";
+const CLIMA_URL = "https://api.open-meteo.com/v1/forecast?latitude=-25.4595&longitude=-49.5279&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=4&timezone=America%2FSao_Paulo";
 const REFRESH_DADOS_MIN = 10;   // atualização das despesas
+const REFRESH_HOJE_MIN  = 10;   // movimento do dia (empenhado/liquidado/pago de hoje)
 const REFRESH_CLIMA_MIN = 20;
+const CLIMA_ROTACAO_S   = 8;    // segundos entre hoje e cada dia da previsão
 
 /* Dados SIMULADOS — substituir quando os links de receita/tributos forem informados */
 const SIM = {
@@ -275,19 +336,6 @@ const SIM = {
   receitaFonte: { labels:['ISS','IPTU','Repasses ICMS/FPM','ITBI','Outros'], valores:[26,21,38,6,9] },
   // fallback caso a API de despesas esteja inacessível
   despesaMensalFallback: { emp:[71.5,84.2,90.1,93.8,97.4,96.0,101.7,108.9,106.5,112.2,100,100], pago:[58.3,70.4,77.9,82.6,86.1,85.2,90.4,96.8,98.7,80.5,80,80] },
-  servicos: [
-    { nome:'Atendimentos ao Contribuinte', hoje:'312', mes:'6.874', status:'ok' },
-    { nome:'Emissão de ITBI',              hoje:'47',  mes:'918',   status:'ok' },
-    { nome:'Certidões CND emitidas',       hoje:'189', mes:'3.402', status:'ok' },
-    { nome:'Fiscalização (autos/notif.)',  hoje:'23',  mes:'511',   status:'warn' },
-    { nome:'Tempo Médio de Resposta',      hoje:'1,8 d', mes:'2,3 d', status:'warn' }
-  ],
-  alertas: [
-    { nivel:'danger',  icone:'bi-file-earmark-excel', titulo:'RGF - 3º Quadrimestre', sub:'SICONFI · Relatório de Gestão Fiscal', prazo:'Vence em 12 dias' },
-    { nivel:'warning', icone:'bi-file-earmark-text',  titulo:'RREO - 5º Bimestre',    sub:'LRF · Execução orçamentária', prazo:'Vence em 3 dias' },
-    { nivel:'info',    icone:'bi-arrow-left-right',   titulo:'Repasse Constitucional (FPM)', sub:'Previsão de crédito', prazo:'Próximo decêndio' },
-    { nivel:'warning', icone:'bi-envelope-paper',     titulo:'Lote de Notificações IPTU', sub:'Cobrança de débitos vencidos', prazo:'Postagem em 5 dias' }
-  ]
 };
 
 /* =====================================================
@@ -298,6 +346,9 @@ const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov'
 const brlCompacto = v => v >= 1e9 ? 'R$ '+(v/1e9).toFixed(2).replace('.',',')+' bi' : 'R$ '+(v/1e6).toFixed(1).replace('.',',')+' mi';
 const pct = v => (isFinite(v)?v:0).toFixed(1).replace('.',',')+'%';
 const pad2 = n => String(n).padStart(2,'0');
+const cv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const temaAtual = () => document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
+const paletaPie = () => temaAtual()==='dark' ? ['#7fa6ea','#2f6fdb','#1d4e9e','#2bb3c9','#e6ad2e','#6b7686'] : ['#0b2f57','#2f6fdb','#7fa6ea','#0f8fa3','#d39a1c','#b8bec9'];
 const dataBR = d => `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
 
 function numero(valor){
@@ -307,6 +358,20 @@ function numero(valor){
   if(t.includes(".") && t.includes(",")) t = t.replace(/\./g,"").replace(",",".");
   else if(t.includes(",")) t = t.replace(",",".");
   const n = Number(t); return Number.isFinite(n) ? n : 0;
+}
+
+/* Agendador: roda a cada N min; se a tarefa devolver false (erro), tenta de novo em 30 s, 1, 2 e 5 min (máx.) */
+function agendar(fn, minutos, rotulo){
+  let falhas = 0;
+  const rodar = async () => {
+    let ok = false;
+    try{ ok = await fn(); }catch(e){ console.warn(rotulo+': erro inesperado', e); }
+    falhas = ok ? 0 : falhas+1;
+    const espera = ok ? minutos*60000 : Math.min(30000*Math.pow(2, falhas-1), 5*60000);
+    if(!ok) console.warn(`${rotulo}: nova tentativa em ${Math.round(espera/1000)} s`);
+    setTimeout(rodar, espera);
+  };
+  rodar();
 }
 
 /* Relógio */
@@ -366,13 +431,13 @@ async function apiGet(url, tentativas=API_TENTATIVAS){
 }
 
 /* Cache local (localStorage): meses encerrados não mudam a cada atualização → evita novas requisições e o HTTP 429 */
-const CACHE_PREFIXO = 'fzcl1:';
+const CACHE_PREFIXO = 'fzcl1:'; let _cacheVelho = 0;
 function cacheGet(k, ttl, ignoraTtl){ try{ const o = JSON.parse(localStorage.getItem(CACHE_PREFIXO+k)); if(o && (ignoraTtl || Date.now()-o.t < ttl)) return o.v; }catch(e){} return null; }
 function cacheSet(k, v){ try{ localStorage.setItem(CACHE_PREFIXO+k, JSON.stringify({ t:Date.now(), v })); }catch(e){} }
 async function comCache(k, ttl, fn){
   const c = cacheGet(k, ttl); if(c !== null) return c;
   try{ const v = await fn(); cacheSet(k, v); return v; }
-  catch(e){ const velho = cacheGet(k, 0, true); if(velho !== null){ console.warn('usando cache antigo de', k, e); return velho; } throw e; }
+  catch(e){ const velho = cacheGet(k, 0, true); if(velho !== null){ _cacheVelho++; console.warn('usando cache antigo de', k, e); return velho; } throw e; }
 }
 const TTL_MES_FECHADO = 6*3600*1000, TTL_ORCADO = 3600*1000;
 const ttlMes = (ano, m) => { const h=new Date(); return (ano<h.getFullYear() || m<h.getMonth()) ? TTL_MES_FECHADO : 0; };  // mês atual: sempre consulta
@@ -530,8 +595,9 @@ function renderDespesas(d){
 
   const tag = $('tagDespesa'), tg = $('tagGraf');
   const to = $('tagOrcado');
-  if(d.orcadoVivo){ to.className='tag-live'; to.textContent='Orçado: API ao vivo'; } else { to.className='tag-sim'; to.textContent='Orçado: API indisponível · R$ 0,00'; }
+  if(d.orcadoVivo){ to.className='tag-live'; to.textContent='Orçado: API ao vivo'; } else { to.className='tag-sim'; to.textContent = d.orcado>0 ? 'Orçado: última leitura · nova tentativa em instantes' : 'Orçado: API indisponível · R$ 0,00'; }
   if(d.ao_vivo){ tag.className='tag-live'; tag.textContent='Empenhado/Liquidado/Pago: API ao vivo'; tg.className='tag-live'; tg.textContent='Empenhado/Pago: API ao vivo'; }
+  else if(d.antigo){ tag.className='tag-sim'; tag.textContent='API indisponível · exibindo última leitura · nova tentativa em instantes'; tg.className='tag-sim'; tg.textContent='Despesas: última leitura · nova tentativa em instantes'; }
   else { tag.className='tag-sim'; tag.textContent='API indisponível · '+(d.erro||'')+' · R$ 0,00'; tg.className='tag-sim'; tg.textContent='Despesas: API indisponível · 0'; }
 }
 
@@ -674,7 +740,7 @@ function renderTagsReceita(r){
   k.textContent = vivo ? 'Receita e Orçamento: API ao vivo · Poder Executivo' : (r.ao_vivo ? 'Receita: API ao vivo · Orçamento: API indisponível · '+(r.erroOrc||'0') : 'API indisponível · exibindo R$ 0,00');
 }
 
-function corMeta(p){ const hue = Math.max(0,Math.min(p,100))*1.2; return `hsl(${hue.toFixed(0)},60%,38%)`; }
+function corMeta(p){ const hue = Math.max(0,Math.min(p,100))*1.2; return `hsl(${hue.toFixed(0)},60%,${temaAtual()==='dark'?58:38}%)`; }
 function renderKpis(r){
   const n = r.meses.length, mes = r.meses[n-1] ?? 0, ant = r.meses[n-2];
   const anual = r.meses.reduce((a,b)=>a+b,0), orc = r.orcada;
@@ -700,22 +766,9 @@ function renderKpis(r){
   setExtMoeda('kMes', mes); setExtMoeda('kAno', anual); setExtMoeda('kOrc', orc); setExtPct('kMeta', meta);
 }
 
-function renderRodape(){
-  const st = { ok:['#1f8f5f','Normal'], warn:['#d39a1c','Atenção'], crit:['#c2410c','Crítico'] };
-  $('tbServ').innerHTML = SIM.servicos.map(s =>
-    `<tr><td class="fw-medium">${s.nome}</td><td class="text-end">${s.hoje}</td><td class="text-end">${s.mes}</td><td class="text-center"><span class="st" style="--c:${st[s.status][0]}"><i></i>${st[s.status][1]}</span></td></tr>`).join('');
-  const cor = { danger:'#c0392b', warning:'#b7791f', info:'#2b6cb0' };
-  $('alertas').innerHTML = SIM.alertas.map(a =>
-    `<div class="alert-item">
-       <i class="bi ${a.icone}" style="color:${cor[a.nivel]}"></i>
-       <div><b class="fw-semibold">${a.titulo}</b><small>${a.sub}</small></div>
-       <span class="d" style="color:${cor[a.nivel]}">${a.prazo}</span>
-     </div>`).join('');
-}
-
 function renderGraficos(d, r){
   Chart.defaults.font.size = 14;
-  Chart.defaults.color = '#6b7280';
+  Chart.defaults.color = cv('--mut');
   Chart.defaults.font.family = "Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif";
   Chart.defaults.animation = false;
   const n = Math.max(d.meses.length, r.meses.length);
@@ -724,7 +777,7 @@ function renderGraficos(d, r){
   if(chartMain) chartMain.destroy();
   chartMain = new Chart($('chartMain'),{
     data:{ labels, datasets:[
-      { type:'bar',  label:'Receita Arrecadada'+(r.ao_vivo?'':' (API indisponível)'), data:r.meses.map(mi), backgroundColor:'#c9d9f5', borderRadius:4, maxBarThickness:46, order:4 },
+      { type:'bar',  label:'Receita Arrecadada'+(r.ao_vivo?'':' (API indisponível)'), data:r.meses.map(mi), backgroundColor:cv('--bar'), borderRadius:4, maxBarThickness:46, order:4 },
       { type:'line', label:'Empenhado', data:d.meses.map(m=>mi(m.emp)), borderColor:'#0f8fa3', backgroundColor:'#0f8fa3', borderWidth:2.5, tension:.25, pointRadius:3.5, order:3 },
       { type:'line', label:'Liquidado', data:d.meses.map(m=>mi(m.liq ?? m.emp*0.86)), borderColor:'#d39a1c', backgroundColor:'#d39a1c', borderWidth:2.5, tension:.25, pointRadius:3.5, order:2 },
       { type:'line', label:'Pago',      data:d.meses.map(m=>mi(m.pago)), borderColor:'#1f8f5f', backgroundColor:'#1f8f5f', borderWidth:2.5, tension:.25, pointRadius:3.5, order:1 }
@@ -732,21 +785,21 @@ function renderGraficos(d, r){
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:'top', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, padding:18, font:{size:14} } },
         tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: R$ ${c.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:2})} mi` } } },
-      scales:{ y:{ beginAtZero:true, grid:{color:'#eef0f3'}, border:{display:false} }, x:{ grid:{display:false}, border:{color:'#e6e8ec'} } } }
+      scales:{ y:{ beginAtZero:true, grid:{color:cv('--grid')}, border:{display:false} }, x:{ grid:{display:false}, border:{color:cv('--linha')} } } }
   });
 
   const vazio = !r.fontes.length;
-  if(vazio) r.fontes = [{ label:'Sem dados', valor:1 }];
-  const tot = r.fontes.reduce((s,f)=>s+f.valor,0) || 1;
+  const fontes = vazio ? [{ label:'Sem dados', valor:1 }] : r.fontes;
+  const tot = fontes.reduce((s,f)=>s+f.valor,0) || 1;
   const cur = s => s.length>30 ? s.slice(0,29)+'…' : s;
   if(chartPie) chartPie.destroy();
   chartPie = new Chart($('chartPie'),{
     type:'doughnut',
-    data:{ labels:r.fontes.map(f=>cur(f.label)), datasets:[{ data:r.fontes.map(f=>f.valor),
-      backgroundColor: vazio ? ['#e6e8ec'] : ['#0b2f57','#2f6fdb','#7fa6ea','#0f8fa3','#d39a1c','#b8bec9'], borderWidth:2, borderColor:'#fff' }]},
+    data:{ labels:fontes.map(f=>cur(f.label)), datasets:[{ data:fontes.map(f=>f.valor),
+      backgroundColor: vazio ? [cv('--linha')] : paletaPie(), borderWidth:2, borderColor:cv('--card') }]},
     options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
       plugins:{ legend:{ position:'right', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, padding:14, font:{size:14} } },
-        tooltip:{ callbacks:{ label:c=>` ${r.fontes[c.dataIndex].label}: ${brlCompacto(c.parsed)} (${(c.parsed/tot*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%)` } } } }
+        tooltip:{ callbacks:{ label:c=>` ${fontes[c.dataIndex].label}: ${brlCompacto(c.parsed)} (${(c.parsed/tot*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%)` } } } }
   });
 }
 
@@ -764,39 +817,169 @@ function climaInfo(code){
   if(code<=82) return ['bi-cloud-rain-fill','Pancadas de chuva'];
   return ['bi-cloud-lightning-rain-fill','Tempestade'];
 }
+const DIAS_SEM = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+let _wSlides = [], _wIdx = 0, _wTimer = null, _climaOk = false;
+function diaRotulo(iso, i){
+  if(i===1) return 'Amanhã';
+  const [y,m,d] = iso.split('-').map(Number);
+  return `${DIAS_SEM[new Date(y,m-1,d).getDay()]} ${pad2(d)}/${pad2(m)}`;
+}
+function mostrarSlideClima(i){
+  _wIdx = i;
+  _wSlides.forEach((s,k)=>s.classList.toggle('ativo', k===i));
+  [...$('wDots').children].forEach((d,k)=>d.classList.toggle('ativo', k===i));
+}
+function montarClima(j){
+  const dd = j.daily, [ic,desc] = climaInfo(j.current.weather_code);
+  $('wTemp').textContent = Math.round(j.current.temperature_2m)+'°C';
+  $('wDesc').textContent = `${desc} · ${Math.round(dd.temperature_2m_min[0])}° / ${Math.round(dd.temperature_2m_max[0])}°`;
+  $('wIcon').className = 'bi '+ic;
+  const stage = $('wStage');
+  stage.querySelectorAll('.w-prev').forEach(e=>e.remove());
+  for(let i=1; i<=3 && i<dd.time.length; i++){
+    const [pic,pdesc] = climaInfo(dd.weather_code[i]);
+    const prob = dd.precipitation_probability_max ? dd.precipitation_probability_max[i] : null;
+    const el = document.createElement('div'); el.className = 'w-slide w-prev';
+    el.innerHTML = `<i class="bi ${pic}"></i><div class="temp">${Math.round(dd.temperature_2m_max[i])}°<small>${Math.round(dd.temperature_2m_min[i])}°</small></div>`
+      + `<div class="desc"><b>${diaRotulo(dd.time[i],i)}</b><br>${pdesc}${prob!=null ? ` · <i class="bi bi-droplet-half"></i> ${Math.round(prob)}%` : ''}</div>`;
+    stage.appendChild(el);
+  }
+  _wSlides = [...stage.querySelectorAll('.w-slide')];
+  $('wDots').innerHTML = _wSlides.map(()=>'<span></span>').join('');
+  mostrarSlideClima(0);
+  clearInterval(_wTimer);
+  if(_wSlides.length > 1) _wTimer = setInterval(()=>mostrarSlideClima((_wIdx+1)%_wSlides.length), CLIMA_ROTACAO_S*1000);
+}
 async function carregarClima(){
   try{
-    const r = await fetch(CLIMA_URL); const j = await r.json();
-    const [ic,desc] = climaInfo(j.current.weather_code);
-    $('wTemp').textContent = Math.round(j.current.temperature_2m)+'°C';
-    $('wDesc').textContent = desc;
-    $('wIcon').className = 'bi '+ic;
-  }catch(e){ console.warn('Clima indisponível', e); $('wDesc').textContent = 'Clima indisponível'; }
+    const r = await fetch(CLIMA_URL); if(!r.ok) throw new Error('HTTP '+r.status);
+    montarClima(await r.json()); _climaOk = true; return true;
+  }catch(e){
+    console.warn('Clima indisponível', e);
+    if(!_climaOk) $('wDesc').textContent = 'Clima indisponível';
+    return false;
+  }
 }
 
 /* =====================================================
-   CICLO DE ATUALIZAÇÃO
+   MOVIMENTO DO DIA (empenhado / liquidado / pago de hoje)
+   ===================================================== */
+const brlDia = v => { const a = Math.abs(v), s = v<0 ? '-' : '';
+  if(a >= 1e6) return s+'R$ '+(a/1e6).toFixed(2).replace('.',',')+' mi';
+  if(a >= 1e3) return s+'R$ '+(a/1e3).toFixed(1).replace('.',',')+' mil';
+  return s+brl2(a); };
+const HOJE_CAMPOS = [
+  { id:'hEmp', k:'emp',  n:'nEmp', un:['empenho','empenhos'] },
+  { id:'hLiq', k:'liq',  n:'nLiq', un:['liquidação','liquidações'] },
+  { id:'hPag', k:'pago', n:'nPag', un:['pagamento','pagamentos'] }
+];
+let HOJE_ANT = null;   // última leitura do dia { dia, t }
+
+function somarDia(lista){
+  const t = somar(lista);
+  t.nEmp = lista.filter(i=>numero(i.valorEmpenhado)>0).length;
+  t.nLiq = lista.filter(i=>numero(i.valorLiquidado)>0).length;
+  t.nPag = lista.filter(i=>numero(i.valorPago)>0).length;
+  return t;
+}
+function tremerTela(){ const a = $('app'); a.classList.remove('tremer'); void a.offsetWidth; a.classList.add('tremer'); }
+$('app').addEventListener('animationend', e => { if(e.target.id==='app') e.target.classList.remove('tremer'); });
+
+/* devolve true se algum valor mudou em relação à leitura anterior do mesmo dia */
+function renderHoje(t, ant){
+  let mudou = false;
+  HOJE_CAMPOS.forEach(c => {
+    const card = $(c.id).closest('.card'), v = t[c.k], q = t[c.n], dl = $(c.id+'Delta');
+    $(c.id).textContent = brlDia(v);
+    setExtMoeda(c.id, v);
+    $(c.id+'Sub').textContent = q ? `${q.toLocaleString('pt-BR')} ${q===1?c.un[0]:c.un[1]} no dia` : 'Sem movimentação hoje';
+    const delta = ant ? v - ant[c.k] : 0;
+    if(ant && Math.abs(delta) >= 0.005){
+      dl.textContent = (delta>0 ? '+' : '−')+brlDia(Math.abs(delta));
+      mudou = true;
+      card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+    } else dl.textContent = '';
+  });
+  $('hReg').textContent = t.n.toLocaleString('pt-BR');
+  $('hRegSub').textContent = `${t.credores.toLocaleString('pt-BR')} credores · anulado ${brlDia(t.anu)}`;
+  if(ant && t.n !== ant.n) mudou = true;
+  return mudou;
+}
+function limparHoje(){
+  ['hReg','hEmp','hLiq','hPag'].forEach(id => { $(id).textContent = '—'; const c = $(id).closest('.card'); delete c.dataset.extenso; delete c.dataset.num; });
+  ['hRegSub','hEmpSub','hLiqSub','hPagSub'].forEach(id => $(id).innerHTML = '&nbsp;');
+  ['hEmpDelta','hLiqDelta','hPagDelta'].forEach(id => $(id).textContent = '');
+}
+async function atualizarHoje(){
+  const agora = new Date(), dia = dataBR(agora);
+  $('hojeData').textContent = dia;
+  $('hojeCada').textContent = REFRESH_HOJE_MIN;
+  try{
+    const t = somarDia(await consultarDespesas(agora, agora));
+    const ant = (HOJE_ANT && HOJE_ANT.dia === dia) ? HOJE_ANT.t : null;   // virada do dia: sem comparação
+    const mudou = renderHoje(t, ant);
+    HOJE_ANT = { dia, t };
+    const tg = $('tagHoje'); tg.className = 'tag-live'; tg.textContent = 'API ao vivo · Poder Executivo';
+    $('hojeUpd').textContent = new Date().toLocaleTimeString('pt-BR');
+    if(mudou) tremerTela();
+    return true;
+  }catch(e){
+    console.warn('Falha no movimento do dia:', e);
+    if(HOJE_ANT && HOJE_ANT.dia !== dia){ HOJE_ANT = null; limparHoje(); }
+    const tg = $('tagHoje'); tg.className = 'tag-sim';
+    tg.textContent = 'API indisponível · '+_msg(e)+' · nova tentativa em instantes';
+    return false;
+  }
+}
+
+/* =====================================================
+   TEMA CLARO / ESCURO
+   ===================================================== */
+let ULT = {};   // última leitura (para redesenhar ao trocar o tema)
+function aplicarTema(tema, salvar){
+  document.documentElement.setAttribute('data-bs-theme', tema);
+  $('btnTema').innerHTML = tema==='dark' ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-stars-fill"></i>';
+  if(salvar){ try{ localStorage.setItem('fzcl1:tema', tema); }catch(e){} }
+  if(ULT.cur){ renderGraficos(ULT.cur.d, ULT.cur.r); renderKpis(ULT.cur.r); }
+}
+const alternarTema = () => aplicarTema(temaAtual()==='dark' ? 'light' : 'dark', true);
+$('btnTema').addEventListener('click', alternarTema);
+document.addEventListener('keydown', e => { if((e.key==='t' || e.key==='T') && !e.ctrlKey && !e.metaKey && !e.altKey) alternarTema(); });
+aplicarTema(temaAtual(), false);
+
+/* =====================================================
+   CICLO DE ATUALIZAÇÃO (devolve false se alguma consulta falhou → o agendador tenta de novo)
    ===================================================== */
 async function carregar(){
-  let d;
-  try{ d = await carregarDespesas(); }
-  catch(e){ console.warn('Falha na API de despesas (CORS/rede?):', e); d = despesasFallback(); d.erro = _msg(e); }
-  try{ d.orcado = await consultarOrcado(); d.orcadoVivo = d.orcado > 0; if(!d.orcadoVivo) d.orcado = 0; }
+  let ok = true, d, r;
+  _cacheVelho = 0;
+  try{ d = await carregarDespesas(); if(d.falhas) ok = false; }
+  catch(e){
+    ok = false; console.warn('Falha na API de despesas (CORS/rede?):', e);
+    d = ULT.d ? { ...ULT.d, ao_vivo:false, antigo:true } : despesasFallback();   // mantém a última leitura na tela
+    d.erro = _msg(e);
+  }
+  try{ d.orcado = await consultarOrcado(); d.orcadoVivo = d.orcado > 0; }
   catch(e){ console.warn('Falha na API de despesas orçadas:', e); d.orcado = 0; d.orcadoVivo = false; }
+  if(d.orcadoVivo) ULT.orcado = d.orcado; else { ok = false; d.orcado = ULT.orcado || 0; }
   renderDespesas(d);
-  let r;
-  try{ r = await carregarReceitas(); }
-  catch(e){ console.warn('Falha na API de receitas:', e); r = receitasFallback(); r.erro = _msg(e); }
+  if(_cacheVelho > 0){ $('tagDespesa').className='tag-sim'; $('tagDespesa').textContent='API instável · exibindo última leitura · nova tentativa em instantes'; }
+  if(d.ao_vivo) ULT.d = d;
+  try{ r = await carregarReceitas(); if(r.falhas) ok = false; }
+  catch(e){ ok = false; console.warn('Falha na API de receitas:', e); r = receitasFallback(); r.erro = _msg(e); }
   try{ r.orcada = await consultarReceitaOrcada(); r.orcadaVivo = r.orcada > 0; if(!r.orcadaVivo) r.orcada = 0; }
   catch(e){ console.warn('Falha na API de receitas orçadas:', e); r.orcada = 0; r.orcadaVivo = false; r.erroOrc = _msg(e); }
+  if(!r.orcadaVivo || _cacheVelho > 0) ok = false;
   renderKpis(r);
-  renderRodape();
   renderGraficos(d, r);
   renderTagsReceita(r);
+  ULT.cur = { d, r };
   marcarAtualizacao();
+  return ok;
 }
-carregar();           setInterval(carregar, REFRESH_DADOS_MIN*60*1000);
-carregarClima();      setInterval(carregarClima, REFRESH_CLIMA_MIN*60*1000);
+agendar(carregar,       REFRESH_DADOS_MIN, 'painel');
+agendar(atualizarHoje,  REFRESH_HOJE_MIN,  'movimento do dia');
+agendar(carregarClima,  REFRESH_CLIMA_MIN, 'clima');
 carregarNoticias();   setInterval(carregarNoticias, NOTICIAS_REFRESH_MIN*60*1000);
 </script>
 </body>
