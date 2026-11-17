@@ -163,7 +163,7 @@
         }
 
         .table tbody td { font-size: 0.86rem; vertical-align: middle; }
-        #reader { width: 100%; max-width: 450px; margin: 0 auto; border-radius: 0.75rem; overflow: hidden; }
+        .scanner-reader { width: 100%; max-width: 480px; margin: 0 auto; border-radius: 0.75rem; overflow: hidden; }
         .saldo-destaque { font-size: 2.75rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
         .toast-container { z-index: 1090; }
 
@@ -433,33 +433,36 @@
                     </div>
                 </div>
 
-                <!-- SUBPÁGINA 2: CONSULTA RÁPIDA / CÓDIGO OU NOME / CÂMERA -->
+                <!-- SUBPÁGINA 2: CONSULTA RÁPIDA / CÓDIGO DE BARRAS CODE 128 / NOME -->
                 <div id="page-consulta" class="subpage d-none">
                     <div class="row g-4">
                         <div class="col-12 col-lg-5">
                             <div class="kpi-card p-4">
                                 <h5 class="fw-bold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Consulta de Produto</h5>
-                                <p class="text-muted small mb-3">Bipe o <strong>Cód.Produto</strong> ou digite o <strong>Nome do Produto</strong> para ver Saldo e último valor.</p>
+                                <p class="text-muted small mb-3">Bipe o código de barras (ex: <strong>131</strong>) ou digite o <strong>Nome do Produto</strong>.</p>
 
                                 <form onsubmit="searchProductByInput(event)" class="mb-3">
                                     <label for="barcodeInput" class="form-label small fw-semibold text-uppercase text-secondary">Código ou Nome do Produto</label>
                                     <div class="input-group input-group-lg">
-                                        <input type="text" class="form-control fw-bold" id="barcodeInput" placeholder="Ex: 1001 ou Papel..." autocomplete="off">
+                                        <input type="text" class="form-control fw-bold" id="barcodeInput" placeholder="Ex: 131 ou Papel..." autocomplete="off">
                                         <button class="btn btn-primary px-4" type="submit">
                                             <i class="bi bi-search"></i>
                                         </button>
                                     </div>
+                                    <div class="form-text small text-muted">
+                                        <i class="bi bi-magic me-1"></i>Leitor óptico extrai apenas números inteiros (ignora letras e casas decimais).
+                                    </div>
                                 </form>
 
                                 <div class="d-grid mb-3">
-                                    <button type="button" class="btn btn-outline-dark fw-semibold py-2 rounded-3" id="btnToggleCamera" onclick="toggleCameraScanner()">
-                                        <i class="bi bi-camera-fill me-2"></i>Ler Código com a Câmera
+                                    <button type="button" class="btn btn-outline-dark fw-semibold py-2 rounded-3" id="btnToggleCamera" onclick="toggleCameraScanner('consulta')">
+                                        <i class="bi bi-upc-scan me-2"></i>Ler Código de Barras (Câmera)
                                     </button>
                                 </div>
 
                                 <div id="cameraWrapper" class="d-none mb-3 p-2 bg-dark rounded-3 text-center">
-                                    <div id="reader"></div>
-                                    <small class="text-light d-block mt-2">Aponte a câmera para o código de barras ou QR Code</small>
+                                    <div id="reader" class="scanner-reader"></div>
+                                    <small class="text-light d-block mt-2">Alinhe as barras verticais dentro da caixa horizontal</small>
                                 </div>
 
                                 <div class="border-top pt-3">
@@ -475,7 +478,7 @@
                                     <i class="bi bi-upc fs-1"></i>
                                 </div>
                                 <h5 class="fw-bold text-secondary">Aguardando leitura ou busca</h5>
-                                <p class="text-muted small mb-0" style="max-width: 360px;">Bipe ou digite o código/nome de um produto para visualizar Entradas, Saídas, Saldo Real e Último Valor Unitário.</p>
+                                <p class="text-muted small mb-0" style="max-width: 360px;">Bipe o código de barras ou digite o código/nome do produto para visualizar Entradas, Saídas, Saldo Real e Último Valor Unitário.</p>
                             </div>
 
                             <div id="consultaResultCard" class="kpi-card p-4 d-none">
@@ -568,9 +571,20 @@
                                 <h6 class="fw-bold mb-3">Registrar Contagem Física</h6>
                                 <form onsubmit="addBlindCountItem(event)">
                                     <div class="mb-3">
-                                        <label class="form-label small fw-semibold">Código do Produto</label>
-                                        <input type="text" class="form-control fw-bold" id="blindCodeInput" placeholder="Bipe ou digite o Cód.Produto" required autocomplete="off">
+                                        <label class="form-label small fw-semibold">Código do Produto (ex: 131)</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control fw-bold" id="blindCodeInput" placeholder="Bipe ou digite o código" required autocomplete="off">
+                                            <button type="button" class="btn btn-outline-dark" id="btnToggleBlindCamera" onclick="toggleCameraScanner('inventario')" title="Ler código de barras com câmera">
+                                                <i class="bi bi-upc-scan"></i>
+                                            </button>
+                                        </div>
                                     </div>
+
+                                    <div id="blindCameraWrapper" class="d-none mb-3 p-2 bg-dark rounded-3 text-center">
+                                        <div id="blindReader" class="scanner-reader"></div>
+                                        <small class="text-light d-block mt-1">Alinhe o código de barras</small>
+                                    </div>
+
                                     <div class="mb-3">
                                         <label class="form-label small fw-semibold">Quantidade Contada Fisicamente</label>
                                         <input type="number" step="0.01" min="0" class="form-control form-control-lg fw-bold text-primary" id="blindQtyInput" placeholder="0" required>
@@ -692,17 +706,33 @@
         let movimentacoes = [];
         let estoqueConsolidadoCache = [];
         let depositosMap = new Map();
-        let produtosNomeMap = new Map(); // cod -> Nome do Produto
+        let produtosNomeMap = new Map();
         let fuseExtrato = null;
         let fuseProdutos = null;
 
         let currentSession = null;
         let activeDepotFilter = 'ALL';
         let html5QrcodeScanner = null;
-        let isCameraRunning = false;
+        let activeScannerContext = null; // 'consulta' | 'inventario' | null
         let blindInventoryItems = [];
         let isBlindFinished = false;
         const LIMITE_EXTRATO = 500;
+
+        /**
+         * SANITIZADOR DE CÓDIGO DE BARRAS (ESTILO CODE 128 NUMÉRICO INTEIRO)
+         * Ignora casas decimais (ex: "131.00" ou "131,0") e remove quaisquer letras/símbolos (ex: "COD131" -> "131").
+         */
+        function extrairCodigoNumerico(raw) {
+            let s = String(raw ?? "").trim();
+            if (!s) return "";
+            // Remove parte decimal antes de extrair dígitos (ex: "131.00" -> "131", "131,5" -> "131")
+            s = s.replace(/[.,]\d+$/, '');
+            // Mantém apenas dígitos 0-9
+            const digitsOnly = s.replace(/\D+/g, '');
+            if (!digitsOnly) return "";
+            // Remove zeros à esquerda se houver (ex: "00131" -> "131"), preservando "0" se for só zero
+            return String(parseInt(digitsOnly, 10));
+        }
 
         /**
          * 1. INICIALIZAÇÃO E LEITURA DO GOOGLE SHEETS
@@ -780,8 +810,6 @@
             depositosMap.clear();
             produtosNomeMap.clear();
 
-            // Cabeçalho atualizado:
-            // Mov. | Nº | Data / Hora | Tipo | Estado | Depósito | Nome do Depósito | Cód.Produto | Nome do Produto | Un. | Qtd. | Vlr. unit. | Vlr. total | Documento | CNPJ / C. Custo | Observação
             movimentacoes = rawRows.map((r, rowIndex) => {
                 const movRaw = String(getCol(r, ['Mov.', 'Mov', 'Movimento'])).trim();
                 const numStr = String(getCol(r, ['Nº', 'No', 'Numero', 'Número'])).trim();
@@ -804,7 +832,9 @@
                     }
                 }
 
-                const codProduto = normCod(getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cod Produto', 'Cód.', 'Código']));
+                // Normaliza o código do produto ignorando decimais e letras (ex: "131.0" -> "131")
+                const rawCodVal = getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cod Produto', 'Cód.', 'Código']);
+                const codProduto = extrairCodigoNumerico(rawCodVal) || normCod(rawCodVal);
                 const nomeProdutoRaw = String(getCol(r, ['Nome do Produto', 'Nome Produto', 'Produto', 'Descrição', 'Descricao'])).trim();
 
                 if (codProduto && nomeProdutoRaw) {
@@ -850,7 +880,6 @@
                 };
             }).filter(m => m.cod || m.mov);
 
-            // Garante preenchimento do Nome do Produto caso alguma linha venha vazia mas outra linha do mesmo código tenha o nome
             movimentacoes.forEach(m => {
                 if (!m.nomeProduto && m.cod && produtosNomeMap.has(m.cod)) {
                     m.nomeProduto = produtosNomeMap.get(m.cod);
@@ -859,7 +888,6 @@
                 }
             });
 
-            // Ordena do mais recente para o mais antigo para exibição no extrato
             movimentacoes.sort((a, b) => {
                 const ta = a.dataObj ? a.dataObj.getTime() : 0;
                 const tb = b.dataObj ? b.dataObj.getTime() : 0;
@@ -1112,7 +1140,7 @@
             renderExtratoTable();
             const currentResCode = $('resProdCode').dataset.code;
             if (currentResCode && !$('consultaResultCard').classList.contains('d-none')) {
-                displayProductDetails(currentResCode);
+                displayProductDetails(currentResCode, true);
             }
         }
 
@@ -1282,7 +1310,7 @@
         }
 
         /**
-         * 6. SUBPÁGINA 2: CONSULTA RÁPIDA DE PRODUTO (CÓDIGO OU NOME)
+         * 6. SUBPÁGINA 2: CONSULTA RÁPIDA E LEITOR DE CÓDIGO DE BARRAS (CODE 128)
          */
         function renderQuickSampleCodes() {
             const uniqueItems = [];
@@ -1304,43 +1332,60 @@
         }
 
         function triggerSampleLookup(cod) {
-            $('barcodeInput').value = cod;
-            displayProductDetails(cod);
+            const cleanCod = extrairCodigoNumerico(cod) || cod;
+            $('barcodeInput').value = cleanCod;
+            displayProductDetails(cleanCod, true);
         }
 
         function searchProductByInput(e) {
             e.preventDefault();
             const input = $('barcodeInput');
-            const query = input.value.trim();
-            if (!query) return;
-            displayProductDetails(query);
+            const rawQuery = input.value.trim();
+            if (!rawQuery) return;
+
+            // Se contiver qualquer dígito (ex: "131", "131.00", "COD131"), normaliza para número inteiro sem letras/decimais
+            const numericCode = extrairCodigoNumerico(rawQuery);
+            if (numericCode && !/[a-zA-Z]{3,}/.test(rawQuery)) {
+                input.value = numericCode;
+                displayProductDetails(numericCode, true);
+            } else {
+                displayProductDetails(rawQuery, false);
+            }
             input.select();
         }
 
-        function displayProductDetails(query) {
-            const cleanQuery = normCod(query);
+        function displayProductDetails(query, forceNumericOnly = false) {
             const allStock = getConsolidatedStock();
-            let matches = allStock.filter(item => item.cod.toLowerCase() === cleanQuery.toLowerCase());
+            const numericCode = extrairCodigoNumerico(query);
+            let matches = [];
 
-            // Busca por substring no nome do produto
-            if (matches.length === 0) {
-                const subMatch = allStock.find(item => item.nomeProduto.toLowerCase().includes(query.toLowerCase()));
-                if (subMatch) {
-                    matches = allStock.filter(item => item.cod === subMatch.cod);
+            if (forceNumericOnly) {
+                if (!numericCode) {
+                    showToast(`Código de barras inválido (nenhum número identificado).`, 'warning');
+                    return;
+                }
+                matches = allStock.filter(item => item.cod === numericCode);
+            } else {
+                if (numericCode) {
+                    matches = allStock.filter(item => item.cod === numericCode);
+                }
+                if (matches.length === 0) {
+                    const subMatch = allStock.find(item => item.nomeProduto.toLowerCase().includes(query.toLowerCase()));
+                    if (subMatch) {
+                        matches = allStock.filter(item => item.cod === subMatch.cod);
+                    }
+                }
+                if (matches.length === 0 && fuseProdutos) {
+                    const fuzzy = fuseProdutos.search(query);
+                    if (fuzzy.length > 0) {
+                        const bestCod = fuzzy[0].item.cod;
+                        matches = allStock.filter(item => item.cod === bestCod);
+                    }
                 }
             }
 
-            // Busca aproximada via Fuse.js (código ou nome)
-            if (matches.length === 0 && fuseProdutos) {
-                const fuzzy = fuseProdutos.search(query);
-                if (fuzzy.length > 0) {
-                    const bestCod = fuzzy[0].item.cod;
-                    matches = allStock.filter(item => item.cod === bestCod);
-                }
-            }
-
             if (matches.length === 0) {
-                showToast(`Produto "${query}" não encontrado na planilha.`, 'warning');
+                showToast(`Produto "${forceNumericOnly ? numericCode : query}" não encontrado na planilha.`, 'warning');
                 return;
             }
 
@@ -1393,7 +1438,6 @@
             valEl.className = `fw-bold mb-1 ${scopedVal < 0 ? 'text-danger' : 'text-dark'}`;
             $('resUnitVal').textContent = `Último Vlr. Unitário: ${formatCurrency(ultimoUnitExibido)}`;
 
-            // Tabela por depósito
             const breakdownBody = $('resDepotsBreakdownBody');
             breakdownBody.innerHTML = matches.sort((a, b) => Number(a.deposito) - Number(b.deposito)).map(m => {
                 const saldoDep = m.entradasQtd - m.saidasQtd;
@@ -1411,7 +1455,6 @@
                 `;
             }).join('');
 
-            // Histórico de movimentações
             const itemMovs = movimentacoes.filter(m => {
                 const matchCode = m.cod === sampleItem.cod;
                 const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
@@ -1442,34 +1485,86 @@
             }
         }
 
-        function toggleCameraScanner() {
-            if (isCameraRunning) stopCameraIfRunning();
-            else startCameraScanner();
+        /**
+         * LEITOR DE CÓDIGO DE BARRAS OTIMIZADO PARA CODE 128 / 1D LINEAR (EX: 131)
+         * Ignora letras e casas decimais na captura óptica.
+         */
+        function toggleCameraScanner(context = 'consulta') {
+            if (activeScannerContext === context) {
+                stopCameraIfRunning();
+            } else {
+                stopCameraIfRunning();
+                startCameraScanner(context);
+            }
         }
 
-        function startCameraScanner() {
-            const wrapper = $('cameraWrapper');
-            const btn = $('btnToggleCamera');
+        function startCameraScanner(context = 'consulta') {
+            const isBlind = context === 'inventario';
+            const wrapper = $(isBlind ? 'blindCameraWrapper' : 'cameraWrapper');
+            const readerElementId = isBlind ? 'blindReader' : 'reader';
+            const btn = $(isBlind ? 'btnToggleBlindCamera' : 'btnToggleCamera');
+
             wrapper.classList.remove('d-none');
-            btn.innerHTML = `<i class="bi bi-stop-circle-fill me-2 text-danger"></i>Fechar Câmera`;
+            if (isBlind) {
+                btn.innerHTML = `<i class="bi bi-stop-circle-fill text-danger"></i>`;
+            } else {
+                btn.innerHTML = `<i class="bi bi-stop-circle-fill me-2 text-danger"></i>Fechar Câmera`;
+            }
 
             try {
-                html5QrcodeScanner = new Html5Qrcode("reader");
+                // Configura explicitamente para leitura de código de barras 1D (Code 128, Code 39, EAN, ITF)
+                const scannerConfig = {
+                    verbose: false,
+                    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+                };
+                if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+                    scannerConfig.formatsToSupport = [
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.CODE_93,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.ITF,
+                        Html5QrcodeSupportedFormats.CODABAR
+                    ];
+                }
+
+                html5QrcodeScanner = new Html5Qrcode(readerElementId, scannerConfig);
                 html5QrcodeScanner.start(
                     { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    {
+                        fps: 15,
+                        // Caixa horizontal retangular ideal para barras estilo Code 128 (ex: 131)
+                        qrbox: (viewfinderWidth, viewfinderHeight) => {
+                            const w = Math.min(340, Math.floor(viewfinderWidth * 0.88));
+                            const h = Math.min(130, Math.floor(viewfinderHeight * 0.45));
+                            return { width: Math.max(200, w), height: Math.max(90, h) };
+                        },
+                        aspectRatio: 1.777778
+                    },
                     (decodedText) => {
-                        $('barcodeInput').value = decodedText;
-                        displayProductDetails(decodedText);
-                        showToast(`Código lido: ${decodedText}`, 'success');
-                        stopCameraIfRunning();
+                        // Sanitiza: ignora letras e casas decimais, mantendo apenas o código numérico inteiro
+                        const cleanCode = extrairCodigoNumerico(decodedText);
+                        if (!cleanCode) return;
+
+                        if (isBlind) {
+                            $('blindCodeInput').value = cleanCode;
+                            showToast(`Código lido: ${cleanCode}`, 'success');
+                            stopCameraIfRunning();
+                            setTimeout(() => $('blindQtyInput').focus(), 100);
+                        } else {
+                            $('barcodeInput').value = cleanCode;
+                            displayProductDetails(cleanCode, true);
+                            showToast(`Código de barras lido: ${cleanCode}`, 'success');
+                            stopCameraIfRunning();
+                        }
                     },
                     () => {}
                 ).catch(() => {
                     showToast('Não foi possível acessar a câmera.', 'warning');
                     stopCameraIfRunning();
                 });
-                isCameraRunning = true;
+                activeScannerContext = context;
             } catch (e) {
                 showToast('Leitor de câmera indisponível.', 'danger');
                 stopCameraIfRunning();
@@ -1477,14 +1572,22 @@
         }
 
         function stopCameraIfRunning() {
-            const wrapper = $('cameraWrapper');
-            const btn = $('btnToggleCamera');
-            wrapper.classList.add('d-none');
-            btn.innerHTML = `<i class="bi bi-camera-fill me-2"></i>Ler Código com a Câmera`;
-            if (html5QrcodeScanner && isCameraRunning) {
-                html5QrcodeScanner.stop().then(() => html5QrcodeScanner.clear()).catch(() => {});
+            const w1 = $('cameraWrapper');
+            const w2 = $('blindCameraWrapper');
+            const b1 = $('btnToggleCamera');
+            const b2 = $('btnToggleBlindCamera');
+
+            if (w1) w1.classList.add('d-none');
+            if (w2) w2.classList.add('d-none');
+            if (b1) b1.innerHTML = `<i class="bi bi-upc-scan me-2"></i>Ler Código de Barras (Câmera)`;
+            if (b2) b2.innerHTML = `<i class="bi bi-upc-scan"></i>`;
+
+            if (html5QrcodeScanner && activeScannerContext) {
+                const scannerRef = html5QrcodeScanner;
+                html5QrcodeScanner = null;
+                scannerRef.stop().then(() => scannerRef.clear()).catch(() => {});
             }
-            isCameraRunning = false;
+            activeScannerContext = null;
         }
 
         /**
@@ -1499,11 +1602,18 @@
 
             const codeInput = $('blindCodeInput');
             const qtyInput = $('blindQtyInput');
-            const code = normCod(codeInput.value.trim());
+            // Ignora letras e casas decimais no código bipado/digitado
+            const code = extrairCodigoNumerico(codeInput.value.trim());
             const countedQty = parseFloat(qtyInput.value);
 
+            if (!code) {
+                showToast(`Informe um código numérico válido (ex: 131).`, 'warning');
+                codeInput.select();
+                return;
+            }
+
             const allStock = getConsolidatedStock();
-            const productMatches = allStock.filter(i => i.cod.toLowerCase() === code.toLowerCase());
+            const productMatches = allStock.filter(i => i.cod === code);
 
             if (productMatches.length === 0) {
                 showToast(`Código "${code}" não encontrado na planilha.`, 'danger');
