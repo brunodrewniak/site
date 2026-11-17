@@ -5,31 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Almoxarifado Smart - Controle & Estoque (Google Sheets)</title>
     
-    <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
-    <!-- SheetJS (Leitura de XLSX publicado do Google Planilhas) -->
+    <!-- SheetJS & Fuse.js & HTML5-QRCode -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-    <!-- Fuse.js (Busca aproximada / inteligente) -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
-    
-    <!-- HTML5-QRCode Library (Leitura de Câmera) -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
     <style>
         :root {
             --primary-color: #0f172a;
             --accent-color: #2563eb;
-            --accent-hover: #1d4ed8;
             --bg-light: #f1f5f9;
             --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
             --sidebar-width: 260px;
@@ -75,10 +65,7 @@
         }
 
         /* ================= LAYOUT PRINCIPAL ================= */
-        #app-wrapper {
-            display: none;
-            min-height: 100vh;
-        }
+        #app-wrapper { display: none; min-height: 100vh; }
 
         .sidebar {
             width: var(--sidebar-width);
@@ -112,11 +99,7 @@
             cursor: pointer;
         }
 
-        .nav-sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.08);
-            color: #ffffff;
-        }
-
+        .nav-sidebar .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
         .nav-sidebar .nav-link.active {
             background-color: var(--accent-color);
             color: #ffffff;
@@ -145,11 +128,6 @@
             border: 1px solid #e2e8f0;
             border-radius: 0.85rem;
             box-shadow: var(--card-shadow);
-            transition: transform 0.2s;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-2px);
         }
 
         .kpi-icon {
@@ -170,11 +148,7 @@
             overflow: hidden;
         }
 
-        .table-sticky-header {
-            max-height: 560px;
-            overflow-y: auto;
-        }
-
+        .table-sticky-header { max-height: 560px; overflow-y: auto; }
         .table-sticky-header thead th {
             position: sticky;
             top: 0;
@@ -188,40 +162,15 @@
             white-space: nowrap;
         }
 
-        .table tbody td {
-            font-size: 0.86rem;
-            vertical-align: middle;
-        }
-
-        #reader {
-            width: 100%;
-            max-width: 450px;
-            margin: 0 auto;
-            border-radius: 0.75rem;
-            overflow: hidden;
-        }
-
-        .saldo-destaque {
-            font-size: 3rem;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -0.03em;
-        }
-
-        .toast-container {
-            z-index: 1090;
-        }
+        .table tbody td { font-size: 0.86rem; vertical-align: middle; }
+        #reader { width: 100%; max-width: 450px; margin: 0 auto; border-radius: 0.75rem; overflow: hidden; }
+        .saldo-destaque { font-size: 2.75rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+        .toast-container { z-index: 1090; }
 
         @media (max-width: 991.98px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-            }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .main-content { margin-left: 0; }
             .sidebar-backdrop {
                 display: none;
                 position: fixed;
@@ -229,9 +178,7 @@
                 background: rgba(15, 23, 42, 0.5);
                 z-index: 1025;
             }
-            .sidebar-backdrop.show {
-                display: block;
-            }
+            .sidebar-backdrop.show { display: block; }
         }
     </style>
 </head>
@@ -239,9 +186,7 @@
 
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
 
-    <!-- ===================================================================== -->
-    <!-- 1. TELA DE LOGIN                                                      -->
-    <!-- ===================================================================== -->
+    <!-- 1. TELA DE LOGIN -->
     <section id="login-screen">
         <div class="login-card">
             <div class="login-icon-box">
@@ -250,7 +195,6 @@
             <h4 class="text-center fw-bold mb-1">Controle de Almoxarifado</h4>
             <p class="text-center text-muted small mb-3">Conectado ao Google Planilhas</p>
 
-            <!-- Status da conexão com Google Sheets -->
             <div id="sheetSyncStatus" class="alert alert-info py-2 px-3 small text-center mb-3">
                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                 Carregando dados da planilha Google...
@@ -273,7 +217,6 @@
                 </button>
             </form>
 
-            <!-- Atalhos Dinâmicos gerados a partir da Planilha -->
             <div class="border-top pt-3">
                 <p class="text-center text-muted small mb-2 fw-medium">Acesso Rápido (Depósitos detectados):</p>
                 <div class="d-grid gap-2" id="dynamicDepotShortcuts" style="max-height: 200px; overflow-y: auto;">
@@ -286,9 +229,7 @@
         </div>
     </section>
 
-    <!-- ===================================================================== -->
-    <!-- 2. DASHBOARD PRINCIPAL (SPA)                                          -->
-    <!-- ===================================================================== -->
+    <!-- 2. DASHBOARD PRINCIPAL -->
     <div id="app-wrapper">
         <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
@@ -319,7 +260,7 @@
             <nav class="nav flex-column nav-sidebar mt-3 flex-grow-1">
                 <a class="nav-link active" data-page="page-kpis" onclick="navigateTo('page-kpis', this)">
                     <i class="bi bi-speedometer2"></i>
-                    <span>Visão Geral & KPIs</span>
+                    <span>Visão Geral & Saldos</span>
                 </a>
                 <a class="nav-link" data-page="page-consulta" onclick="navigateTo('page-consulta', this)">
                     <i class="bi bi-upc-scan"></i>
@@ -352,7 +293,7 @@
                         <i class="bi bi-list fs-5"></i>
                     </button>
                     <div>
-                        <h5 class="mb-0 fw-bold text-dark" id="pageTitle">Visão Geral & KPIs</h5>
+                        <h5 class="mb-0 fw-bold text-dark" id="pageTitle">Visão Geral & Saldos</h5>
                         <small class="text-muted d-none d-sm-inline" id="currentDateDisplay"></small>
                     </div>
                 </div>
@@ -376,23 +317,21 @@
 
             <main class="p-3 p-md-4 flex-grow-1">
 
-                <!-- ========================================================= -->
-                <!-- SUBPÁGINA 1: VISÃO GERAL & KPIs                           -->
-                <!-- ========================================================= -->
+                <!-- SUBPÁGINA 1: VISÃO GERAL & SALDOS -->
                 <div id="page-kpis" class="subpage">
                     <div class="row g-3 mb-4">
                         <div class="col-12 col-sm-6 col-xl-3">
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Saldo Financeiro Líquido</p>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Valor em Estoque</p>
                                         <h4 class="fw-bold mb-0 text-dark" id="kpiTotalValue">R$ 0,00</h4>
                                     </div>
                                     <div class="kpi-icon bg-success-subtle text-success">
                                         <i class="bi bi-currency-dollar"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block"><i class="bi bi-check-circle text-success"></i> Entradas − Saídas (válidas)</small>
+                                <small class="text-muted mt-2 d-block" id="kpiValSub">Calculado pelo último Vlr. Unit.</small>
                             </div>
                         </div>
 
@@ -400,14 +339,14 @@
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Itens Movimentados</p>
-                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalItems">0</h4>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Entradas (R$)</p>
+                                        <h4 class="fw-bold mb-0 text-primary" id="kpiEntradasVal">R$ 0,00</h4>
                                     </div>
                                     <div class="kpi-icon bg-primary-subtle text-primary">
-                                        <i class="bi bi-box-seam"></i>
+                                        <i class="bi bi-box-arrow-in-down"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiTotalUnits">0 unidades em saldo</small>
+                                <small class="text-muted mt-2 d-block" id="kpiEntradasQtd">0 lançamentos de entrada</small>
                             </div>
                         </div>
 
@@ -415,14 +354,14 @@
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Sem Giro (+30 dias)</p>
-                                        <h4 class="fw-bold mb-0 text-warning" id="kpiStagnantCount">0</h4>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Saídas (R$)</p>
+                                        <h4 class="fw-bold mb-0 text-danger" id="kpiSaidasVal">R$ 0,00</h4>
                                     </div>
-                                    <div class="kpi-icon bg-warning-subtle text-warning">
-                                        <i class="bi bi-hourglass-split"></i>
+                                    <div class="kpi-icon bg-danger-subtle text-danger">
+                                        <i class="bi bi-box-arrow-up"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiStagnantValue">R$ 0,00 parados</small>
+                                <small class="text-muted mt-2 d-block" id="kpiSaidasQtd">0 lançamentos de saída</small>
                             </div>
                         </div>
 
@@ -430,46 +369,52 @@
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Lançamentos</p>
-                                        <h4 class="fw-bold mb-0 text-primary" id="kpiMovCount">0</h4>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Produtos / Saldo Físico</p>
+                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalItems">0</h4>
                                     </div>
                                     <div class="kpi-icon bg-info-subtle text-info">
-                                        <i class="bi bi-arrow-left-right"></i>
+                                        <i class="bi bi-boxes"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiMovBreakdown">0 entradas / 0 saídas</small>
+                                <small class="text-muted mt-2 d-block" id="kpiTotalUnits">0 unidades acumuladas</small>
                             </div>
                         </div>
                     </div>
 
                     <div class="row g-4">
-                        <!-- Tabela Interativa: Produtos Sem Giro (30 / 60 / 90 dias) -->
+                        <!-- Tabela Consolidada de Saldos e Último Valor por Produto / Depósito -->
                         <div class="col-12 col-xl-8">
                             <div class="table-container h-100">
                                 <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white">
                                     <div>
-                                        <h6 class="fw-bold mb-0"><i class="bi bi-clock-history text-warning me-2"></i>Produtos Sem Giro (Sem Entrada nem Saída)</h6>
-                                        <small class="text-muted">Itens com saldo positivo sem movimentação recente</small>
+                                        <h6 class="fw-bold mb-0"><i class="bi bi-layers-fill text-primary me-2"></i>Posição de Estoque & Último Preço por Depósito</h6>
+                                        <small class="text-muted">Valor total calculado pelo último Vlr. unit. registrado no depósito</small>
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group" id="stagnantFilterGroup">
-                                        <button type="button" class="btn btn-warning fw-semibold active" onclick="setStagnantDays(30, this)">+30 Dias</button>
-                                        <button type="button" class="btn btn-outline-warning text-dark fw-semibold" onclick="setStagnantDays(60, this)">+60 Dias</button>
-                                        <button type="button" class="btn btn-outline-warning text-dark fw-semibold" onclick="setStagnantDays(90, this)">+90 Dias</button>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <input type="text" id="saldoSearchInput" class="form-control form-control-sm" placeholder="Filtrar Cód. ou Depósito..." oninput="renderStockPositionTable()">
+                                        <select id="saldoFilterMode" class="form-select form-select-sm" onchange="renderStockPositionTable()">
+                                            <option value="ALL">Todos os itens</option>
+                                            <option value="POS">Saldo &gt; 0</option>
+                                            <option value="NEG">Saldo &lt; 0</option>
+                                            <option value="STAG30">Sem giro (+30d)</option>
+                                        </select>
                                     </div>
                                 </div>
-                                <div class="table-responsive" style="max-height: 430px;">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light">
+                                <div class="table-responsive" style="max-height: 450px;">
+                                    <table class="table table-hover table-sm mb-0">
+                                        <thead class="table-light sticky-top">
                                             <tr>
                                                 <th>Cód. Produto</th>
                                                 <th>Depósito</th>
-                                                <th class="text-end">Saldo</th>
-                                                <th class="text-end">Valor Estimado</th>
+                                                <th class="text-end">Entradas</th>
+                                                <th class="text-end">Saídas</th>
+                                                <th class="text-end">Saldo Atual</th>
+                                                <th class="text-end">Último Vlr. Unit.</th>
+                                                <th class="text-end">Vlr. Total Estoque</th>
                                                 <th class="text-center">Última Mov.</th>
-                                                <th class="text-center">Dias Parado</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="stagnantTableBody"></tbody>
+                                        <tbody id="stockPositionTableBody"></tbody>
                                     </table>
                                 </div>
                             </div>
@@ -480,21 +425,19 @@
                             <div class="kpi-card p-3 h-100">
                                 <h6 class="fw-bold mb-1"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Top Saídas por C. Custo / CNPJ</h6>
                                 <p class="text-muted small mb-3">Maiores destinos registrados na planilha</p>
-                                <div id="costCenterContainer" class="d-flex flex-column gap-3" style="max-height: 410px; overflow-y: auto;"></div>
+                                <div id="costCenterContainer" class="d-flex flex-column gap-3" style="max-height: 430px; overflow-y: auto;"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ========================================================= -->
-                <!-- SUBPÁGINA 2: CONSULTA RÁPIDA / CÓDIGO DE BARRAS / CÂMERA  -->
-                <!-- ========================================================= -->
+                <!-- SUBPÁGINA 2: CONSULTA RÁPIDA / CÓDIGO DE BARRAS / CÂMERA -->
                 <div id="page-consulta" class="subpage d-none">
                     <div class="row g-4">
                         <div class="col-12 col-lg-5">
                             <div class="kpi-card p-4">
                                 <h5 class="fw-bold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Consulta de Produto</h5>
-                                <p class="text-muted small mb-3">Bipe ou digite o <strong>Cód.Produto</strong> (busca inteligente ativa).</p>
+                                <p class="text-muted small mb-3">Bipe ou digite o <strong>Cód.Produto</strong> para ver saldo e último valor por depósito.</p>
 
                                 <form onsubmit="searchProductByInput(event)" class="mb-3">
                                     <label for="barcodeInput" class="form-label small fw-semibold text-uppercase text-secondary">Código do Produto</label>
@@ -530,7 +473,7 @@
                                     <i class="bi bi-upc fs-1"></i>
                                 </div>
                                 <h5 class="fw-bold text-secondary">Aguardando leitura ou código</h5>
-                                <p class="text-muted small mb-0" style="max-width: 360px;">Digite ou bipe o código de um produto para visualizar seu saldo consolidado, valores e histórico.</p>
+                                <p class="text-muted small mb-0" style="max-width: 360px;">Digite ou bipe o código de um produto para visualizar seu saldo por depósito, último valor unitário e histórico.</p>
                             </div>
 
                             <div id="consultaResultCard" class="kpi-card p-4 d-none">
@@ -557,20 +500,33 @@
                                     </div>
                                     <div class="col-12 col-sm-6">
                                         <div class="p-3 rounded-3 bg-light border">
-                                            <small class="text-secondary fw-bold text-uppercase d-block mb-1">Valor Estimado</small>
+                                            <small class="text-secondary fw-bold text-uppercase d-block mb-1">Valor Total (Saldo × Últ. Vlr.)</small>
                                             <h3 class="fw-bold text-dark mb-1" id="resStockTotalVal">R$ 0,00</h3>
-                                            <small class="text-muted" id="resUnitVal">Último Vlr. Unitário: R$ 0,00</small>
+                                            <small class="text-muted fw-semibold" id="resUnitVal">Último Vlr. Unitário: R$ 0,00</small>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div id="otherDepotsAlert" class="alert alert-light border d-flex align-items-center justify-content-between py-2 px-3 mb-4">
-                                    <span class="small fw-medium"><i class="bi bi-building me-1 text-primary"></i> Saldo por depósito:</span>
-                                    <span class="small fw-bold" id="otherDepotsText">-</span>
+                                <!-- Detalhamento por Depósito -->
+                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Saldo e Último Preço por Depósito</h6>
+                                <div class="table-responsive border rounded-3 mb-4">
+                                    <table class="table table-sm mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Depósito</th>
+                                                <th class="text-end">Entradas</th>
+                                                <th class="text-end">Saídas</th>
+                                                <th class="text-end">Saldo</th>
+                                                <th class="text-end">Último Vlr. Unit.</th>
+                                                <th class="text-end">Valor Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="resDepotsBreakdownBody"></tbody>
+                                    </table>
                                 </div>
 
-                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Histórico na Planilha</h6>
-                                <div class="table-responsive border rounded-3" style="max-height: 280px;">
+                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Histórico de Movimentações na Planilha</h6>
+                                <div class="table-responsive border rounded-3" style="max-height: 260px;">
                                     <table class="table table-sm table-striped mb-0">
                                         <thead class="table-light">
                                             <tr>
@@ -580,6 +536,8 @@
                                                 <th>Tipo</th>
                                                 <th>Dep.</th>
                                                 <th class="text-end">Qtd.</th>
+                                                <th class="text-end">Vlr. Unit.</th>
+                                                <th class="text-end">Vlr. Total</th>
                                                 <th>Doc.</th>
                                                 <th>CNPJ / C. Custo</th>
                                             </tr>
@@ -592,15 +550,13 @@
                     </div>
                 </div>
 
-                <!-- ========================================================= -->
-                <!-- SUBPÁGINA 3: INVENTÁRIO ÀS CEGAS                           -->
-                <!-- ========================================================= -->
+                <!-- SUBPÁGINA 3: INVENTÁRIO ÀS CEGAS -->
                 <div id="page-inventario" class="subpage d-none">
                     <div class="alert alert-info border-info-subtle d-flex align-items-center gap-3 rounded-3 mb-4">
                         <i class="bi bi-eye-slash-fill fs-3 text-info"></i>
                         <div>
                             <h6 class="fw-bold mb-0">Modo de Contagem às Cegas Ativo</h6>
-                            <small>O saldo da planilha fica oculto durante a bipagem. Clique em <strong>"Finalizar e Apurar"</strong> para comparar físico x planilha.</small>
+                            <small>O saldo da planilha fica oculto durante a bipagem. O impacto financeiro usa o <strong>último Vlr. unit. encontrado no depósito</strong>.</small>
                         </div>
                     </div>
 
@@ -668,9 +624,7 @@
                     </div>
                 </div>
 
-                <!-- ========================================================= -->
-                <!-- SUBPÁGINA 4: EXTRATO DE MOVIMENTAÇÕES                      -->
-                <!-- ========================================================= -->
+                <!-- SUBPÁGINA 4: EXTRATO DE MOVIMENTAÇÕES -->
                 <div id="page-extrato" class="subpage d-none">
                     <div class="kpi-card p-3 mb-3">
                         <div class="row g-2 align-items-center">
@@ -725,27 +679,20 @@
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- ===================================================================== -->
-    <!-- LÓGICA JAVASCRIPT CONECTADA AO GOOGLE PLANILHAS                       -->
-    <!-- ===================================================================== -->
     <script>
         const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRWiRG_thI_ZW6oaD4uveXFc_2HhUfDy3_3E81sEPj3Udyo03RcY2IIE7sb98uZKQjpumCZXH4UcHil/pub?output=xlsx";
         const $ = id => document.getElementById(id);
 
-        // Estruturas de Dados em Memória
         let movimentacoes = [];
-        let baseInicialEstoque = []; // Suporta eventual aba "SaldoInicial" ou "Cadastro" na planilha
-        let depositosMap = new Map(); // depositoId -> nomeAmigavel
+        let estoqueConsolidadoCache = [];
+        let depositosMap = new Map();
         let fuseExtrato = null;
         let fuseProdutos = null;
 
-        // Estado da Sessão e UI
         let currentSession = null;
         let activeDepotFilter = 'ALL';
-        let stagnantDaysThreshold = 30;
         let html5QrcodeScanner = null;
         let isCameraRunning = false;
         let blindInventoryItems = [];
@@ -753,7 +700,7 @@
         const LIMITE_EXTRATO = 500;
 
         /**
-         * 1. INICIALIZAÇÃO E LEITURA DA PLANILHA PUBLICADA (XLSX)
+         * 1. INICIALIZAÇÃO E LEITURA DO GOOGLE SHEETS
          */
         window.addEventListener('DOMContentLoaded', async () => {
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -784,7 +731,6 @@
             }
 
             try {
-                // Adiciona timestamp para evitar cache antigo do navegador
                 const urlNoCache = `${PUB_XLSX_URL}&t=${Date.now()}`;
                 const response = await fetch(urlNoCache);
                 if (!response.ok) throw new Error(`HTTP ${response.status} ao acessar a planilha.`);
@@ -792,15 +738,11 @@
                 const arrayBuffer = await response.arrayBuffer();
                 const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
 
-                // Procura a aba principal de movimentação
                 const sheetName = workbook.SheetNames.find(n => /moviment/i.test(n)) || workbook.SheetNames[0];
                 const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
 
-                // Verifica se existe alguma aba opcional de Saldo Inicial / Cadastro de Produtos
-                const initSheetName = workbook.SheetNames.find(n => /saldo|inicial|cadastro|produto/i.test(n));
-                const rawInitRows = initSheetName ? XLSX.utils.sheet_to_json(workbook.Sheets[initSheetName], { defval: "" }) : [];
-
-                processarLinhasPlanilha(rawRows, rawInitRows);
+                processarLinhasPlanilha(rawRows);
+                recalcularEstoqueConsolidado();
 
                 if (statusEl) {
                     statusEl.className = "alert alert-success py-2 px-3 small text-center mb-3";
@@ -829,34 +771,14 @@
             }
         }
 
-        function processarLinhasPlanilha(rawRows, rawInitRows) {
+        function processarLinhasPlanilha(rawRows) {
             depositosMap.clear();
-            baseInicialEstoque = [];
 
-            // Processa aba opcional de saldo inicial caso o usuário crie no futuro
-            rawInitRows.forEach(r => {
-                const dep = normDep(getCol(r, ['Depósito', 'Deposito']));
-                const cod = String(getCol(r, ['Cód.Produto', 'Cod.Produto', 'Código', 'Codigo'])).trim();
-                if (!cod) return;
-                const depNome = String(getCol(r, ['Nome do Depósito', 'Nome Deposito'])).trim();
-                if (dep && depNome) depositosMap.set(dep, depNome);
-
-                baseInicialEstoque.push({
-                    deposito: dep || '0',
-                    depositoNome: depNome || (dep ? `Depósito ${dep}` : 'Geral'),
-                    cod: cod,
-                    produto: String(getCol(r, ['Produto', 'Descrição', 'Descricao'])).trim() || `Produto ${cod}`,
-                    un: String(getCol(r, ['Un.', 'Un', 'Unidade'])).trim() || 'UN',
-                    qtdInicial: parseNumBR(getCol(r, ['Qtd.', 'Qtd', 'Saldo', 'Quantidade'])),
-                    vlrUnit: parseNumBR(getCol(r, ['Vlr. unit.', 'Vlr. Unit.', 'Valor Unitário'])),
-                    estoqueMin: parseNumBR(getCol(r, ['Estoque Min', 'Minimo']))
-                });
-            });
-
-            // Processa as 15 colunas geradas pelo Apps Script
-            movimentacoes = rawRows.map(r => {
+            movimentacoes = rawRows.map((r, rowIndex) => {
                 const movRaw = String(getCol(r, ['Mov.', 'Mov', 'Movimento'])).trim();
-                const num = String(getCol(r, ['Nº', 'No', 'Numero', 'Número'])).trim();
+                const numStr = String(getCol(r, ['Nº', 'No', 'Numero', 'Número'])).trim();
+                const numInt = parseInt(numStr, 10) || 0;
+
                 const dataHoraRaw = getCol(r, ['Data / Hora', 'Data/Hora', 'Data']);
                 const dataHoraObj = parseDataHoraFlex(dataHoraRaw);
                 const dataHoraStr = formatDateTimeBR(dataHoraObj, dataHoraRaw);
@@ -874,18 +796,29 @@
                     }
                 }
 
-                const codProduto = String(getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cód.', 'Código'])).trim();
-                const un = String(getCol(r, ['Un.', 'Un'])).trim() || 'UN';
-                const qtd = parseNumBR(getCol(r, ['Qtd.', 'Qtd']));
-                const vlrUnit = parseNumBR(getCol(r, ['Vlr. unit.', 'Vlr. Unit.']));
-                const vlrTotal = parseNumBR(getCol(r, ['Vlr. total', 'Vlr. Total'])) || (qtd * vlrUnit);
+                const codProduto = normCod(getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cod Produto', 'Cód.', 'Código']));
+                const un = String(getCol(r, ['Un.', 'Un', 'Unidade'])).trim() || 'UN';
+                const qtd = parseNumBR(getCol(r, ['Qtd.', 'Qtd', 'Quantidade']));
+                let vlrUnit = parseNumBR(getCol(r, ['Vlr. unit.', 'Vlr. Unit.', 'Vlr unit', 'Valor Unitario']));
+                let vlrTotal = parseNumBR(getCol(r, ['Vlr. total', 'Vlr. Total', 'Vlr total', 'Valor Total']));
+
+                // Garante consistência entre Vlr. unit. e Vlr. total na própria linha
+                if (vlrUnit <= 0 && vlrTotal > 0 && qtd > 0) {
+                    vlrUnit = vlrTotal / qtd;
+                }
+                if (vlrTotal <= 0 && vlrUnit > 0 && qtd > 0) {
+                    vlrTotal = vlrUnit * qtd;
+                }
+
                 const documento = String(getCol(r, ['Documento'])).trim();
                 const cnpjCentroCusto = String(getCol(r, ['CNPJ / C. Custo', 'CNPJ / C.Custo'])).trim();
                 const observacao = String(getCol(r, ['Observação', 'Observacao'])).trim();
 
                 return {
-                    mov: movRaw, // "Entrada" ou "Saída"
-                    num: num,
+                    rowIndex,
+                    mov: movRaw,
+                    num: numStr,
+                    numInt: numInt,
                     dataHora: dataHoraStr,
                     dataObj: dataHoraObj,
                     tipo: tipo,
@@ -893,7 +826,6 @@
                     deposito: deposito || '0',
                     depositoNome: nomeDepPlanilha || (deposito ? `Depósito ${deposito}` : 'Sem Depósito'),
                     cod: codProduto,
-                    produto: `Cód. ${codProduto}`, // Como a planilha traz apenas Cód.Produto
                     un: un,
                     qtd: qtd,
                     vlrUnit: vlrUnit,
@@ -904,10 +836,15 @@
                 };
             }).filter(m => m.cod || m.mov);
 
-            // Ordena do mais recente para o mais antigo
-            movimentacoes.sort((a, b) => (b.dataObj?.getTime() || 0) - (a.dataObj?.getTime() || 0));
+            // Ordena do mais recente para o mais antigo (Data -> Nº -> ordem na planilha)
+            movimentacoes.sort((a, b) => {
+                const ta = a.dataObj ? a.dataObj.getTime() : 0;
+                const tb = b.dataObj ? b.dataObj.getTime() : 0;
+                if (tb !== ta) return tb - ta;
+                if (b.numInt !== a.numInt) return b.numInt - a.numInt;
+                return b.rowIndex - a.rowIndex;
+            });
 
-            // Inicializa Fuse.js para buscas rápidas no Extrato e Consulta
             if (typeof Fuse !== 'undefined') {
                 fuseExtrato = new Fuse(movimentacoes, {
                     keys: ['cod', 'num', 'documento', 'cnpjCentroCusto', 'tipo', 'observacao', 'deposito', 'depositoNome'],
@@ -917,6 +854,101 @@
             }
         }
 
+        /**
+         * 2. MOTOR DE CÁLCULO: SALDO E ÚLTIMO VALOR UNITÁRIO POR PRODUTO E DEPÓSITO
+         */
+        function recalcularEstoqueConsolidado() {
+            const today = new Date();
+            const stockMap = new Map();
+            const ultimoPrecoGlobalProduto = new Map(); // fallback caso um depósito só tenha saída sem preço
+
+            // Percorre em ordem cronológica (do lançamento mais antigo para o mais recente)
+            const movsCronologicas = [...movimentacoes].sort((a, b) => {
+                const ta = a.dataObj ? a.dataObj.getTime() : 0;
+                const tb = b.dataObj ? b.dataObj.getTime() : 0;
+                if (ta !== tb) return ta - tb;
+                if (a.numInt !== b.numInt) return a.numInt - b.numInt;
+                return a.rowIndex - b.rowIndex;
+            });
+
+            movsCronologicas.forEach(m => {
+                // Ignora movimentações estornadas totalmente
+                if (m.estado && m.estado.toLowerCase().includes('estornada total')) return;
+                if (!m.cod) return;
+
+                const key = `${m.deposito}_${m.cod}`;
+                if (!stockMap.has(key)) {
+                    stockMap.set(key, {
+                        deposito: m.deposito,
+                        depositoNome: m.depositoNome,
+                        cod: m.cod,
+                        un: m.un || 'UN',
+                        entradasQtd: 0,
+                        saidasQtd: 0,
+                        saldo: 0,
+                        ultimoVlrUnit: 0,
+                        dataUltimoVlr: '',
+                        lastMovDate: null,
+                        daysWithoutMov: 999
+                    });
+                }
+
+                const entry = stockMap.get(key);
+                if (m.un) entry.un = m.un;
+
+                const qtd = Number(m.qtd || 0);
+                const vlrUnit = Number(m.vlrUnit || 0);
+                const movLower = m.mov.toLowerCase();
+
+                // Sempre atualiza para o ÚLTIMO valor unitário (> 0) encontrado para este produto neste depósito
+                if (vlrUnit > 0) {
+                    entry.ultimoVlrUnit = vlrUnit;
+                    entry.dataUltimoVlr = m.dataHora;
+                    ultimoPrecoGlobalProduto.set(m.cod, vlrUnit);
+                }
+
+                if (movLower.startsWith('ent') || movLower === 'e') {
+                    entry.entradasQtd += qtd;
+                    entry.saldo += qtd;
+                } else if (movLower.startsWith('sa') || movLower === 's') {
+                    entry.saidasQtd += qtd;
+                    entry.saldo -= qtd;
+                }
+
+                if (m.dataObj) {
+                    if (!entry.lastMovDate || m.dataObj >= entry.lastMovDate.obj) {
+                        const diffDays = Math.max(0, Math.floor((today - m.dataObj) / (1000 * 60 * 60 * 24)));
+                        entry.lastMovDate = { str: m.dataHora.split(' ')[0], full: m.dataHora, obj: m.dataObj };
+                        entry.daysWithoutMov = diffDays;
+                    }
+                }
+            });
+
+            // Aplica fallback de preço global caso algum depósito específico não tenha tido preço preenchido
+            stockMap.forEach(entry => {
+                if (entry.ultimoVlrUnit <= 0 && ultimoPrecoGlobalProduto.has(entry.cod)) {
+                    entry.ultimoVlrUnit = ultimoPrecoGlobalProduto.get(entry.cod);
+                }
+                entry.valorTotalCalculado = entry.saldo * entry.ultimoVlrUnit;
+            });
+
+            estoqueConsolidadoCache = Array.from(stockMap.values());
+
+            if (typeof Fuse !== 'undefined') {
+                fuseProdutos = new Fuse(estoqueConsolidadoCache, {
+                    keys: ['cod', 'deposito', 'depositoNome'],
+                    threshold: 0.25
+                });
+            }
+        }
+
+        function getConsolidatedStock() {
+            return estoqueConsolidadoCache;
+        }
+
+        /**
+         * 3. LOGIN E CONTROLE DE DEPÓSITOS
+         */
         function renderDynamicLoginShortcuts() {
             const container = $('dynamicDepotShortcuts');
             let html = `
@@ -948,13 +980,9 @@
             select.innerHTML = html;
         }
 
-        /**
-         * 2. AUTENTICAÇÃO E CONTROLE DE DEPÓSITO
-         */
         function handleLogin(e) {
             e.preventDefault();
-            const code = $('accessCodeInput').value.trim().toUpperCase();
-            loginWithCode(code);
+            loginWithCode($('accessCodeInput').value.trim().toUpperCase());
         }
 
         function quickLogin(code) {
@@ -1027,11 +1055,10 @@
         }
 
         /**
-         * 3. NAVEGAÇÃO SPA
+         * 4. NAVEGAÇÃO SPA
          */
         function navigateTo(pageId, navElement) {
             stopCameraIfRunning();
-
             document.querySelectorAll('.nav-sidebar .nav-link').forEach(el => el.classList.remove('active'));
             if (navElement) navElement.classList.add('active');
 
@@ -1039,7 +1066,7 @@
             $(pageId).classList.remove('d-none');
 
             const titles = {
-                'page-kpis': 'Visão Geral & KPIs',
+                'page-kpis': 'Visão Geral & Saldos',
                 'page-consulta': 'Consulta / Cód. Produto',
                 'page-inventario': 'Inventário às Cegas',
                 'page-extrato': 'Extrato Movimentações'
@@ -1049,11 +1076,8 @@
             $('sidebar').classList.remove('show');
             $('sidebarBackdrop').classList.remove('show');
 
-            if (pageId === 'page-consulta') {
-                setTimeout(() => $('barcodeInput').focus(), 150);
-            } else if (pageId === 'page-inventario') {
-                setTimeout(() => $('blindCodeInput').focus(), 150);
-            }
+            if (pageId === 'page-consulta') setTimeout(() => $('barcodeInput').focus(), 150);
+            else if (pageId === 'page-inventario') setTimeout(() => $('blindCodeInput').focus(), 150);
         }
 
         function toggleSidebar() {
@@ -1061,84 +1085,8 @@
             $('sidebarBackdrop').classList.toggle('show');
         }
 
-        /**
-         * 4. MOTOR DE CÁLCULO DE SALDO POR PRODUTO E DEPÓSITO
-         */
-        function getConsolidatedStock() {
-            const today = new Date();
-            const stockMap = new Map();
-
-            // 1. Carrega eventual saldo inicial (se existir aba auxiliar)
-            baseInicialEstoque.forEach(item => {
-                const key = `${item.deposito}_${item.cod}`;
-                stockMap.set(key, {
-                    deposito: item.deposito,
-                    depositoNome: item.depositoNome,
-                    cod: item.cod,
-                    produto: item.produto,
-                    un: item.un,
-                    saldo: Number(item.qtdInicial || 0),
-                    vlrUnit: Number(item.vlrUnit || 0),
-                    lastMovDate: null,
-                    daysWithoutMov: 999
-                });
-            });
-
-            // 2. Processa movimentações em ordem cronológica (do mais antigo para o mais recente)
-            const movsCronologicas = [...movimentacoes].reverse();
-
-            movsCronologicas.forEach(m => {
-                // Ignora movimentações estornadas totalmente
-                if (m.estado && m.estado.toLowerCase().includes('estornada total')) return;
-
-                const key = `${m.deposito}_${m.cod}`;
-                if (!stockMap.has(key)) {
-                    stockMap.set(key, {
-                        deposito: m.deposito,
-                        depositoNome: m.depositoNome,
-                        cod: m.cod,
-                        produto: m.produto,
-                        un: m.un,
-                        saldo: 0,
-                        vlrUnit: Number(m.vlrUnit || 0),
-                        lastMovDate: null,
-                        daysWithoutMov: 999
-                    });
-                }
-
-                const entry = stockMap.get(key);
-                const qtd = Number(m.qtd || 0);
-                const movLower = m.mov.toLowerCase();
-
-                if (movLower.startsWith('ent') || movLower === 'e') {
-                    entry.saldo += qtd;
-                    if (m.vlrUnit > 0) entry.vlrUnit = Number(m.vlrUnit);
-                } else if (movLower.startsWith('sa') || movLower === 's') {
-                    entry.saldo -= qtd;
-                    if (entry.vlrUnit === 0 && m.vlrUnit > 0) entry.vlrUnit = Number(m.vlrUnit);
-                }
-
-                if (m.dataObj) {
-                    if (!entry.lastMovDate || m.dataObj > entry.lastMovDate.obj) {
-                        const diffDays = Math.max(0, Math.floor((today - m.dataObj) / (1000 * 60 * 60 * 24)));
-                        entry.lastMovDate = { str: m.dataHora.split(' ')[0], obj: m.dataObj };
-                        entry.daysWithoutMov = diffDays;
-                    }
-                }
-            });
-
-            const list = Array.from(stockMap.values());
-            if (typeof Fuse !== 'undefined') {
-                fuseProdutos = new Fuse(list, {
-                    keys: ['cod', 'produto', 'depositoNome'],
-                    threshold: 0.25
-                });
-            }
-            return list;
-        }
-
         function refreshAllViews() {
-            renderKPIsAndStagnant();
+            renderKPIsAndStockPosition();
             renderExtratoTable();
             const currentResCode = $('resProdCode').dataset.code;
             if (currentResCode && !$('consultaResultCard').classList.contains('d-none')) {
@@ -1147,82 +1095,114 @@
         }
 
         /**
-         * 5. SUBPÁGINA 1: KPIs & PRODUTOS SEM GIRO
+         * 5. SUBPÁGINA 1: KPIs E POSIÇÃO DE ESTOQUE POR DEPÓSITO
          */
-        function renderKPIsAndStagnant() {
+        function renderKPIsAndStockPosition() {
             const allStock = getConsolidatedStock();
             const filteredStock = activeDepotFilter === 'ALL'
                 ? allStock
                 : allStock.filter(item => item.deposito === activeDepotFilter);
 
-            let totalValue = 0;
-            let totalUnits = 0;
-            let stagnant30Count = 0;
-            let stagnant30Value = 0;
+            // Valor em estoque calculado sempre pelo último Vlr. unit. do produto no depósito
+            let valorEstoquePositivo = 0;
+            let saldoLiquidoValor = 0;
+            let totalUnidadesLiquidas = 0;
 
             filteredStock.forEach(item => {
+                const vlrItem = item.saldo * item.ultimoVlrUnit;
+                saldoLiquidoValor += vlrItem;
                 if (item.saldo > 0) {
-                    const itemVal = item.saldo * item.vlrUnit;
-                    totalValue += itemVal;
-                    totalUnits += item.saldo;
+                    valorEstoquePositivo += vlrItem;
+                }
+                totalUnidadesLiquidas += item.saldo;
+            });
 
-                    if (item.daysWithoutMov >= 30 && item.daysWithoutMov < 999) {
-                        stagnant30Count++;
-                        stagnant30Value += itemVal;
-                    }
+            // Totais financeiros de Entradas e Saídas da planilha
+            const scopedMovs = movimentacoes.filter(m => {
+                const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
+                const validState = !m.estado.toLowerCase().includes('estornada total');
+                return matchDepot && validState;
+            });
+
+            let totalEntradasVal = 0, qtdLancEntradas = 0;
+            let totalSaidasVal = 0, qtdLancSaidas = 0;
+
+            scopedMovs.forEach(m => {
+                const movLower = m.mov.toLowerCase();
+                if (movLower.startsWith('ent') || movLower === 'e') {
+                    totalEntradasVal += m.vlrTotal;
+                    qtdLancEntradas++;
+                } else if (movLower.startsWith('sa') || movLower === 's') {
+                    totalSaidasVal += m.vlrTotal;
+                    qtdLancSaidas++;
                 }
             });
 
-            // Contagem de lançamentos no escopo ativo
-            const scopedMovs = movimentacoes.filter(m => activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter);
-            const qtdEntradas = scopedMovs.filter(m => m.mov.toLowerCase().startsWith('ent')).length;
-            const qtdSaidas = scopedMovs.filter(m => m.mov.toLowerCase().startsWith('sa')).length;
+            // Exibe valor positivo em estoque (ou saldo líquido se não houver entradas ainda)
+            const valorExibido = valorEstoquePositivo > 0 ? valorEstoquePositivo : saldoLiquidoValor;
+            $('kpiTotalValue').textContent = formatCurrency(valorExibido);
+            $('kpiValSub').textContent = valorEstoquePositivo > 0
+                ? `Saldo líquido geral: ${formatCurrency(saldoLiquidoValor)}`
+                : `Baseado no último Vlr. unit. por depósito`;
 
-            $('kpiTotalValue').textContent = formatCurrency(totalValue);
-            $('kpiTotalItems').textContent = filteredStock.length.toLocaleString('pt-BR');
-            $('kpiTotalUnits').textContent = `${totalUnits.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} unidades em saldo`;
-            $('kpiStagnantCount').textContent = stagnant30Count.toLocaleString('pt-BR');
-            $('kpiStagnantValue').textContent = `${formatCurrency(stagnant30Value)} parados`;
-            $('kpiMovCount').textContent = scopedMovs.length.toLocaleString('pt-BR');
-            $('kpiMovBreakdown').textContent = `${qtdEntradas} entradas / ${qtdSaidas} saídas`;
+            $('kpiEntradasVal').textContent = formatCurrency(totalEntradasVal);
+            $('kpiEntradasQtd').textContent = `${qtdLancEntradas.toLocaleString('pt-BR')} lançamentos de entrada`;
 
-            // Tabela Sem Giro
-            const stagnantItems = filteredStock
-                .filter(item => item.saldo > 0 && item.daysWithoutMov >= stagnantDaysThreshold && item.daysWithoutMov < 999)
-                .sort((a, b) => b.daysWithoutMov - a.daysWithoutMov)
-                .slice(0, 100);
+            $('kpiSaidasVal').textContent = formatCurrency(totalSaidasVal);
+            $('kpiSaidasQtd').textContent = `${qtdLancSaidas.toLocaleString('pt-BR')} lançamentos de saída`;
 
-            const tbody = $('stagnantTableBody');
-            if (stagnantItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Nenhum item com saldo positivo parado há mais de ${stagnantDaysThreshold} dias.</td></tr>`;
-            } else {
-                tbody.innerHTML = stagnantItems.map(item => {
-                    const badgeColor = item.daysWithoutMov >= 90 ? 'bg-danger' : (item.daysWithoutMov >= 60 ? 'bg-warning text-dark' : 'bg-secondary');
-                    return `
-                        <tr>
-                            <td class="fw-bold text-primary">${item.cod}</td>
-                            <td><span class="badge bg-light text-dark border">${item.deposito} - ${item.depositoNome}</span></td>
-                            <td class="text-end fw-bold">${item.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${item.un}</td>
-                            <td class="text-end text-danger fw-semibold">${formatCurrency(item.saldo * item.vlrUnit)}</td>
-                            <td class="text-center text-muted small">${item.lastMovDate ? item.lastMovDate.str : '-'}</td>
-                            <td class="text-center"><span class="badge ${badgeColor}">${item.daysWithoutMov} dias</span></td>
-                        </tr>
-                    `;
-                }).join('');
-            }
+            const produtosDistintos = new Set(filteredStock.map(i => i.cod)).size;
+            $('kpiTotalItems').textContent = `${produtosDistintos.toLocaleString('pt-BR')} itens`;
+            $('kpiTotalUnits').textContent = `Saldo físico líquido: ${totalUnidadesLiquidas.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un.`;
 
+            renderStockPositionTable();
             renderCostCenterChart();
         }
 
-        function setStagnantDays(days, btnEl) {
-            stagnantDaysThreshold = days;
-            document.querySelectorAll('#stagnantFilterGroup button').forEach(b => {
-                b.classList.remove('btn-warning', 'active');
-                b.classList.add('btn-outline-warning', 'text-dark');
+        function renderStockPositionTable() {
+            const allStock = getConsolidatedStock();
+            const search = $('saldoSearchInput').value.trim().toLowerCase();
+            const mode = $('saldoFilterMode').value;
+
+            let rows = allStock.filter(item => {
+                if (activeDepotFilter !== 'ALL' && item.deposito !== activeDepotFilter) return false;
+                if (mode === 'POS' && item.saldo <= 0) return false;
+                if (mode === 'NEG' && item.saldo >= 0) return false;
+                if (mode === 'STAG30' && (item.saldo <= 0 || item.daysWithoutMov < 30 || item.daysWithoutMov >= 999)) return false;
+                if (search && !`${item.cod} ${item.deposito} ${item.depositoNome}`.toLowerCase().includes(search)) return false;
+                return true;
             });
-            btnEl.classList.remove('btn-outline-warning', 'text-dark');
-            btnEl.classList.add('btn-warning', 'active');
-            renderKPIsAndStagnant();
+
+            // Ordena pelos maiores valores absolutos em estoque
+            rows.sort((a, b) => Math.abs(b.valorTotalCalculado) - Math.abs(a.valorTotalCalculado));
+
+            const tbody = $('stockPositionTableBody');
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">Nenhum item encontrado para o filtro selecionado.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.slice(0, 300).map(item => {
+                const saldoClass = item.saldo < 0 ? 'text-danger' : (item.saldo > 0 ? 'text-success' : 'text-muted');
+                return `
+                    <tr style="cursor:pointer;" onclick="abrirConsultaDireta('${item.cod}')" title="Clique para ver detalhes do produto ${item.cod}">
+                        <td class="fw-bold text-primary">${item.cod}</td>
+                        <td><span class="badge bg-light text-dark border">${item.deposito} - ${item.depositoNome}</span></td>
+                        <td class="text-end text-muted">${item.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
+                        <td class="text-end text-muted">${item.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
+                        <td class="text-end fw-bold ${saldoClass}">${item.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${item.un}</td>
+                        <td class="text-end text-nowrap">${formatCurrency(item.ultimoVlrUnit)}</td>
+                        <td class="text-end fw-semibold text-nowrap ${saldoClass}">${formatCurrency(item.valorTotalCalculado)}</td>
+                        <td class="text-center text-muted small">${item.lastMovDate ? item.lastMovDate.str : '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function abrirConsultaDireta(cod) {
+            const navBtn = document.querySelector('[data-page="page-consulta"]');
+            navigateTo('page-consulta', navBtn);
+            triggerSampleLookup(cod);
         }
 
         function renderCostCenterChart() {
@@ -1268,7 +1248,7 @@
         }
 
         /**
-         * 6. SUBPÁGINA 2: CONSULTA RÁPIDA, FUSE.JS E CÂMERA
+         * 6. SUBPÁGINA 2: CONSULTA RÁPIDA DE PRODUTO
          */
         function renderQuickSampleCodes() {
             const uniqueCodes = [...new Set(movimentacoes.map(i => i.cod).filter(Boolean))].slice(0, 12);
@@ -1295,12 +1275,12 @@
         }
 
         function displayProductDetails(query) {
+            const cleanQuery = normCod(query);
             const allStock = getConsolidatedStock();
-            let matches = allStock.filter(item => item.cod.toLowerCase() === query.toLowerCase());
+            let matches = allStock.filter(item => item.cod.toLowerCase() === cleanQuery.toLowerCase());
 
-            // Fallback com Fuse.js caso não ache correspondência exata
             if (matches.length === 0 && fuseProdutos) {
-                const fuzzy = fuseProdutos.search(query);
+                const fuzzy = fuseProdutos.search(cleanQuery);
                 if (fuzzy.length > 0) {
                     const bestCod = fuzzy[0].item.cod;
                     matches = allStock.filter(item => item.cod === bestCod);
@@ -1325,16 +1305,21 @@
 
             let scopedQty = 0;
             let scopedVal = 0;
+            let ultimoUnitExibido = 0;
             let depotLabel = '';
 
             if (activeDepotFilter === 'ALL') {
                 scopedQty = matches.reduce((acc, m) => acc + m.saldo, 0);
-                scopedVal = matches.reduce((acc, m) => acc + (m.saldo * m.vlrUnit), 0);
+                // Soma o valor calculado de cada depósito (cada um usando seu próprio último preço)
+                scopedVal = matches.reduce((acc, m) => acc + (m.saldo * m.ultimoVlrUnit), 0);
+                const comPreco = matches.filter(m => m.ultimoVlrUnit > 0);
+                ultimoUnitExibido = comPreco.length > 0 ? comPreco[comPreco.length - 1].ultimoVlrUnit : 0;
                 depotLabel = 'Todos os Depósitos';
             } else {
                 const targetDepot = matches.find(m => m.deposito === activeDepotFilter);
                 scopedQty = targetDepot ? targetDepot.saldo : 0;
-                scopedVal = targetDepot ? (targetDepot.saldo * targetDepot.vlrUnit) : 0;
+                ultimoUnitExibido = targetDepot ? targetDepot.ultimoVlrUnit : 0;
+                scopedVal = scopedQty * ultimoUnitExibido;
                 depotLabel = currentSession.label;
             }
 
@@ -1342,14 +1327,26 @@
             $('resStockQty').textContent = scopedQty.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
             $('resStockUnit').textContent = sampleItem.un;
             $('resStockTotalVal').textContent = formatCurrency(scopedVal);
-            $('resUnitVal').textContent = `Último Vlr. Unitário: ${formatCurrency(sampleItem.vlrUnit)}`;
+            $('resUnitVal').textContent = `Último Vlr. Unitário: ${formatCurrency(ultimoUnitExibido)}`;
 
-            const otherDepotsInfo = matches
-                .map(m => `Dep. ${m.deposito}: <strong>${m.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${m.un}</strong>`)
-                .join(' | ');
+            // Tabela de breakdown por depósito
+            const breakdownBody = $('resDepotsBreakdownBody');
+            breakdownBody.innerHTML = matches.sort((a, b) => Number(a.deposito) - Number(b.deposito)).map(m => {
+                const vlrTotalDep = m.saldo * m.ultimoVlrUnit;
+                const isSelected = activeDepotFilter !== 'ALL' && m.deposito === activeDepotFilter;
+                return `
+                    <tr class="${isSelected ? 'table-primary fw-semibold' : ''}">
+                        <td>${m.deposito} - ${m.depositoNome}</td>
+                        <td class="text-end">${m.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
+                        <td class="text-end">${m.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
+                        <td class="text-end fw-bold ${m.saldo < 0 ? 'text-danger' : 'text-success'}">${m.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${m.un}</td>
+                        <td class="text-end">${formatCurrency(m.ultimoVlrUnit)}</td>
+                        <td class="text-end fw-bold">${formatCurrency(vlrTotalDep)}</td>
+                    </tr>
+                `;
+            }).join('');
 
-            $('otherDepotsText').innerHTML = otherDepotsInfo || '-';
-
+            // Histórico de movimentações
             const itemMovs = movimentacoes.filter(m => {
                 const matchCode = m.cod === sampleItem.cod;
                 const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
@@ -1358,7 +1355,7 @@
 
             const histBody = $('resHistoryBody');
             if (itemMovs.length === 0) {
-                histBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-3">Sem movimentações para este depósito.</td></tr>`;
+                histBody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-3">Sem movimentações para este depósito.</td></tr>`;
             } else {
                 histBody.innerHTML = itemMovs.map(m => {
                     const isEntry = m.mov.toLowerCase().startsWith('ent');
@@ -1370,6 +1367,8 @@
                             <td class="small">${m.tipo}</td>
                             <td>${m.deposito}</td>
                             <td class="text-end fw-bold">${isEntry ? '+' : '-'}${m.qtd.toLocaleString('pt-BR')}</td>
+                            <td class="text-end text-nowrap">${formatCurrency(m.vlrUnit)}</td>
+                            <td class="text-end text-nowrap">${formatCurrency(m.vlrTotal)}</td>
                             <td class="small">${m.documento || '-'}</td>
                             <td class="small text-muted">${m.cnpjCentroCusto || '-'}</td>
                         </tr>
@@ -1435,7 +1434,7 @@
 
             const codeInput = $('blindCodeInput');
             const qtyInput = $('blindQtyInput');
-            const code = codeInput.value.trim();
+            const code = normCod(codeInput.value.trim());
             const countedQty = parseFloat(qtyInput.value);
 
             const allStock = getConsolidatedStock();
@@ -1448,9 +1447,18 @@
             }
 
             const sample = productMatches[0];
-            const systemQty = activeDepotFilter === 'ALL'
-                ? productMatches.reduce((s, x) => s + x.saldo, 0)
-                : (productMatches.find(x => x.deposito === activeDepotFilter)?.saldo || 0);
+            let systemQty = 0;
+            let ultimoUnit = 0;
+
+            if (activeDepotFilter === 'ALL') {
+                systemQty = productMatches.reduce((s, x) => s + x.saldo, 0);
+                const comPreco = productMatches.filter(x => x.ultimoVlrUnit > 0);
+                ultimoUnit = comPreco.length > 0 ? comPreco[comPreco.length - 1].ultimoVlrUnit : 0;
+            } else {
+                const depEntry = productMatches.find(x => x.deposito === activeDepotFilter);
+                systemQty = depEntry ? depEntry.saldo : 0;
+                ultimoUnit = depEntry ? depEntry.ultimoVlrUnit : 0;
+            }
 
             const existing = blindInventoryItems.find(i => i.cod === sample.cod);
             if (existing) {
@@ -1459,7 +1467,7 @@
                 blindInventoryItems.push({
                     cod: sample.cod,
                     un: sample.un,
-                    vlrUnit: sample.vlrUnit,
+                    vlrUnit: ultimoUnit,
                     systemQty: systemQty,
                     countedQty: countedQty
                 });
@@ -1512,6 +1520,7 @@
                         <th class="text-end">Saldo Planilha</th>
                         <th class="text-end">Contagem Física</th>
                         <th class="text-end">Diferença</th>
+                        <th class="text-end">Último Vlr. Unit.</th>
                         <th class="text-end">Impacto (R$)</th>
                     </tr>`;
                 tbody.innerHTML = blindInventoryItems.map(item => {
@@ -1527,6 +1536,7 @@
                             <td class="text-end text-muted">${item.systemQty.toLocaleString('pt-BR')} ${item.un}</td>
                             <td class="text-end fw-bold">${item.countedQty.toLocaleString('pt-BR')} ${item.un}</td>
                             <td class="text-end">${diffBadge}</td>
+                            <td class="text-end">${formatCurrency(item.vlrUnit)}</td>
                             <td class="text-end fw-semibold ${financialImpact < 0 ? 'text-danger' : (financialImpact > 0 ? 'text-primary' : 'text-muted')}">
                                 ${formatCurrency(financialImpact)}
                             </td>
@@ -1555,11 +1565,12 @@
         }
 
         function exportBlindCsv() {
-            let csv = "Cod_Produto;Unidade;Saldo_Planilha;Contagem_Fisica;Diferenca;Impacto_Financeiro\n";
+            let csv = "Cod_Produto;Unidade;Saldo_Planilha;Contagem_Fisica;Diferenca;Ultimo_Vlr_Unit;Impacto_Financeiro\n";
             blindInventoryItems.forEach(i => {
                 const diff = i.countedQty - i.systemQty;
+                const unitStr = i.vlrUnit.toFixed(2).replace('.', ',');
                 const impact = (diff * i.vlrUnit).toFixed(2).replace('.', ',');
-                csv += `${i.cod};${i.un};${i.systemQty};${i.countedQty};${diff};${impact}\n`;
+                csv += `${i.cod};${i.un};${i.systemQty};${i.countedQty};${diff};${unitStr};${impact}\n`;
             });
             const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
@@ -1569,7 +1580,7 @@
         }
 
         /**
-         * 8. SUBPÁGINA 4: EXTRATO DE MOVIMENTAÇÕES (COM FUSE.JS)
+         * 8. SUBPÁGINA 4: EXTRATO DE MOVIMENTAÇÕES
          */
         function renderExtratoTable() {
             const searchTerm = $('extratoSearchInput').value.trim();
@@ -1622,12 +1633,21 @@
         }
 
         /**
-         * 9. UTILITÁRIOS DE PARSING E FORMATAÇÃO
+         * 9. UTILITÁRIOS DE NORMALIZAÇÃO, PARSING E FORMATAÇÃO
          */
+        function normHeader(str) {
+            return String(str || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-zA-Z0-9]/g, '')
+                .toLowerCase();
+        }
+
         function getCol(row, candidates) {
             const keys = Object.keys(row);
             for (const c of candidates) {
-                const found = keys.find(k => k.trim().toLowerCase() === c.toLowerCase());
+                const target = normHeader(c);
+                const found = keys.find(k => normHeader(k) === target);
                 if (found !== undefined) return row[found];
             }
             return "";
@@ -1636,6 +1656,11 @@
         function normDep(val) {
             const s = String(val ?? "").trim();
             return /^\d+(\.0+)?$/.test(s) ? String(parseInt(s, 10)) : s;
+        }
+
+        function normCod(val) {
+            const s = String(val ?? "").trim();
+            return /^\d+\.0+$/.test(s) ? String(parseInt(s, 10)) : s;
         }
 
         function parseNumBR(val) {
