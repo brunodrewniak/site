@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Almoxarifado Smart - Controle & Estoque (Google Sheets)</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- SheetJS (Leitura de XLSX publicado do Google Planilhas) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- Fuse.js (Busca aproximada / inteligente) -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+    
+    <!-- HTML5-QRCode Library (Leitura de Câmera) -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #0f172a;
+            --accent-color: #2563eb;
+            --accent-hover: #1d4ed8;
+            --bg-light: #f1f5f9;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --sidebar-width: 260px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        /* ================= TELA DE LOGIN ================= */
+        #login-screen {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .login-card {
+            background: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            max-width: 460px;
+            width: 100%;
+            padding: 2.5rem 2rem;
+        }
+
+        .login-icon-box {
+            width: 64px;
+            height: 64px;
+            background: #eff6ff;
+            color: var(--accent-color);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 1.25rem;
+        }
+
+        /* ================= LAYOUT PRINCIPAL ================= */
+        #app-wrapper {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--primary-color);
+            color: #f8fafc;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1030;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-sidebar .nav-link {
+            color: #cbd5e1;
+            padding: 0.85rem 1.25rem;
+            margin: 0.25rem 0.75rem;
+            border-radius: 0.6rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .nav-sidebar .nav-link.active {
+            background-color: var(--accent-color);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+        }
+
+        .topbar {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.85rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.85rem;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .table-container {
+            background: #ffffff;
+            border-radius: 0.85rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .table-sticky-header {
+            max-height: 560px;
+            overflow-y: auto;
+        }
+
+        .table-sticky-header thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            z-index: 10;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        .table tbody td {
+            font-size: 0.86rem;
+            vertical-align: middle;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 450px;
+            margin: 0 auto;
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+
+        .saldo-destaque {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+
+        .toast-container {
+            z-index: 1090;
+        }
+
+        @media (max-width: 991.98px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .sidebar-backdrop {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.5);
+                z-index: 1025;
+            }
+            .sidebar-backdrop.show {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+    <!-- ===================================================================== -->
+    <!-- 1. TELA DE LOGIN                                                      -->
+    <!-- ===================================================================== -->
+    <section id="login-screen">
+        <div class="login-card">
+            <div class="login-icon-box">
+                <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+            </div>
+            <h4 class="text-center fw-bold mb-1">Controle de Almoxarifado</h4>
+            <p class="text-center text-muted small mb-3">Conectado ao Google Planilhas</p>
+
+            <!-- Status da conexão com Google Sheets -->
+            <div id="sheetSyncStatus" class="alert alert-info py-2 px-3 small text-center mb-3">
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                Carregando dados da planilha Google...
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                    <label for="accessCodeInput" class="form-label fw-semibold small text-uppercase text-secondary">Código ou Número do Depósito</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-qr-code-scan text-primary"></i></span>
+                        <input type="text" class="form-control border-start-0 text-uppercase fw-bold" id="accessCodeInput" placeholder="Ex: GERAL ou Nº Depósito" autocomplete="off" autofocus required>
+                    </div>
+                    <div id="loginErrorMsg" class="text-danger small mt-2 d-none">
+                        <i class="bi bi-exclamation-circle-fill me-1"></i> Depósito não encontrado na planilha. Digite <strong>GERAL</strong> ou um número de depósito válido.
+                    </div>
+                </div>
+
+                <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-lg w-100 fw-semibold rounded-3 shadow-sm mb-4" disabled>
+                    Acessar Painel <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </form>
+
+            <!-- Atalhos Dinâmicos gerados a partir da Planilha -->
+            <div class="border-top pt-3">
+                <p class="text-center text-muted small mb-2 fw-medium">Acesso Rápido (Depósitos detectados):</p>
+                <div class="d-grid gap-2" id="dynamicDepotShortcuts" style="max-height: 200px; overflow-y: auto;">
+                    <button type="button" class="btn btn-outline-dark btn-sm d-flex justify-content-between align-items-center px-3 py-2 rounded-3" onclick="quickLogin('GERAL')">
+                        <span><strong>GERAL</strong> — Visão Gerencial</span>
+                        <span class="badge bg-dark">Todos Depósitos</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 2. DASHBOARD PRINCIPAL (SPA)                                          -->
+    <!-- ===================================================================== -->
+    <div id="app-wrapper">
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-primary rounded-3 p-2 d-flex align-items-center justify-content-center">
+                        <i class="bi bi-boxes text-white fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-white">AlmoxSmart</h6>
+                        <small class="text-secondary" style="font-size: 0.72rem;">Google Sheets Live</small>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-link text-white d-lg-none" onclick="toggleSidebar()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="px-3 py-3 border-bottom border-secondary border-opacity-25">
+                <small class="text-uppercase text-secondary fw-bold d-block mb-1" style="font-size: 0.68rem;">Unidade Conectada</small>
+                <div class="d-flex align-items-center gap-2 text-info fw-semibold small" id="sidebarDepotLabel">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span>Carregando...</span>
+                </div>
+            </div>
+
+            <nav class="nav flex-column nav-sidebar mt-3 flex-grow-1">
+                <a class="nav-link active" data-page="page-kpis" onclick="navigateTo('page-kpis', this)">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Visão Geral & KPIs</span>
+                </a>
+                <a class="nav-link" data-page="page-consulta" onclick="navigateTo('page-consulta', this)">
+                    <i class="bi bi-upc-scan"></i>
+                    <span>Consulta / Cód. Produto</span>
+                </a>
+                <a class="nav-link" data-page="page-inventario" onclick="navigateTo('page-inventario', this)">
+                    <i class="bi bi-clipboard-check"></i>
+                    <span>Inventário às Cegas</span>
+                </a>
+                <a class="nav-link" data-page="page-extrato" onclick="navigateTo('page-extrato', this)">
+                    <i class="bi bi-table"></i>
+                    <span>Extrato Movimentações</span>
+                </a>
+            </nav>
+
+            <div class="p-3 border-top border-secondary border-opacity-25 d-grid gap-2">
+                <button class="btn btn-outline-info btn-sm w-100 rounded-3 d-flex align-items-center justify-content-center gap-2" onclick="carregarDadosGoogleSheets(true)">
+                    <i class="bi bi-arrow-repeat"></i> Atualizar Planilha
+                </button>
+                <button class="btn btn-outline-light btn-sm w-100 rounded-3 d-flex align-items-center justify-content-center gap-2" onclick="logout()">
+                    <i class="bi bi-box-arrow-left"></i> Trocar Depósito / Sair
+                </button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <header class="topbar d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-light border d-lg-none" onclick="toggleSidebar()">
+                        <i class="bi bi-list fs-5"></i>
+                    </button>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-dark" id="pageTitle">Visão Geral & KPIs</h5>
+                        <small class="text-muted d-none d-sm-inline" id="currentDateDisplay"></small>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <div id="depotFilterContainer" class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fs-6 fw-semibold" id="lockedDepotBadge">
+                            <i class="bi bi-lock-fill me-1"></i> Depósito
+                        </span>
+
+                        <select id="globalDepotSelect" class="form-select form-select-sm fw-semibold border-primary d-none" style="min-width: 240px;" onchange="onGlobalDepotChange()">
+                            <option value="ALL">🌐 Todos os Depósitos (Consolidado)</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-outline-primary btn-sm rounded-3 d-inline-flex align-items-center gap-1" onclick="carregarDadosGoogleSheets(true)" title="Recarregar dados do Google Planilhas">
+                        <i class="bi bi-cloud-arrow-down"></i> <span class="d-none d-md-inline">Sincronizar</span>
+                    </button>
+                </div>
+            </header>
+
+            <main class="p-3 p-md-4 flex-grow-1">
+
+                <!-- ========================================================= -->
+                <!-- SUBPÁGINA 1: VISÃO GERAL & KPIs                           -->
+                <!-- ========================================================= -->
+                <div id="page-kpis" class="subpage">
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="kpi-card p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Saldo Financeiro Líquido</p>
+                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalValue">R$ 0,00</h4>
+                                    </div>
+                                    <div class="kpi-icon bg-success-subtle text-success">
+                                        <i class="bi bi-currency-dollar"></i>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block"><i class="bi bi-check-circle text-success"></i> Entradas − Saídas (válidas)</small>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="kpi-card p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Itens Movimentados</p>
+                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalItems">0</h4>
+                                    </div>
+                                    <div class="kpi-icon bg-primary-subtle text-primary">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block" id="kpiTotalUnits">0 unidades em saldo</small>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="kpi-card p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Sem Giro (+30 dias)</p>
+                                        <h4 class="fw-bold mb-0 text-warning" id="kpiStagnantCount">0</h4>
+                                    </div>
+                                    <div class="kpi-icon bg-warning-subtle text-warning">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block" id="kpiStagnantValue">R$ 0,00 parados</small>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="kpi-card p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Lançamentos</p>
+                                        <h4 class="fw-bold mb-0 text-primary" id="kpiMovCount">0</h4>
+                                    </div>
+                                    <div class="kpi-icon bg-info-subtle text-info">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block" id="kpiMovBreakdown">0 entradas / 0 saídas</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Tabela Interativa: Produtos Sem Giro (30 / 60 / 90 dias) -->
+                        <div class="col-12 col-xl-8">
+                            <div class="table-container h-100">
+                                <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white">
+                                    <div>
+                                        <h6 class="fw-bold mb-0"><i class="bi bi-clock-history text-warning me-2"></i>Produtos Sem Giro (Sem Entrada nem Saída)</h6>
+                                        <small class="text-muted">Itens com saldo positivo sem movimentação recente</small>
+                                    </div>
+                                    <div class="btn-group btn-group-sm" role="group" id="stagnantFilterGroup">
+                                        <button type="button" class="btn btn-warning fw-semibold active" onclick="setStagnantDays(30, this)">+30 Dias</button>
+                                        <button type="button" class="btn btn-outline-warning text-dark fw-semibold" onclick="setStagnantDays(60, this)">+60 Dias</button>
+                                        <button type="button" class="btn btn-outline-warning text-dark fw-semibold" onclick="setStagnantDays(90, this)">+90 Dias</button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive" style="max-height: 430px;">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Cód. Produto</th>
+                                                <th>Depósito</th>
+                                                <th class="text-end">Saldo</th>
+                                                <th class="text-end">Valor Estimado</th>
+                                                <th class="text-center">Última Mov.</th>
+                                                <th class="text-center">Dias Parado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stagnantTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Consumo por Centro de Custo / CNPJ -->
+                        <div class="col-12 col-xl-4">
+                            <div class="kpi-card p-3 h-100">
+                                <h6 class="fw-bold mb-1"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Top Saídas por C. Custo / CNPJ</h6>
+                                <p class="text-muted small mb-3">Maiores destinos registrados na planilha</p>
+                                <div id="costCenterContainer" class="d-flex flex-column gap-3" style="max-height: 410px; overflow-y: auto;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- SUBPÁGINA 2: CONSULTA RÁPIDA / CÓDIGO DE BARRAS / CÂMERA  -->
+                <!-- ========================================================= -->
+                <div id="page-consulta" class="subpage d-none">
+                    <div class="row g-4">
+                        <div class="col-12 col-lg-5">
+                            <div class="kpi-card p-4">
+                                <h5 class="fw-bold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Consulta de Produto</h5>
+                                <p class="text-muted small mb-3">Bipe ou digite o <strong>Cód.Produto</strong> (busca inteligente ativa).</p>
+
+                                <form onsubmit="searchProductByInput(event)" class="mb-3">
+                                    <label for="barcodeInput" class="form-label small fw-semibold text-uppercase text-secondary">Código do Produto</label>
+                                    <div class="input-group input-group-lg">
+                                        <input type="text" class="form-control fw-bold" id="barcodeInput" placeholder="Ex: 1001..." autocomplete="off">
+                                        <button class="btn btn-primary px-4" type="submit">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div class="d-grid mb-3">
+                                    <button type="button" class="btn btn-outline-dark fw-semibold py-2 rounded-3" id="btnToggleCamera" onclick="toggleCameraScanner()">
+                                        <i class="bi bi-camera-fill me-2"></i>Ler Código com a Câmera
+                                    </button>
+                                </div>
+
+                                <div id="cameraWrapper" class="d-none mb-3 p-2 bg-dark rounded-3 text-center">
+                                    <div id="reader"></div>
+                                    <small class="text-light d-block mt-2">Aponte a câmera para o código de barras ou QR Code</small>
+                                </div>
+
+                                <div class="border-top pt-3">
+                                    <small class="text-muted fw-semibold d-block mb-2">Amostra de códigos da planilha:</small>
+                                    <div class="d-flex flex-wrap gap-2" id="quickSampleCodes"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-7">
+                            <div id="consultaEmptyState" class="kpi-card p-5 text-center h-100 d-flex flex-column justify-content-center align-items-center">
+                                <div class="bg-light rounded-circle p-4 mb-3 text-secondary">
+                                    <i class="bi bi-upc fs-1"></i>
+                                </div>
+                                <h5 class="fw-bold text-secondary">Aguardando leitura ou código</h5>
+                                <p class="text-muted small mb-0" style="max-width: 360px;">Digite ou bipe o código de um produto para visualizar seu saldo consolidado, valores e histórico.</p>
+                            </div>
+
+                            <div id="consultaResultCard" class="kpi-card p-4 d-none">
+                                <div class="d-flex flex-wrap justify-content-between align-items-start border-bottom pb-3 mb-3 gap-2">
+                                    <div>
+                                        <span class="badge bg-secondary mb-1" id="resProdCode">CÓD: 0000</span>
+                                        <h4 class="fw-bold mb-0 text-dark" id="resProdName">Produto</h4>
+                                        <small class="text-muted" id="resProdUnit">Unidade: UN</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2" id="resDepotContext">Depósito Atual</span>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12 col-sm-6">
+                                        <div class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle">
+                                            <small class="text-primary fw-bold text-uppercase d-block mb-1">Saldo Calculado</small>
+                                            <div class="d-flex align-items-baseline gap-2">
+                                                <span class="saldo-destaque text-primary" id="resStockQty">0</span>
+                                                <span class="fw-bold text-primary fs-5" id="resStockUnit">UN</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <div class="p-3 rounded-3 bg-light border">
+                                            <small class="text-secondary fw-bold text-uppercase d-block mb-1">Valor Estimado</small>
+                                            <h3 class="fw-bold text-dark mb-1" id="resStockTotalVal">R$ 0,00</h3>
+                                            <small class="text-muted" id="resUnitVal">Último Vlr. Unitário: R$ 0,00</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="otherDepotsAlert" class="alert alert-light border d-flex align-items-center justify-content-between py-2 px-3 mb-4">
+                                    <span class="small fw-medium"><i class="bi bi-building me-1 text-primary"></i> Saldo por depósito:</span>
+                                    <span class="small fw-bold" id="otherDepotsText">-</span>
+                                </div>
+
+                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Histórico na Planilha</h6>
+                                <div class="table-responsive border rounded-3" style="max-height: 280px;">
+                                    <table class="table table-sm table-striped mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Data/Hora</th>
+                                                <th>Mov.</th>
+                                                <th>Nº</th>
+                                                <th>Tipo</th>
+                                                <th>Dep.</th>
+                                                <th class="text-end">Qtd.</th>
+                                                <th>Doc.</th>
+                                                <th>CNPJ / C. Custo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="resHistoryBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- SUBPÁGINA 3: INVENTÁRIO ÀS CEGAS                           -->
+                <!-- ========================================================= -->
+                <div id="page-inventario" class="subpage d-none">
+                    <div class="alert alert-info border-info-subtle d-flex align-items-center gap-3 rounded-3 mb-4">
+                        <i class="bi bi-eye-slash-fill fs-3 text-info"></i>
+                        <div>
+                            <h6 class="fw-bold mb-0">Modo de Contagem às Cegas Ativo</h6>
+                            <small>O saldo da planilha fica oculto durante a bipagem. Clique em <strong>"Finalizar e Apurar"</strong> para comparar físico x planilha.</small>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-12 col-lg-4">
+                            <div class="kpi-card p-4">
+                                <h6 class="fw-bold mb-3">Registrar Contagem Física</h6>
+                                <form onsubmit="addBlindCountItem(event)">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Código do Produto</label>
+                                        <input type="text" class="form-control fw-bold" id="blindCodeInput" placeholder="Bipe ou digite o Cód.Produto" required autocomplete="off">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Quantidade Contada Fisicamente</label>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-lg fw-bold text-primary" id="blindQtyInput" placeholder="0" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">
+                                        <i class="bi bi-plus-circle me-1"></i> Adicionar à Contagem
+                                    </button>
+                                </form>
+
+                                <hr class="my-4">
+
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-success fw-bold py-2" id="btnFinishBlind" onclick="finishBlindInventory()" disabled>
+                                        <i class="bi bi-check2-all me-1"></i> Finalizar e Apurar Divergências
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetBlindInventory()">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Limpar Contagem
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-8">
+                            <div class="table-container">
+                                <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-white">
+                                    <div>
+                                        <h6 class="fw-bold mb-0" id="blindTableTitle">Itens Contados nesta Sessão (<span id="blindCountBadge">0</span>)</h6>
+                                        <small class="text-muted" id="blindTableSubtitle">Os saldos da planilha serão revelados após a finalização</small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-success d-none" id="btnExportBlindCsv" onclick="exportBlindCsv()">
+                                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar CSV
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light" id="blindTableHead">
+                                            <tr>
+                                                <th>Cód. Produto</th>
+                                                <th>Un.</th>
+                                                <th class="text-end">Qtd. Contada</th>
+                                                <th class="text-center">Ação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="blindTableBody">
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted py-4">Nenhum item bipado ainda.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- SUBPÁGINA 4: EXTRATO DE MOVIMENTAÇÕES                      -->
+                <!-- ========================================================= -->
+                <div id="page-extrato" class="subpage d-none">
+                    <div class="kpi-card p-3 mb-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-12 col-md-5">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="extratoSearchInput" placeholder="Busca inteligente (Cód, Nº, Doc, CNPJ, Tipo, Obs)..." oninput="renderExtratoTable()">
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <select class="form-select form-select-sm" id="extratoTypeFilter" onchange="renderExtratoTable()">
+                                    <option value="ALL">Entradas e Saídas</option>
+                                    <option value="Entrada">Somente Entradas</option>
+                                    <option value="Saída">Somente Saídas</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4 text-md-end">
+                                <span class="badge bg-light text-dark border py-2 px-3" id="extratoCountLabel">0 registros</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <div class="table-responsive table-sticky-header">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Mov.</th>
+                                        <th>Nº</th>
+                                        <th>Data / Hora</th>
+                                        <th>Tipo</th>
+                                        <th>Estado</th>
+                                        <th>Depósito</th>
+                                        <th>Nome do Depósito</th>
+                                        <th>Cód.Produto</th>
+                                        <th>Un.</th>
+                                        <th class="text-end">Qtd.</th>
+                                        <th class="text-end">Vlr. unit.</th>
+                                        <th class="text-end">Vlr. total</th>
+                                        <th>Documento</th>
+                                        <th>CNPJ / C. Custo</th>
+                                        <th>Observação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="extratoTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ===================================================================== -->
+    <!-- LÓGICA JAVASCRIPT CONECTADA AO GOOGLE PLANILHAS                       -->
+    <!-- ===================================================================== -->
+    <script>
+        const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRWiRG_thI_ZW6oaD4uveXFc_2HhUfDy3_3E81sEPj3Udyo03RcY2IIE7sb98uZKQjpumCZXH4UcHil/pub?output=xlsx";
+        const $ = id => document.getElementById(id);
+
+        // Estruturas de Dados em Memória
+        let movimentacoes = [];
+        let baseInicialEstoque = []; // Suporta eventual aba "SaldoInicial" ou "Cadastro" na planilha
+        let depositosMap = new Map(); // depositoId -> nomeAmigavel
+        let fuseExtrato = null;
+        let fuseProdutos = null;
+
+        // Estado da Sessão e UI
+        let currentSession = null;
+        let activeDepotFilter = 'ALL';
+        let stagnantDaysThreshold = 30;
+        let html5QrcodeScanner = null;
+        let isCameraRunning = false;
+        let blindInventoryItems = [];
+        let isBlindFinished = false;
+        const LIMITE_EXTRATO = 500;
+
+        /**
+         * 1. INICIALIZAÇÃO E LEITURA DA PLANILHA PUBLICADA (XLSX)
+         */
+        window.addEventListener('DOMContentLoaded', async () => {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            $('currentDateDisplay').textContent = new Date().toLocaleDateString('pt-BR', options);
+
+            await carregarDadosGoogleSheets(false);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlCod = urlParams.get('cod');
+            if (urlCod) {
+                loginWithCode(urlCod.trim().toUpperCase());
+                return;
+            }
+
+            const savedSession = sessionStorage.getItem('almox_session_gs');
+            if (savedSession && movimentacoes.length > 0) {
+                currentSession = JSON.parse(savedSession);
+                initDashboard();
+            }
+        });
+
+        async function carregarDadosGoogleSheets(isManualRefresh = false) {
+            const statusEl = $('sheetSyncStatus');
+            const btnLogin = $('btnLoginSubmit');
+
+            if (isManualRefresh) {
+                showToast('Sincronizando dados com Google Planilhas...', 'info');
+            }
+
+            try {
+                // Adiciona timestamp para evitar cache antigo do navegador
+                const urlNoCache = `${PUB_XLSX_URL}&t=${Date.now()}`;
+                const response = await fetch(urlNoCache);
+                if (!response.ok) throw new Error(`HTTP ${response.status} ao acessar a planilha.`);
+
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+
+                // Procura a aba principal de movimentação
+                const sheetName = workbook.SheetNames.find(n => /moviment/i.test(n)) || workbook.SheetNames[0];
+                const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
+
+                // Verifica se existe alguma aba opcional de Saldo Inicial / Cadastro de Produtos
+                const initSheetName = workbook.SheetNames.find(n => /saldo|inicial|cadastro|produto/i.test(n));
+                const rawInitRows = initSheetName ? XLSX.utils.sheet_to_json(workbook.Sheets[initSheetName], { defval: "" }) : [];
+
+                processarLinhasPlanilha(rawRows, rawInitRows);
+
+                if (statusEl) {
+                    statusEl.className = "alert alert-success py-2 px-3 small text-center mb-3";
+                    statusEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Planilha conectada: <strong>${movimentacoes.length.toLocaleString('pt-BR')}</strong> registros carregados.`;
+                }
+                if (btnLogin) btnLogin.disabled = false;
+
+                renderDynamicLoginShortcuts();
+                populateGlobalDepotSelect();
+
+                if (currentSession) {
+                    refreshAllViews();
+                }
+                if (isManualRefresh) {
+                    showToast(`Planilha atualizada! ${movimentacoes.length} lançamentos carregados.`, 'success');
+                }
+            } catch (err) {
+                console.error("Erro ao ler planilha Google:", err);
+                if (statusEl) {
+                    statusEl.className = "alert alert-danger py-2 px-3 small text-center mb-3";
+                    statusEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i> Erro ao conectar: ${err.message}`;
+                }
+                if (isManualRefresh) {
+                    showToast('Falha ao atualizar planilha: ' + err.message, 'danger');
+                }
+            }
+        }
+
+        function processarLinhasPlanilha(rawRows, rawInitRows) {
+            depositosMap.clear();
+            baseInicialEstoque = [];
+
+            // Processa aba opcional de saldo inicial caso o usuário crie no futuro
+            rawInitRows.forEach(r => {
+                const dep = normDep(getCol(r, ['Depósito', 'Deposito']));
+                const cod = String(getCol(r, ['Cód.Produto', 'Cod.Produto', 'Código', 'Codigo'])).trim();
+                if (!cod) return;
+                const depNome = String(getCol(r, ['Nome do Depósito', 'Nome Deposito'])).trim();
+                if (dep && depNome) depositosMap.set(dep, depNome);
+
+                baseInicialEstoque.push({
+                    deposito: dep || '0',
+                    depositoNome: depNome || (dep ? `Depósito ${dep}` : 'Geral'),
+                    cod: cod,
+                    produto: String(getCol(r, ['Produto', 'Descrição', 'Descricao'])).trim() || `Produto ${cod}`,
+                    un: String(getCol(r, ['Un.', 'Un', 'Unidade'])).trim() || 'UN',
+                    qtdInicial: parseNumBR(getCol(r, ['Qtd.', 'Qtd', 'Saldo', 'Quantidade'])),
+                    vlrUnit: parseNumBR(getCol(r, ['Vlr. unit.', 'Vlr. Unit.', 'Valor Unitário'])),
+                    estoqueMin: parseNumBR(getCol(r, ['Estoque Min', 'Minimo']))
+                });
+            });
+
+            // Processa as 15 colunas geradas pelo Apps Script
+            movimentacoes = rawRows.map(r => {
+                const movRaw = String(getCol(r, ['Mov.', 'Mov', 'Movimento'])).trim();
+                const num = String(getCol(r, ['Nº', 'No', 'Numero', 'Número'])).trim();
+                const dataHoraRaw = getCol(r, ['Data / Hora', 'Data/Hora', 'Data']);
+                const dataHoraObj = parseDataHoraFlex(dataHoraRaw);
+                const dataHoraStr = formatDateTimeBR(dataHoraObj, dataHoraRaw);
+
+                const tipo = String(getCol(r, ['Tipo'])).trim();
+                const estado = String(getCol(r, ['Estado'])).trim() || 'Normal';
+                const deposito = normDep(getCol(r, ['Depósito', 'Deposito']));
+                const nomeDepPlanilha = String(getCol(r, ['Nome do Depósito', 'Nome Deposito'])).trim();
+
+                if (deposito) {
+                    if (nomeDepPlanilha) {
+                        depositosMap.set(deposito, nomeDepPlanilha);
+                    } else if (!depositosMap.has(deposito)) {
+                        depositosMap.set(deposito, `Depósito ${deposito}`);
+                    }
+                }
+
+                const codProduto = String(getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cód.', 'Código'])).trim();
+                const un = String(getCol(r, ['Un.', 'Un'])).trim() || 'UN';
+                const qtd = parseNumBR(getCol(r, ['Qtd.', 'Qtd']));
+                const vlrUnit = parseNumBR(getCol(r, ['Vlr. unit.', 'Vlr. Unit.']));
+                const vlrTotal = parseNumBR(getCol(r, ['Vlr. total', 'Vlr. Total'])) || (qtd * vlrUnit);
+                const documento = String(getCol(r, ['Documento'])).trim();
+                const cnpjCentroCusto = String(getCol(r, ['CNPJ / C. Custo', 'CNPJ / C.Custo'])).trim();
+                const observacao = String(getCol(r, ['Observação', 'Observacao'])).trim();
+
+                return {
+                    mov: movRaw, // "Entrada" ou "Saída"
+                    num: num,
+                    dataHora: dataHoraStr,
+                    dataObj: dataHoraObj,
+                    tipo: tipo,
+                    estado: estado,
+                    deposito: deposito || '0',
+                    depositoNome: nomeDepPlanilha || (deposito ? `Depósito ${deposito}` : 'Sem Depósito'),
+                    cod: codProduto,
+                    produto: `Cód. ${codProduto}`, // Como a planilha traz apenas Cód.Produto
+                    un: un,
+                    qtd: qtd,
+                    vlrUnit: vlrUnit,
+                    vlrTotal: vlrTotal,
+                    documento: documento,
+                    cnpjCentroCusto: cnpjCentroCusto,
+                    observacao: observacao
+                };
+            }).filter(m => m.cod || m.mov);
+
+            // Ordena do mais recente para o mais antigo
+            movimentacoes.sort((a, b) => (b.dataObj?.getTime() || 0) - (a.dataObj?.getTime() || 0));
+
+            // Inicializa Fuse.js para buscas rápidas no Extrato e Consulta
+            if (typeof Fuse !== 'undefined') {
+                fuseExtrato = new Fuse(movimentacoes, {
+                    keys: ['cod', 'num', 'documento', 'cnpjCentroCusto', 'tipo', 'observacao', 'deposito', 'depositoNome'],
+                    threshold: 0.3,
+                    ignoreLocation: true
+                });
+            }
+        }
+
+        function renderDynamicLoginShortcuts() {
+            const container = $('dynamicDepotShortcuts');
+            let html = `
+                <button type="button" class="btn btn-outline-dark btn-sm d-flex justify-content-between align-items-center px-3 py-2 rounded-3" onclick="quickLogin('GERAL')">
+                    <span><strong>GERAL</strong> — Visão Gerencial</span>
+                    <span class="badge bg-dark">Todos (${depositosMap.size} dep.)</span>
+                </button>
+            `;
+
+            const sortedDeps = Array.from(depositosMap.entries()).sort((a, b) => Number(a[0]) - Number(b[0]));
+            sortedDeps.forEach(([id, nome]) => {
+                html += `
+                    <button type="button" class="btn btn-outline-secondary btn-sm d-flex justify-content-between align-items-center px-3 py-2 rounded-3" onclick="quickLogin('${id}')">
+                        <span><strong class="text-dark">${id}</strong> — ${nome}</span>
+                        <span class="badge bg-primary-subtle text-primary">Restrito</span>
+                    </button>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function populateGlobalDepotSelect() {
+            const select = $('globalDepotSelect');
+            let html = `<option value="ALL">🌐 Todos os Depósitos (${depositosMap.size})</option>`;
+            const sortedDeps = Array.from(depositosMap.entries()).sort((a, b) => Number(a[0]) - Number(b[0]));
+            sortedDeps.forEach(([id, nome]) => {
+                html += `<option value="${id}">📦 ${id} - ${nome}</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        /**
+         * 2. AUTENTICAÇÃO E CONTROLE DE DEPÓSITO
+         */
+        function handleLogin(e) {
+            e.preventDefault();
+            const code = $('accessCodeInput').value.trim().toUpperCase();
+            loginWithCode(code);
+        }
+
+        function quickLogin(code) {
+            $('accessCodeInput').value = code;
+            loginWithCode(code);
+        }
+
+        function loginWithCode(code) {
+            const errorEl = $('loginErrorMsg');
+            const normCode = normDep(code);
+
+            if (code === 'GERAL' || code === 'ADMIN' || code === 'TODOS') {
+                errorEl.classList.add('d-none');
+                currentSession = { code: 'GERAL', depotId: 'ALL', label: 'Visão Gerencial (Todos)', isMaster: true };
+                sessionStorage.setItem('almox_session_gs', JSON.stringify(currentSession));
+                initDashboard();
+            } else if (depositosMap.has(normCode)) {
+                errorEl.classList.add('d-none');
+                const depNome = depositosMap.get(normCode);
+                currentSession = { code: normCode, depotId: normCode, label: `${normCode} - ${depNome}`, isMaster: false };
+                sessionStorage.setItem('almox_session_gs', JSON.stringify(currentSession));
+                initDashboard();
+            } else {
+                errorEl.classList.remove('d-none');
+                $('accessCodeInput').focus();
+            }
+        }
+
+        function logout() {
+            stopCameraIfRunning();
+            sessionStorage.removeItem('almox_session_gs');
+            currentSession = null;
+            $('app-wrapper').style.display = 'none';
+            $('login-screen').style.display = 'flex';
+            $('accessCodeInput').value = '';
+            $('accessCodeInput').focus();
+        }
+
+        function initDashboard() {
+            $('login-screen').style.display = 'none';
+            $('app-wrapper').style.display = 'block';
+
+            const sidebarLabel = $('sidebarDepotLabel');
+            const lockedBadge = $('lockedDepotBadge');
+            const globalSelect = $('globalDepotSelect');
+
+            sidebarLabel.innerHTML = `<i class="bi bi-geo-alt-fill"></i> <span>${currentSession.label}</span>`;
+
+            if (currentSession.isMaster) {
+                lockedBadge.classList.add('d-none');
+                globalSelect.classList.remove('d-none');
+                globalSelect.value = 'ALL';
+                activeDepotFilter = 'ALL';
+            } else {
+                globalSelect.classList.add('d-none');
+                lockedBadge.classList.remove('d-none');
+                lockedBadge.innerHTML = `<i class="bi bi-lock-fill me-1"></i> ${currentSession.label}`;
+                activeDepotFilter = currentSession.depotId;
+            }
+
+            renderQuickSampleCodes();
+            refreshAllViews();
+        }
+
+        function onGlobalDepotChange() {
+            activeDepotFilter = $('globalDepotSelect').value;
+            refreshAllViews();
+            const label = activeDepotFilter === 'ALL' ? 'Todos os Depósitos' : `Depósito ${activeDepotFilter}`;
+            showToast(`Visualizando: ${label}`, 'primary');
+        }
+
+        /**
+         * 3. NAVEGAÇÃO SPA
+         */
+        function navigateTo(pageId, navElement) {
+            stopCameraIfRunning();
+
+            document.querySelectorAll('.nav-sidebar .nav-link').forEach(el => el.classList.remove('active'));
+            if (navElement) navElement.classList.add('active');
+
+            document.querySelectorAll('.subpage').forEach(page => page.classList.add('d-none'));
+            $(pageId).classList.remove('d-none');
+
+            const titles = {
+                'page-kpis': 'Visão Geral & KPIs',
+                'page-consulta': 'Consulta / Cód. Produto',
+                'page-inventario': 'Inventário às Cegas',
+                'page-extrato': 'Extrato Movimentações'
+            };
+            $('pageTitle').textContent = titles[pageId] || 'Dashboard';
+
+            $('sidebar').classList.remove('show');
+            $('sidebarBackdrop').classList.remove('show');
+
+            if (pageId === 'page-consulta') {
+                setTimeout(() => $('barcodeInput').focus(), 150);
+            } else if (pageId === 'page-inventario') {
+                setTimeout(() => $('blindCodeInput').focus(), 150);
+            }
+        }
+
+        function toggleSidebar() {
+            $('sidebar').classList.toggle('show');
+            $('sidebarBackdrop').classList.toggle('show');
+        }
+
+        /**
+         * 4. MOTOR DE CÁLCULO DE SALDO POR PRODUTO E DEPÓSITO
+         */
+        function getConsolidatedStock() {
+            const today = new Date();
+            const stockMap = new Map();
+
+            // 1. Carrega eventual saldo inicial (se existir aba auxiliar)
+            baseInicialEstoque.forEach(item => {
+                const key = `${item.deposito}_${item.cod}`;
+                stockMap.set(key, {
+                    deposito: item.deposito,
+                    depositoNome: item.depositoNome,
+                    cod: item.cod,
+                    produto: item.produto,
+                    un: item.un,
+                    saldo: Number(item.qtdInicial || 0),
+                    vlrUnit: Number(item.vlrUnit || 0),
+                    lastMovDate: null,
+                    daysWithoutMov: 999
+                });
+            });
+
+            // 2. Processa movimentações em ordem cronológica (do mais antigo para o mais recente)
+            const movsCronologicas = [...movimentacoes].reverse();
+
+            movsCronologicas.forEach(m => {
+                // Ignora movimentações estornadas totalmente
+                if (m.estado && m.estado.toLowerCase().includes('estornada total')) return;
+
+                const key = `${m.deposito}_${m.cod}`;
+                if (!stockMap.has(key)) {
+                    stockMap.set(key, {
+                        deposito: m.deposito,
+                        depositoNome: m.depositoNome,
+                        cod: m.cod,
+                        produto: m.produto,
+                        un: m.un,
+                        saldo: 0,
+                        vlrUnit: Number(m.vlrUnit || 0),
+                        lastMovDate: null,
+                        daysWithoutMov: 999
+                    });
+                }
+
+                const entry = stockMap.get(key);
+                const qtd = Number(m.qtd || 0);
+                const movLower = m.mov.toLowerCase();
+
+                if (movLower.startsWith('ent') || movLower === 'e') {
+                    entry.saldo += qtd;
+                    if (m.vlrUnit > 0) entry.vlrUnit = Number(m.vlrUnit);
+                } else if (movLower.startsWith('sa') || movLower === 's') {
+                    entry.saldo -= qtd;
+                    if (entry.vlrUnit === 0 && m.vlrUnit > 0) entry.vlrUnit = Number(m.vlrUnit);
+                }
+
+                if (m.dataObj) {
+                    if (!entry.lastMovDate || m.dataObj > entry.lastMovDate.obj) {
+                        const diffDays = Math.max(0, Math.floor((today - m.dataObj) / (1000 * 60 * 60 * 24)));
+                        entry.lastMovDate = { str: m.dataHora.split(' ')[0], obj: m.dataObj };
+                        entry.daysWithoutMov = diffDays;
+                    }
+                }
+            });
+
+            const list = Array.from(stockMap.values());
+            if (typeof Fuse !== 'undefined') {
+                fuseProdutos = new Fuse(list, {
+                    keys: ['cod', 'produto', 'depositoNome'],
+                    threshold: 0.25
+                });
+            }
+            return list;
+        }
+
+        function refreshAllViews() {
+            renderKPIsAndStagnant();
+            renderExtratoTable();
+            const currentResCode = $('resProdCode').dataset.code;
+            if (currentResCode && !$('consultaResultCard').classList.contains('d-none')) {
+                displayProductDetails(currentResCode);
+            }
+        }
+
+        /**
+         * 5. SUBPÁGINA 1: KPIs & PRODUTOS SEM GIRO
+         */
+        function renderKPIsAndStagnant() {
+            const allStock = getConsolidatedStock();
+            const filteredStock = activeDepotFilter === 'ALL'
+                ? allStock
+                : allStock.filter(item => item.deposito === activeDepotFilter);
+
+            let totalValue = 0;
+            let totalUnits = 0;
+            let stagnant30Count = 0;
+            let stagnant30Value = 0;
+
+            filteredStock.forEach(item => {
+                if (item.saldo > 0) {
+                    const itemVal = item.saldo * item.vlrUnit;
+                    totalValue += itemVal;
+                    totalUnits += item.saldo;
+
+                    if (item.daysWithoutMov >= 30 && item.daysWithoutMov < 999) {
+                        stagnant30Count++;
+                        stagnant30Value += itemVal;
+                    }
+                }
+            });
+
+            // Contagem de lançamentos no escopo ativo
+            const scopedMovs = movimentacoes.filter(m => activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter);
+            const qtdEntradas = scopedMovs.filter(m => m.mov.toLowerCase().startsWith('ent')).length;
+            const qtdSaidas = scopedMovs.filter(m => m.mov.toLowerCase().startsWith('sa')).length;
+
+            $('kpiTotalValue').textContent = formatCurrency(totalValue);
+            $('kpiTotalItems').textContent = filteredStock.length.toLocaleString('pt-BR');
+            $('kpiTotalUnits').textContent = `${totalUnits.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} unidades em saldo`;
+            $('kpiStagnantCount').textContent = stagnant30Count.toLocaleString('pt-BR');
+            $('kpiStagnantValue').textContent = `${formatCurrency(stagnant30Value)} parados`;
+            $('kpiMovCount').textContent = scopedMovs.length.toLocaleString('pt-BR');
+            $('kpiMovBreakdown').textContent = `${qtdEntradas} entradas / ${qtdSaidas} saídas`;
+
+            // Tabela Sem Giro
+            const stagnantItems = filteredStock
+                .filter(item => item.saldo > 0 && item.daysWithoutMov >= stagnantDaysThreshold && item.daysWithoutMov < 999)
+                .sort((a, b) => b.daysWithoutMov - a.daysWithoutMov)
+                .slice(0, 100);
+
+            const tbody = $('stagnantTableBody');
+            if (stagnantItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Nenhum item com saldo positivo parado há mais de ${stagnantDaysThreshold} dias.</td></tr>`;
+            } else {
+                tbody.innerHTML = stagnantItems.map(item => {
+                    const badgeColor = item.daysWithoutMov >= 90 ? 'bg-danger' : (item.daysWithoutMov >= 60 ? 'bg-warning text-dark' : 'bg-secondary');
+                    return `
+                        <tr>
+                            <td class="fw-bold text-primary">${item.cod}</td>
+                            <td><span class="badge bg-light text-dark border">${item.deposito} - ${item.depositoNome}</span></td>
+                            <td class="text-end fw-bold">${item.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${item.un}</td>
+                            <td class="text-end text-danger fw-semibold">${formatCurrency(item.saldo * item.vlrUnit)}</td>
+                            <td class="text-center text-muted small">${item.lastMovDate ? item.lastMovDate.str : '-'}</td>
+                            <td class="text-center"><span class="badge ${badgeColor}">${item.daysWithoutMov} dias</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            renderCostCenterChart();
+        }
+
+        function setStagnantDays(days, btnEl) {
+            stagnantDaysThreshold = days;
+            document.querySelectorAll('#stagnantFilterGroup button').forEach(b => {
+                b.classList.remove('btn-warning', 'active');
+                b.classList.add('btn-outline-warning', 'text-dark');
+            });
+            btnEl.classList.remove('btn-outline-warning', 'text-dark');
+            btnEl.classList.add('btn-warning', 'active');
+            renderKPIsAndStagnant();
+        }
+
+        function renderCostCenterChart() {
+            const filteredMovs = movimentacoes.filter(m => {
+                const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
+                const isSaida = m.mov.toLowerCase().startsWith('sa');
+                const validState = !m.estado.toLowerCase().includes('estornada total');
+                return matchDepot && isSaida && validState;
+            });
+
+            const ccTotals = {};
+            let grandTotal = 0;
+
+            filteredMovs.forEach(m => {
+                const cc = m.cnpjCentroCusto || 'Não Informado';
+                const val = Number(m.vlrTotal || 0);
+                ccTotals[cc] = (ccTotals[cc] || 0) + val;
+                grandTotal += val;
+            });
+
+            const sortedCC = Object.entries(ccTotals).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            const container = $('costCenterContainer');
+
+            if (sortedCC.length === 0) {
+                container.innerHTML = `<p class="text-muted small text-center my-4">Nenhuma saída registrada para este filtro.</p>`;
+                return;
+            }
+
+            container.innerHTML = sortedCC.map(([name, total]) => {
+                const pct = grandTotal > 0 ? Math.max(1, Math.round((total / grandTotal) * 100)) : 0;
+                return `
+                    <div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="fw-semibold text-truncate" style="max-width: 62%;" title="${name}">${name}</span>
+                            <span class="fw-bold text-dark">${formatCurrency(total)} <span class="text-muted fw-normal">(${pct}%)</span></span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * 6. SUBPÁGINA 2: CONSULTA RÁPIDA, FUSE.JS E CÂMERA
+         */
+        function renderQuickSampleCodes() {
+            const uniqueCodes = [...new Set(movimentacoes.map(i => i.cod).filter(Boolean))].slice(0, 12);
+            const container = $('quickSampleCodes');
+            container.innerHTML = uniqueCodes.map(cod => `
+                <button type="button" class="btn btn-sm btn-light border fw-semibold" onclick="triggerSampleLookup('${cod}')">
+                    <i class="bi bi-upc me-1 text-muted"></i>${cod}
+                </button>
+            `).join('');
+        }
+
+        function triggerSampleLookup(cod) {
+            $('barcodeInput').value = cod;
+            displayProductDetails(cod);
+        }
+
+        function searchProductByInput(e) {
+            e.preventDefault();
+            const input = $('barcodeInput');
+            const code = input.value.trim();
+            if (!code) return;
+            displayProductDetails(code);
+            input.select();
+        }
+
+        function displayProductDetails(query) {
+            const allStock = getConsolidatedStock();
+            let matches = allStock.filter(item => item.cod.toLowerCase() === query.toLowerCase());
+
+            // Fallback com Fuse.js caso não ache correspondência exata
+            if (matches.length === 0 && fuseProdutos) {
+                const fuzzy = fuseProdutos.search(query);
+                if (fuzzy.length > 0) {
+                    const bestCod = fuzzy[0].item.cod;
+                    matches = allStock.filter(item => item.cod === bestCod);
+                }
+            }
+
+            if (matches.length === 0) {
+                showToast(`Produto "${query}" não encontrado na planilha.`, 'warning');
+                return;
+            }
+
+            $('consultaEmptyState').classList.add('d-none');
+            $('consultaResultCard').classList.remove('d-none');
+
+            const sampleItem = matches[0];
+            const resCodeEl = $('resProdCode');
+            resCodeEl.textContent = `CÓD. PRODUTO: ${sampleItem.cod}`;
+            resCodeEl.dataset.code = sampleItem.cod;
+
+            $('resProdName').textContent = `Produto Cód. ${sampleItem.cod}`;
+            $('resProdUnit').textContent = `Unidade: ${sampleItem.un}`;
+
+            let scopedQty = 0;
+            let scopedVal = 0;
+            let depotLabel = '';
+
+            if (activeDepotFilter === 'ALL') {
+                scopedQty = matches.reduce((acc, m) => acc + m.saldo, 0);
+                scopedVal = matches.reduce((acc, m) => acc + (m.saldo * m.vlrUnit), 0);
+                depotLabel = 'Todos os Depósitos';
+            } else {
+                const targetDepot = matches.find(m => m.deposito === activeDepotFilter);
+                scopedQty = targetDepot ? targetDepot.saldo : 0;
+                scopedVal = targetDepot ? (targetDepot.saldo * targetDepot.vlrUnit) : 0;
+                depotLabel = currentSession.label;
+            }
+
+            $('resDepotContext').textContent = depotLabel;
+            $('resStockQty').textContent = scopedQty.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+            $('resStockUnit').textContent = sampleItem.un;
+            $('resStockTotalVal').textContent = formatCurrency(scopedVal);
+            $('resUnitVal').textContent = `Último Vlr. Unitário: ${formatCurrency(sampleItem.vlrUnit)}`;
+
+            const otherDepotsInfo = matches
+                .map(m => `Dep. ${m.deposito}: <strong>${m.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${m.un}</strong>`)
+                .join(' | ');
+
+            $('otherDepotsText').innerHTML = otherDepotsInfo || '-';
+
+            const itemMovs = movimentacoes.filter(m => {
+                const matchCode = m.cod === sampleItem.cod;
+                const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
+                return matchCode && matchDepot;
+            });
+
+            const histBody = $('resHistoryBody');
+            if (itemMovs.length === 0) {
+                histBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-3">Sem movimentações para este depósito.</td></tr>`;
+            } else {
+                histBody.innerHTML = itemMovs.map(m => {
+                    const isEntry = m.mov.toLowerCase().startsWith('ent');
+                    return `
+                        <tr>
+                            <td class="small text-nowrap">${m.dataHora}</td>
+                            <td><span class="badge ${isEntry ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">${m.mov}</span></td>
+                            <td class="fw-semibold">${m.num}</td>
+                            <td class="small">${m.tipo}</td>
+                            <td>${m.deposito}</td>
+                            <td class="text-end fw-bold">${isEntry ? '+' : '-'}${m.qtd.toLocaleString('pt-BR')}</td>
+                            <td class="small">${m.documento || '-'}</td>
+                            <td class="small text-muted">${m.cnpjCentroCusto || '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        function toggleCameraScanner() {
+            if (isCameraRunning) stopCameraIfRunning();
+            else startCameraScanner();
+        }
+
+        function startCameraScanner() {
+            const wrapper = $('cameraWrapper');
+            const btn = $('btnToggleCamera');
+            wrapper.classList.remove('d-none');
+            btn.innerHTML = `<i class="bi bi-stop-circle-fill me-2 text-danger"></i>Fechar Câmera`;
+
+            try {
+                html5QrcodeScanner = new Html5Qrcode("reader");
+                html5QrcodeScanner.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (decodedText) => {
+                        $('barcodeInput').value = decodedText;
+                        displayProductDetails(decodedText);
+                        showToast(`Código lido: ${decodedText}`, 'success');
+                        stopCameraIfRunning();
+                    },
+                    () => {}
+                ).catch(() => {
+                    showToast('Não foi possível acessar a câmera.', 'warning');
+                    stopCameraIfRunning();
+                });
+                isCameraRunning = true;
+            } catch (e) {
+                showToast('Leitor de câmera indisponível.', 'danger');
+                stopCameraIfRunning();
+            }
+        }
+
+        function stopCameraIfRunning() {
+            const wrapper = $('cameraWrapper');
+            const btn = $('btnToggleCamera');
+            wrapper.classList.add('d-none');
+            btn.innerHTML = `<i class="bi bi-camera-fill me-2"></i>Ler Código com a Câmera`;
+            if (html5QrcodeScanner && isCameraRunning) {
+                html5QrcodeScanner.stop().then(() => html5QrcodeScanner.clear()).catch(() => {});
+            }
+            isCameraRunning = false;
+        }
+
+        /**
+         * 7. SUBPÁGINA 3: INVENTÁRIO ÀS CEGAS
+         */
+        function addBlindCountItem(e) {
+            e.preventDefault();
+            if (isBlindFinished) {
+                showToast('A contagem já foi finalizada. Clique em "Limpar Contagem".', 'warning');
+                return;
+            }
+
+            const codeInput = $('blindCodeInput');
+            const qtyInput = $('blindQtyInput');
+            const code = codeInput.value.trim();
+            const countedQty = parseFloat(qtyInput.value);
+
+            const allStock = getConsolidatedStock();
+            const productMatches = allStock.filter(i => i.cod.toLowerCase() === code.toLowerCase());
+
+            if (productMatches.length === 0) {
+                showToast(`Código "${code}" não encontrado na planilha.`, 'danger');
+                codeInput.select();
+                return;
+            }
+
+            const sample = productMatches[0];
+            const systemQty = activeDepotFilter === 'ALL'
+                ? productMatches.reduce((s, x) => s + x.saldo, 0)
+                : (productMatches.find(x => x.deposito === activeDepotFilter)?.saldo || 0);
+
+            const existing = blindInventoryItems.find(i => i.cod === sample.cod);
+            if (existing) {
+                existing.countedQty += countedQty;
+            } else {
+                blindInventoryItems.push({
+                    cod: sample.cod,
+                    un: sample.un,
+                    vlrUnit: sample.vlrUnit,
+                    systemQty: systemQty,
+                    countedQty: countedQty
+                });
+            }
+
+            codeInput.value = '';
+            qtyInput.value = '';
+            codeInput.focus();
+
+            renderBlindTable();
+            showToast(`Contagem registrada: Cód. ${sample.cod}`, 'success');
+        }
+
+        function removeBlindItem(index) {
+            blindInventoryItems.splice(index, 1);
+            renderBlindTable();
+        }
+
+        function renderBlindTable() {
+            const tbody = $('blindTableBody');
+            const thead = $('blindTableHead');
+            const badge = $('blindCountBadge');
+            const btnFinish = $('btnFinishBlind');
+
+            badge.textContent = blindInventoryItems.length;
+            btnFinish.disabled = blindInventoryItems.length === 0 || isBlindFinished;
+
+            if (blindInventoryItems.length === 0) {
+                thead.innerHTML = `<tr><th>Cód. Produto</th><th>Un.</th><th class="text-end">Qtd. Contada</th><th class="text-center">Ação</th></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Nenhum item bipado ainda.</td></tr>`;
+                return;
+            }
+
+            if (!isBlindFinished) {
+                thead.innerHTML = `<tr><th>Cód. Produto</th><th>Un.</th><th class="text-end">Qtd. Contada</th><th class="text-center">Ação</th></tr>`;
+                tbody.innerHTML = blindInventoryItems.map((item, idx) => `
+                    <tr>
+                        <td class="fw-bold text-primary">${item.cod}</td>
+                        <td>${item.un}</td>
+                        <td class="text-end fw-bold fs-6">${item.countedQty}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeBlindItem(${idx})"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Cód. Produto</th>
+                        <th class="text-end">Saldo Planilha</th>
+                        <th class="text-end">Contagem Física</th>
+                        <th class="text-end">Diferença</th>
+                        <th class="text-end">Impacto (R$)</th>
+                    </tr>`;
+                tbody.innerHTML = blindInventoryItems.map(item => {
+                    const diff = item.countedQty - item.systemQty;
+                    const financialImpact = diff * item.vlrUnit;
+                    let diffBadge = `<span class="badge bg-success-subtle text-success">OK (0)</span>`;
+                    if (diff > 0) diffBadge = `<span class="badge bg-primary">+${diff.toLocaleString('pt-BR')} (Sobra)</span>`;
+                    if (diff < 0) diffBadge = `<span class="badge bg-danger">${diff.toLocaleString('pt-BR')} (Falta)</span>`;
+
+                    return `
+                        <tr>
+                            <td class="fw-bold">${item.cod}</td>
+                            <td class="text-end text-muted">${item.systemQty.toLocaleString('pt-BR')} ${item.un}</td>
+                            <td class="text-end fw-bold">${item.countedQty.toLocaleString('pt-BR')} ${item.un}</td>
+                            <td class="text-end">${diffBadge}</td>
+                            <td class="text-end fw-semibold ${financialImpact < 0 ? 'text-danger' : (financialImpact > 0 ? 'text-primary' : 'text-muted')}">
+                                ${formatCurrency(financialImpact)}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        function finishBlindInventory() {
+            isBlindFinished = true;
+            $('blindTableTitle').innerHTML = `<i class="bi bi-clipboard-data text-success me-2"></i>Resultado da Auditoria de Inventário`;
+            $('blindTableSubtitle').textContent = `Comparativo entre saldo da planilha e contagem física`;
+            $('btnExportBlindCsv').classList.remove('d-none');
+            renderBlindTable();
+            showToast('Apuração concluída!', 'info');
+        }
+
+        function resetBlindInventory() {
+            blindInventoryItems = [];
+            isBlindFinished = false;
+            $('blindTableTitle').innerHTML = `Itens Contados nesta Sessão (<span id="blindCountBadge">0</span>)`;
+            $('blindTableSubtitle').textContent = `Os saldos da planilha serão revelados após a finalização`;
+            $('btnExportBlindCsv').classList.add('d-none');
+            renderBlindTable();
+        }
+
+        function exportBlindCsv() {
+            let csv = "Cod_Produto;Unidade;Saldo_Planilha;Contagem_Fisica;Diferenca;Impacto_Financeiro\n";
+            blindInventoryItems.forEach(i => {
+                const diff = i.countedQty - i.systemQty;
+                const impact = (diff * i.vlrUnit).toFixed(2).replace('.', ',');
+                csv += `${i.cod};${i.un};${i.systemQty};${i.countedQty};${diff};${impact}\n`;
+            });
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `inventario_divergencias_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        /**
+         * 8. SUBPÁGINA 4: EXTRATO DE MOVIMENTAÇÕES (COM FUSE.JS)
+         */
+        function renderExtratoTable() {
+            const searchTerm = $('extratoSearchInput').value.trim();
+            const typeFilter = $('extratoTypeFilter').value;
+
+            let baseList = movimentacoes;
+            if (searchTerm && fuseExtrato) {
+                baseList = fuseExtrato.search(searchTerm).map(r => r.item);
+            }
+
+            const filtered = baseList.filter(m => {
+                const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
+                const matchType = typeFilter === 'ALL' || m.mov.toLowerCase().startsWith(typeFilter.toLowerCase().slice(0, 2));
+                return matchDepot && matchType;
+            });
+
+            $('extratoCountLabel').textContent = filtered.length > LIMITE_EXTRATO
+                ? `Mostrando ${LIMITE_EXTRATO} de ${filtered.length.toLocaleString('pt-BR')} registros`
+                : `${filtered.length.toLocaleString('pt-BR')} registros`;
+
+            const tbody = $('extratoTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="15" class="text-center text-muted py-4">Nenhuma movimentação encontrada.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.slice(0, LIMITE_EXTRATO).map(m => {
+                const isEntry = m.mov.toLowerCase().startsWith('ent');
+                const isEstornada = m.estado.toLowerCase().includes('estornada');
+                return `
+                    <tr class="${isEstornada ? 'table-warning' : ''}">
+                        <td><span class="badge ${isEntry ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">${m.mov}</span></td>
+                        <td class="fw-bold">${m.num}</td>
+                        <td class="text-nowrap small">${m.dataHora}</td>
+                        <td class="text-nowrap">${m.tipo}</td>
+                        <td><span class="badge ${isEstornada ? 'bg-warning text-dark' : 'bg-light text-dark border'}">${m.estado}</span></td>
+                        <td class="text-center fw-bold">${m.deposito}</td>
+                        <td class="text-nowrap text-muted">${m.depositoNome}</td>
+                        <td class="fw-bold text-primary">${m.cod}</td>
+                        <td>${m.un}</td>
+                        <td class="text-end fw-bold">${m.qtd.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}</td>
+                        <td class="text-end text-nowrap">${formatCurrency(m.vlrUnit)}</td>
+                        <td class="text-end fw-semibold text-nowrap">${formatCurrency(m.vlrTotal)}</td>
+                        <td class="text-nowrap">${m.documento || '-'}</td>
+                        <td class="text-nowrap small">${m.cnpjCentroCusto || '-'}</td>
+                        <td class="small text-muted text-nowrap" title="${m.observacao}">${m.observacao || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        /**
+         * 9. UTILITÁRIOS DE PARSING E FORMATAÇÃO
+         */
+        function getCol(row, candidates) {
+            const keys = Object.keys(row);
+            for (const c of candidates) {
+                const found = keys.find(k => k.trim().toLowerCase() === c.toLowerCase());
+                if (found !== undefined) return row[found];
+            }
+            return "";
+        }
+
+        function normDep(val) {
+            const s = String(val ?? "").trim();
+            return /^\d+(\.0+)?$/.test(s) ? String(parseInt(s, 10)) : s;
+        }
+
+        function parseNumBR(val) {
+            if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+            if (!val) return 0;
+            let s = String(val).replace(/R\$/gi, '').replace(/\s/g, '').trim();
+            if (!s) return 0;
+            if (s.includes(',')) {
+                s = s.replace(/\./g, '').replace(',', '.');
+            }
+            const n = Number(s);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function parseDataHoraFlex(val) {
+            if (val instanceof Date && !isNaN(val)) return val;
+            if (!val) return null;
+            const str = String(val).trim();
+            const [dPart, hPart] = str.split(/\s+/);
+            const p = dPart.split('/');
+            if (p.length === 3) {
+                const [h = 0, m = 0, s = 0] = (hPart || '').split(':').map(Number);
+                return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]), h, m, s);
+            }
+            const iso = new Date(str);
+            return isNaN(iso) ? null : iso;
+        }
+
+        function formatDateTimeBR(dateObj, rawFallback) {
+            if (!dateObj || isNaN(dateObj)) return String(rawFallback || '');
+            const pad = n => String(n).padStart(2, '0');
+            return `${pad(dateObj.getDate())}/${pad(dateObj.getMonth() + 1)}/${dateObj.getFullYear()} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
+        }
+
+        function formatCurrency(value) {
+            return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function showToast(message, type = 'primary') {
+            const container = $('toastContainer');
+            const toastId = 'toast_' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0 shadow" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body fw-medium">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toastEl = $(toastId);
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 3200 });
+            bsToast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+    </script>
+</body>
+</html>
