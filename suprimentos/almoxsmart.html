@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Almoxarifado Smart - Controle & Estoque (Google Sheets)</title>
+    <title>Almoxarifado Smart - Posição Real de Estoque</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -241,7 +241,7 @@
                     </div>
                     <div>
                         <h6 class="mb-0 fw-bold text-white">AlmoxSmart</h6>
-                        <small class="text-secondary" style="font-size: 0.72rem;">Google Sheets Live</small>
+                        <small class="text-secondary" style="font-size: 0.72rem;">Entradas − Saídas</small>
                     </div>
                 </div>
                 <button class="btn btn-sm btn-link text-white d-lg-none" onclick="toggleSidebar()">
@@ -260,7 +260,7 @@
             <nav class="nav flex-column nav-sidebar mt-3 flex-grow-1">
                 <a class="nav-link active" data-page="page-kpis" onclick="navigateTo('page-kpis', this)">
                     <i class="bi bi-speedometer2"></i>
-                    <span>Visão Geral & Saldos</span>
+                    <span>Posição Real de Estoque</span>
                 </a>
                 <a class="nav-link" data-page="page-consulta" onclick="navigateTo('page-consulta', this)">
                     <i class="bi bi-upc-scan"></i>
@@ -293,7 +293,7 @@
                         <i class="bi bi-list fs-5"></i>
                     </button>
                     <div>
-                        <h5 class="mb-0 fw-bold text-dark" id="pageTitle">Visão Geral & Saldos</h5>
+                        <h5 class="mb-0 fw-bold text-dark" id="pageTitle">Posição Real de Estoque</h5>
                         <small class="text-muted d-none d-sm-inline" id="currentDateDisplay"></small>
                     </div>
                 </div>
@@ -317,21 +317,21 @@
 
             <main class="p-3 p-md-4 flex-grow-1">
 
-                <!-- SUBPÁGINA 1: VISÃO GERAL & SALDOS -->
+                <!-- SUBPÁGINA 1: POSIÇÃO REAL DE ESTOQUE (ENTRADA - SAÍDA) -->
                 <div id="page-kpis" class="subpage">
                     <div class="row g-3 mb-4">
                         <div class="col-12 col-sm-6 col-xl-3">
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Valor em Estoque</p>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Saldo Real (Entrada − Saída)</p>
                                         <h4 class="fw-bold mb-0 text-dark" id="kpiTotalValue">R$ 0,00</h4>
                                     </div>
-                                    <div class="kpi-icon bg-success-subtle text-success">
-                                        <i class="bi bi-currency-dollar"></i>
+                                    <div class="kpi-icon bg-success-subtle text-success" id="kpiSaldoIcon">
+                                        <i class="bi bi-calculator"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiValSub">Calculado pelo último Vlr. Unit.</small>
+                                <small class="text-muted mt-2 d-block" id="kpiValSub">(Qtd. Entrada − Qtd. Saída) × Últ. Vlr.</small>
                             </div>
                         </div>
 
@@ -339,14 +339,14 @@
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Entradas (R$)</p>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Entradas (+)</p>
                                         <h4 class="fw-bold mb-0 text-primary" id="kpiEntradasVal">R$ 0,00</h4>
                                     </div>
                                     <div class="kpi-icon bg-primary-subtle text-primary">
                                         <i class="bi bi-box-arrow-in-down"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiEntradasQtd">0 lançamentos de entrada</small>
+                                <small class="text-muted mt-2 d-block" id="kpiEntradasQtd">0 unidades / 0 lançamentos</small>
                             </div>
                         </div>
 
@@ -354,14 +354,14 @@
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Saídas (R$)</p>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Saídas (−)</p>
                                         <h4 class="fw-bold mb-0 text-danger" id="kpiSaidasVal">R$ 0,00</h4>
                                     </div>
                                     <div class="kpi-icon bg-danger-subtle text-danger">
                                         <i class="bi bi-box-arrow-up"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiSaidasQtd">0 lançamentos de saída</small>
+                                <small class="text-muted mt-2 d-block" id="kpiSaidasQtd">0 unidades / 0 lançamentos</small>
                             </div>
                         </div>
 
@@ -369,48 +369,49 @@
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Produtos / Saldo Físico</p>
-                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalItems">0</h4>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Saldo Físico (Ent. − Saí.)</p>
+                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalUnits">0 un.</h4>
                                     </div>
                                     <div class="kpi-icon bg-info-subtle text-info">
                                         <i class="bi bi-boxes"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiTotalUnits">0 unidades acumuladas</small>
+                                <small class="text-muted mt-2 d-block" id="kpiTotalItems">0 produtos distintos</small>
                             </div>
                         </div>
                     </div>
 
                     <div class="row g-4">
-                        <!-- Tabela Consolidada de Saldos e Último Valor por Produto / Depósito -->
+                        <!-- Tabela Consolidada de Saldos (Entrada - Saída) -->
                         <div class="col-12 col-xl-8">
                             <div class="table-container h-100">
                                 <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white">
                                     <div>
-                                        <h6 class="fw-bold mb-0"><i class="bi bi-layers-fill text-primary me-2"></i>Posição de Estoque & Último Preço por Depósito</h6>
-                                        <small class="text-muted">Valor total calculado pelo último Vlr. unit. registrado no depósito</small>
+                                        <h6 class="fw-bold mb-0"><i class="bi bi-layers-fill text-primary me-2"></i>Posição Real por Produto e Depósito (Entrada − Saída)</h6>
+                                        <small class="text-muted">Valor em estoque = (Entradas − Saídas) × Último Vlr. unit. encontrado no depósito</small>
                                     </div>
                                     <div class="d-flex gap-2 align-items-center">
                                         <input type="text" id="saldoSearchInput" class="form-control form-control-sm" placeholder="Filtrar Cód. ou Depósito..." oninput="renderStockPositionTable()">
                                         <select id="saldoFilterMode" class="form-select form-select-sm" onchange="renderStockPositionTable()">
                                             <option value="ALL">Todos os itens</option>
-                                            <option value="POS">Saldo &gt; 0</option>
-                                            <option value="NEG">Saldo &lt; 0</option>
+                                            <option value="POS">Saldo Positivo (&gt; 0)</option>
+                                            <option value="NEG">Saldo Negativo (&lt; 0)</option>
+                                            <option value="ZERO">Saldo Zerado (= 0)</option>
                                             <option value="STAG30">Sem giro (+30d)</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="table-responsive" style="max-height: 450px;">
+                                <div class="table-responsive" style="max-height: 460px;">
                                     <table class="table table-hover table-sm mb-0">
                                         <thead class="table-light sticky-top">
                                             <tr>
                                                 <th>Cód. Produto</th>
                                                 <th>Depósito</th>
-                                                <th class="text-end">Entradas</th>
-                                                <th class="text-end">Saídas</th>
-                                                <th class="text-end">Saldo Atual</th>
+                                                <th class="text-end">Entradas (+)</th>
+                                                <th class="text-end">Saídas (−)</th>
+                                                <th class="text-end">Saldo (E − S)</th>
                                                 <th class="text-end">Último Vlr. Unit.</th>
-                                                <th class="text-end">Vlr. Total Estoque</th>
+                                                <th class="text-end">Valor Posição</th>
                                                 <th class="text-center">Última Mov.</th>
                                             </tr>
                                         </thead>
@@ -425,7 +426,7 @@
                             <div class="kpi-card p-3 h-100">
                                 <h6 class="fw-bold mb-1"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Top Saídas por C. Custo / CNPJ</h6>
                                 <p class="text-muted small mb-3">Maiores destinos registrados na planilha</p>
-                                <div id="costCenterContainer" class="d-flex flex-column gap-3" style="max-height: 430px; overflow-y: auto;"></div>
+                                <div id="costCenterContainer" class="d-flex flex-column gap-3" style="max-height: 440px; overflow-y: auto;"></div>
                             </div>
                         </div>
                     </div>
@@ -437,7 +438,7 @@
                         <div class="col-12 col-lg-5">
                             <div class="kpi-card p-4">
                                 <h5 class="fw-bold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Consulta de Produto</h5>
-                                <p class="text-muted small mb-3">Bipe ou digite o <strong>Cód.Produto</strong> para ver saldo e último valor por depósito.</p>
+                                <p class="text-muted small mb-3">Bipe ou digite o <strong>Cód.Produto</strong> para ver Saldo (Entrada − Saída) e último valor por depósito.</p>
 
                                 <form onsubmit="searchProductByInput(event)" class="mb-3">
                                     <label for="barcodeInput" class="form-label small fw-semibold text-uppercase text-secondary">Código do Produto</label>
@@ -473,7 +474,7 @@
                                     <i class="bi bi-upc fs-1"></i>
                                 </div>
                                 <h5 class="fw-bold text-secondary">Aguardando leitura ou código</h5>
-                                <p class="text-muted small mb-0" style="max-width: 360px;">Digite ou bipe o código de um produto para visualizar seu saldo por depósito, último valor unitário e histórico.</p>
+                                <p class="text-muted small mb-0" style="max-width: 360px;">Digite ou bipe o código de um produto para visualizar Entradas, Saídas, Saldo Real e Último Valor Unitário.</p>
                             </div>
 
                             <div id="consultaResultCard" class="kpi-card p-4 d-none">
@@ -491,34 +492,34 @@
                                 <div class="row g-3 mb-4">
                                     <div class="col-12 col-sm-6">
                                         <div class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle">
-                                            <small class="text-primary fw-bold text-uppercase d-block mb-1">Saldo Calculado</small>
+                                            <small class="text-primary fw-bold text-uppercase d-block mb-1">Saldo Real (Entrada − Saída)</small>
                                             <div class="d-flex align-items-baseline gap-2">
                                                 <span class="saldo-destaque text-primary" id="resStockQty">0</span>
                                                 <span class="fw-bold text-primary fs-5" id="resStockUnit">UN</span>
                                             </div>
+                                            <small class="text-muted d-block mt-1" id="resEntSaiBreakdown">Entradas: 0 | Saídas: 0</small>
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-6">
                                         <div class="p-3 rounded-3 bg-light border">
-                                            <small class="text-secondary fw-bold text-uppercase d-block mb-1">Valor Total (Saldo × Últ. Vlr.)</small>
+                                            <small class="text-secondary fw-bold text-uppercase d-block mb-1">Valor da Posição (Saldo × Últ. Vlr.)</small>
                                             <h3 class="fw-bold text-dark mb-1" id="resStockTotalVal">R$ 0,00</h3>
                                             <small class="text-muted fw-semibold" id="resUnitVal">Último Vlr. Unitário: R$ 0,00</small>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Detalhamento por Depósito -->
-                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Saldo e Último Preço por Depósito</h6>
+                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Posição por Depósito (Entrada − Saída)</h6>
                                 <div class="table-responsive border rounded-3 mb-4">
                                     <table class="table table-sm mb-0">
                                         <thead class="table-light">
                                             <tr>
                                                 <th>Depósito</th>
-                                                <th class="text-end">Entradas</th>
-                                                <th class="text-end">Saídas</th>
-                                                <th class="text-end">Saldo</th>
+                                                <th class="text-end">Entradas (+)</th>
+                                                <th class="text-end">Saídas (−)</th>
+                                                <th class="text-end">Saldo (E − S)</th>
                                                 <th class="text-end">Último Vlr. Unit.</th>
-                                                <th class="text-end">Valor Total</th>
+                                                <th class="text-end">Valor Posição</th>
                                             </tr>
                                         </thead>
                                         <tbody id="resDepotsBreakdownBody"></tbody>
@@ -556,7 +557,7 @@
                         <i class="bi bi-eye-slash-fill fs-3 text-info"></i>
                         <div>
                             <h6 class="fw-bold mb-0">Modo de Contagem às Cegas Ativo</h6>
-                            <small>O saldo da planilha fica oculto durante a bipagem. O impacto financeiro usa o <strong>último Vlr. unit. encontrado no depósito</strong>.</small>
+                            <small>Compara a contagem física contra o saldo <strong>(Entradas − Saídas)</strong> usando o <strong>último Vlr. unit. do depósito</strong>.</small>
                         </div>
                     </div>
 
@@ -596,7 +597,7 @@
                                 <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-white">
                                     <div>
                                         <h6 class="fw-bold mb-0" id="blindTableTitle">Itens Contados nesta Sessão (<span id="blindCountBadge">0</span>)</h6>
-                                        <small class="text-muted" id="blindTableSubtitle">Os saldos da planilha serão revelados após a finalização</small>
+                                        <small class="text-muted" id="blindTableSubtitle">Os saldos (Entrada − Saída) serão revelados após a finalização</small>
                                     </div>
                                     <button type="button" class="btn btn-sm btn-outline-success d-none" id="btnExportBlindCsv" onclick="exportBlindCsv()">
                                         <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar CSV
@@ -802,7 +803,6 @@
                 let vlrUnit = parseNumBR(getCol(r, ['Vlr. unit.', 'Vlr. Unit.', 'Vlr unit', 'Valor Unitario']));
                 let vlrTotal = parseNumBR(getCol(r, ['Vlr. total', 'Vlr. Total', 'Vlr total', 'Valor Total']));
 
-                // Garante consistência entre Vlr. unit. e Vlr. total na própria linha
                 if (vlrUnit <= 0 && vlrTotal > 0 && qtd > 0) {
                     vlrUnit = vlrTotal / qtd;
                 }
@@ -836,7 +836,7 @@
                 };
             }).filter(m => m.cod || m.mov);
 
-            // Ordena do mais recente para o mais antigo (Data -> Nº -> ordem na planilha)
+            // Ordena do mais recente para o mais antigo para exibição no extrato
             movimentacoes.sort((a, b) => {
                 const ta = a.dataObj ? a.dataObj.getTime() : 0;
                 const tb = b.dataObj ? b.dataObj.getTime() : 0;
@@ -855,14 +855,14 @@
         }
 
         /**
-         * 2. MOTOR DE CÁLCULO: SALDO E ÚLTIMO VALOR UNITÁRIO POR PRODUTO E DEPÓSITO
+         * 2. MOTOR DE CÁLCULO: SALDO (ENTRADA - SAÍDA) E ÚLTIMO VLR. UNITÁRIO POR DEPÓSITO
          */
         function recalcularEstoqueConsolidado() {
             const today = new Date();
             const stockMap = new Map();
-            const ultimoPrecoGlobalProduto = new Map(); // fallback caso um depósito só tenha saída sem preço
+            const ultimoPrecoGlobalProduto = new Map();
 
-            // Percorre em ordem cronológica (do lançamento mais antigo para o mais recente)
+            // Ordena cronologicamente (mais antigo -> mais recente) para identificar o último preço de cada depósito
             const movsCronologicas = [...movimentacoes].sort((a, b) => {
                 const ta = a.dataObj ? a.dataObj.getTime() : 0;
                 const tb = b.dataObj ? b.dataObj.getTime() : 0;
@@ -885,7 +885,7 @@
                         un: m.un || 'UN',
                         entradasQtd: 0,
                         saidasQtd: 0,
-                        saldo: 0,
+                        saldo: 0, // Sempre Entradas - Saídas
                         ultimoVlrUnit: 0,
                         dataUltimoVlr: '',
                         lastMovDate: null,
@@ -900,20 +900,22 @@
                 const vlrUnit = Number(m.vlrUnit || 0);
                 const movLower = m.mov.toLowerCase();
 
-                // Sempre atualiza para o ÚLTIMO valor unitário (> 0) encontrado para este produto neste depósito
+                // Captura o último Vlr. unit. (> 0) registrado para o produto naquele depósito
                 if (vlrUnit > 0) {
                     entry.ultimoVlrUnit = vlrUnit;
                     entry.dataUltimoVlr = m.dataHora;
                     ultimoPrecoGlobalProduto.set(m.cod, vlrUnit);
                 }
 
+                // Acumula Entradas e Saídas
                 if (movLower.startsWith('ent') || movLower === 'e') {
                     entry.entradasQtd += qtd;
-                    entry.saldo += qtd;
                 } else if (movLower.startsWith('sa') || movLower === 's') {
                     entry.saidasQtd += qtd;
-                    entry.saldo -= qtd;
                 }
+
+                // Saldo = Entrada - Saída
+                entry.saldo = entry.entradasQtd - entry.saidasQtd;
 
                 if (m.dataObj) {
                     if (!entry.lastMovDate || m.dataObj >= entry.lastMovDate.obj) {
@@ -924,11 +926,12 @@
                 }
             });
 
-            // Aplica fallback de preço global caso algum depósito específico não tenha tido preço preenchido
+            // Fallback se um depósito específico teve saída sem preço unitário informado
             stockMap.forEach(entry => {
                 if (entry.ultimoVlrUnit <= 0 && ultimoPrecoGlobalProduto.has(entry.cod)) {
                     entry.ultimoVlrUnit = ultimoPrecoGlobalProduto.get(entry.cod);
                 }
+                entry.saldo = entry.entradasQtd - entry.saidasQtd;
                 entry.valorTotalCalculado = entry.saldo * entry.ultimoVlrUnit;
             });
 
@@ -1066,7 +1069,7 @@
             $(pageId).classList.remove('d-none');
 
             const titles = {
-                'page-kpis': 'Visão Geral & Saldos',
+                'page-kpis': 'Posição Real de Estoque',
                 'page-consulta': 'Consulta / Cód. Produto',
                 'page-inventario': 'Inventário às Cegas',
                 'page-extrato': 'Extrato Movimentações'
@@ -1095,7 +1098,7 @@
         }
 
         /**
-         * 5. SUBPÁGINA 1: KPIs E POSIÇÃO DE ESTOQUE POR DEPÓSITO
+         * 5. SUBPÁGINA 1: KPIs E POSIÇÃO REAL DE ESTOQUE (ENTRADA - SAÍDA)
          */
         function renderKPIsAndStockPosition() {
             const allStock = getConsolidatedStock();
@@ -1103,21 +1106,21 @@
                 ? allStock
                 : allStock.filter(item => item.deposito === activeDepotFilter);
 
-            // Valor em estoque calculado sempre pelo último Vlr. unit. do produto no depósito
-            let valorEstoquePositivo = 0;
-            let saldoLiquidoValor = 0;
-            let totalUnidadesLiquidas = 0;
+            // Soma sempre o Saldo Real = (Entradas - Saídas) × Último Vlr. Unitário
+            let valorPosicaoReal = 0;
+            let saldoFisicoReal = 0;
+            let totalUnidadesEntrada = 0;
+            let totalUnidadesSaida = 0;
 
             filteredStock.forEach(item => {
-                const vlrItem = item.saldo * item.ultimoVlrUnit;
-                saldoLiquidoValor += vlrItem;
-                if (item.saldo > 0) {
-                    valorEstoquePositivo += vlrItem;
-                }
-                totalUnidadesLiquidas += item.saldo;
+                const saldoItem = item.entradasQtd - item.saidasQtd;
+                saldoFisicoReal += saldoItem;
+                valorPosicaoReal += (saldoItem * item.ultimoVlrUnit);
+                totalUnidadesEntrada += item.entradasQtd;
+                totalUnidadesSaida += item.saidasQtd;
             });
 
-            // Totais financeiros de Entradas e Saídas da planilha
+            // Totais financeiros registrados nas movimentações
             const scopedMovs = movimentacoes.filter(m => {
                 const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
                 const validState = !m.estado.toLowerCase().includes('estornada total');
@@ -1138,22 +1141,32 @@
                 }
             });
 
-            // Exibe valor positivo em estoque (ou saldo líquido se não houver entradas ainda)
-            const valorExibido = valorEstoquePositivo > 0 ? valorEstoquePositivo : saldoLiquidoValor;
-            $('kpiTotalValue').textContent = formatCurrency(valorExibido);
-            $('kpiValSub').textContent = valorEstoquePositivo > 0
-                ? `Saldo líquido geral: ${formatCurrency(saldoLiquidoValor)}`
-                : `Baseado no último Vlr. unit. por depósito`;
+            const kpiValEl = $('kpiTotalValue');
+            const kpiIconEl = $('kpiSaldoIcon');
+            kpiValEl.textContent = formatCurrency(valorPosicaoReal);
+
+            if (valorPosicaoReal < -0.005) {
+                kpiValEl.className = "fw-bold mb-0 text-danger";
+                kpiIconEl.className = "kpi-icon bg-danger-subtle text-danger";
+            } else {
+                kpiValEl.className = "fw-bold mb-0 text-success";
+                kpiIconEl.className = "kpi-icon bg-success-subtle text-success";
+            }
+
+            $('kpiValSub').textContent = `(Entradas − Saídas) × Último Vlr. Unit.`;
 
             $('kpiEntradasVal').textContent = formatCurrency(totalEntradasVal);
-            $('kpiEntradasQtd').textContent = `${qtdLancEntradas.toLocaleString('pt-BR')} lançamentos de entrada`;
+            $('kpiEntradasQtd').textContent = `${totalUnidadesEntrada.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un. (${qtdLancEntradas} lanç.)`;
 
             $('kpiSaidasVal').textContent = formatCurrency(totalSaidasVal);
-            $('kpiSaidasQtd').textContent = `${qtdLancSaidas.toLocaleString('pt-BR')} lançamentos de saída`;
+            $('kpiSaidasQtd').textContent = `${totalUnidadesSaida.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un. (${qtdLancSaidas} lanç.)`;
+
+            const kpiUnitsEl = $('kpiTotalUnits');
+            kpiUnitsEl.textContent = `${saldoFisicoReal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un.`;
+            kpiUnitsEl.className = `fw-bold mb-0 ${saldoFisicoReal < 0 ? 'text-danger' : 'text-dark'}`;
 
             const produtosDistintos = new Set(filteredStock.map(i => i.cod)).size;
-            $('kpiTotalItems').textContent = `${produtosDistintos.toLocaleString('pt-BR')} itens`;
-            $('kpiTotalUnits').textContent = `Saldo físico líquido: ${totalUnidadesLiquidas.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un.`;
+            $('kpiTotalItems').textContent = `${produtosDistintos.toLocaleString('pt-BR')} produtos distintos`;
 
             renderStockPositionTable();
             renderCostCenterChart();
@@ -1165,15 +1178,16 @@
             const mode = $('saldoFilterMode').value;
 
             let rows = allStock.filter(item => {
+                const saldoReal = item.entradasQtd - item.saidasQtd;
                 if (activeDepotFilter !== 'ALL' && item.deposito !== activeDepotFilter) return false;
-                if (mode === 'POS' && item.saldo <= 0) return false;
-                if (mode === 'NEG' && item.saldo >= 0) return false;
-                if (mode === 'STAG30' && (item.saldo <= 0 || item.daysWithoutMov < 30 || item.daysWithoutMov >= 999)) return false;
+                if (mode === 'POS' && saldoReal <= 0) return false;
+                if (mode === 'NEG' && saldoReal >= 0) return false;
+                if (mode === 'ZERO' && Math.abs(saldoReal) > 0.0001) return false;
+                if (mode === 'STAG30' && (saldoReal <= 0 || item.daysWithoutMov < 30 || item.daysWithoutMov >= 999)) return false;
                 if (search && !`${item.cod} ${item.deposito} ${item.depositoNome}`.toLowerCase().includes(search)) return false;
                 return true;
             });
 
-            // Ordena pelos maiores valores absolutos em estoque
             rows.sort((a, b) => Math.abs(b.valorTotalCalculado) - Math.abs(a.valorTotalCalculado));
 
             const tbody = $('stockPositionTableBody');
@@ -1183,16 +1197,18 @@
             }
 
             tbody.innerHTML = rows.slice(0, 300).map(item => {
-                const saldoClass = item.saldo < 0 ? 'text-danger' : (item.saldo > 0 ? 'text-success' : 'text-muted');
+                const saldoReal = item.entradasQtd - item.saidasQtd;
+                const valorPosicao = saldoReal * item.ultimoVlrUnit;
+                const saldoClass = saldoReal < 0 ? 'text-danger' : (saldoReal > 0 ? 'text-success' : 'text-muted');
                 return `
                     <tr style="cursor:pointer;" onclick="abrirConsultaDireta('${item.cod}')" title="Clique para ver detalhes do produto ${item.cod}">
                         <td class="fw-bold text-primary">${item.cod}</td>
                         <td><span class="badge bg-light text-dark border">${item.deposito} - ${item.depositoNome}</span></td>
-                        <td class="text-end text-muted">${item.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
-                        <td class="text-end text-muted">${item.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
-                        <td class="text-end fw-bold ${saldoClass}">${item.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${item.un}</td>
+                        <td class="text-end text-primary">${item.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
+                        <td class="text-end text-danger">${item.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
+                        <td class="text-end fw-bold ${saldoClass}">${saldoReal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${item.un}</td>
                         <td class="text-end text-nowrap">${formatCurrency(item.ultimoVlrUnit)}</td>
-                        <td class="text-end fw-semibold text-nowrap ${saldoClass}">${formatCurrency(item.valorTotalCalculado)}</td>
+                        <td class="text-end fw-semibold text-nowrap ${saldoClass}">${formatCurrency(valorPosicao)}</td>
                         <td class="text-center text-muted small">${item.lastMovDate ? item.lastMovDate.str : '-'}</td>
                     </tr>
                 `;
@@ -1303,45 +1319,58 @@
             $('resProdName').textContent = `Produto Cód. ${sampleItem.cod}`;
             $('resProdUnit').textContent = `Unidade: ${sampleItem.un}`;
 
+            let scopedEnt = 0;
+            let scopedSai = 0;
             let scopedQty = 0;
             let scopedVal = 0;
             let ultimoUnitExibido = 0;
             let depotLabel = '';
 
             if (activeDepotFilter === 'ALL') {
-                scopedQty = matches.reduce((acc, m) => acc + m.saldo, 0);
-                // Soma o valor calculado de cada depósito (cada um usando seu próprio último preço)
-                scopedVal = matches.reduce((acc, m) => acc + (m.saldo * m.ultimoVlrUnit), 0);
+                scopedEnt = matches.reduce((acc, m) => acc + m.entradasQtd, 0);
+                scopedSai = matches.reduce((acc, m) => acc + m.saidasQtd, 0);
+                scopedQty = scopedEnt - scopedSai;
+                scopedVal = matches.reduce((acc, m) => acc + ((m.entradasQtd - m.saidasQtd) * m.ultimoVlrUnit), 0);
                 const comPreco = matches.filter(m => m.ultimoVlrUnit > 0);
                 ultimoUnitExibido = comPreco.length > 0 ? comPreco[comPreco.length - 1].ultimoVlrUnit : 0;
                 depotLabel = 'Todos os Depósitos';
             } else {
                 const targetDepot = matches.find(m => m.deposito === activeDepotFilter);
-                scopedQty = targetDepot ? targetDepot.saldo : 0;
+                scopedEnt = targetDepot ? targetDepot.entradasQtd : 0;
+                scopedSai = targetDepot ? targetDepot.saidasQtd : 0;
+                scopedQty = scopedEnt - scopedSai;
                 ultimoUnitExibido = targetDepot ? targetDepot.ultimoVlrUnit : 0;
                 scopedVal = scopedQty * ultimoUnitExibido;
                 depotLabel = currentSession.label;
             }
 
             $('resDepotContext').textContent = depotLabel;
-            $('resStockQty').textContent = scopedQty.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+            const qtyEl = $('resStockQty');
+            qtyEl.textContent = scopedQty.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+            qtyEl.className = `saldo-destaque ${scopedQty < 0 ? 'text-danger' : 'text-primary'}`;
+
             $('resStockUnit').textContent = sampleItem.un;
-            $('resStockTotalVal').textContent = formatCurrency(scopedVal);
+            $('resEntSaiBreakdown').textContent = `Entradas: ${scopedEnt.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} | Saídas: ${scopedSai.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
+
+            const valEl = $('resStockTotalVal');
+            valEl.textContent = formatCurrency(scopedVal);
+            valEl.className = `fw-bold mb-1 ${scopedVal < 0 ? 'text-danger' : 'text-dark'}`;
             $('resUnitVal').textContent = `Último Vlr. Unitário: ${formatCurrency(ultimoUnitExibido)}`;
 
-            // Tabela de breakdown por depósito
+            // Tabela por depósito
             const breakdownBody = $('resDepotsBreakdownBody');
             breakdownBody.innerHTML = matches.sort((a, b) => Number(a.deposito) - Number(b.deposito)).map(m => {
-                const vlrTotalDep = m.saldo * m.ultimoVlrUnit;
+                const saldoDep = m.entradasQtd - m.saidasQtd;
+                const vlrTotalDep = saldoDep * m.ultimoVlrUnit;
                 const isSelected = activeDepotFilter !== 'ALL' && m.deposito === activeDepotFilter;
                 return `
                     <tr class="${isSelected ? 'table-primary fw-semibold' : ''}">
                         <td>${m.deposito} - ${m.depositoNome}</td>
-                        <td class="text-end">${m.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
-                        <td class="text-end">${m.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
-                        <td class="text-end fw-bold ${m.saldo < 0 ? 'text-danger' : 'text-success'}">${m.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${m.un}</td>
+                        <td class="text-end text-primary">${m.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
+                        <td class="text-end text-danger">${m.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
+                        <td class="text-end fw-bold ${saldoDep < 0 ? 'text-danger' : 'text-success'}">${saldoDep.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${m.un}</td>
                         <td class="text-end">${formatCurrency(m.ultimoVlrUnit)}</td>
-                        <td class="text-end fw-bold">${formatCurrency(vlrTotalDep)}</td>
+                        <td class="text-end fw-bold ${vlrTotalDep < 0 ? 'text-danger' : ''}">${formatCurrency(vlrTotalDep)}</td>
                     </tr>
                 `;
             }).join('');
@@ -1451,12 +1480,12 @@
             let ultimoUnit = 0;
 
             if (activeDepotFilter === 'ALL') {
-                systemQty = productMatches.reduce((s, x) => s + x.saldo, 0);
+                systemQty = productMatches.reduce((s, x) => s + (x.entradasQtd - x.saidasQtd), 0);
                 const comPreco = productMatches.filter(x => x.ultimoVlrUnit > 0);
                 ultimoUnit = comPreco.length > 0 ? comPreco[comPreco.length - 1].ultimoVlrUnit : 0;
             } else {
                 const depEntry = productMatches.find(x => x.deposito === activeDepotFilter);
-                systemQty = depEntry ? depEntry.saldo : 0;
+                systemQty = depEntry ? (depEntry.entradasQtd - depEntry.saidasQtd) : 0;
                 ultimoUnit = depEntry ? depEntry.ultimoVlrUnit : 0;
             }
 
@@ -1517,7 +1546,7 @@
                 thead.innerHTML = `
                     <tr>
                         <th>Cód. Produto</th>
-                        <th class="text-end">Saldo Planilha</th>
+                        <th class="text-end">Saldo (Ent. − Saí.)</th>
                         <th class="text-end">Contagem Física</th>
                         <th class="text-end">Diferença</th>
                         <th class="text-end">Último Vlr. Unit.</th>
@@ -1533,7 +1562,7 @@
                     return `
                         <tr>
                             <td class="fw-bold">${item.cod}</td>
-                            <td class="text-end text-muted">${item.systemQty.toLocaleString('pt-BR')} ${item.un}</td>
+                            <td class="text-end ${item.systemQty < 0 ? 'text-danger fw-bold' : 'text-muted'}">${item.systemQty.toLocaleString('pt-BR')} ${item.un}</td>
                             <td class="text-end fw-bold">${item.countedQty.toLocaleString('pt-BR')} ${item.un}</td>
                             <td class="text-end">${diffBadge}</td>
                             <td class="text-end">${formatCurrency(item.vlrUnit)}</td>
@@ -1549,7 +1578,7 @@
         function finishBlindInventory() {
             isBlindFinished = true;
             $('blindTableTitle').innerHTML = `<i class="bi bi-clipboard-data text-success me-2"></i>Resultado da Auditoria de Inventário`;
-            $('blindTableSubtitle').textContent = `Comparativo entre saldo da planilha e contagem física`;
+            $('blindTableSubtitle').textContent = `Comparativo entre Saldo (Entrada − Saída) e contagem física`;
             $('btnExportBlindCsv').classList.remove('d-none');
             renderBlindTable();
             showToast('Apuração concluída!', 'info');
@@ -1559,13 +1588,13 @@
             blindInventoryItems = [];
             isBlindFinished = false;
             $('blindTableTitle').innerHTML = `Itens Contados nesta Sessão (<span id="blindCountBadge">0</span>)`;
-            $('blindTableSubtitle').textContent = `Os saldos da planilha serão revelados após a finalização`;
+            $('blindTableSubtitle').textContent = `Os saldos (Entrada − Saída) serão revelados após a finalização`;
             $('btnExportBlindCsv').classList.add('d-none');
             renderBlindTable();
         }
 
         function exportBlindCsv() {
-            let csv = "Cod_Produto;Unidade;Saldo_Planilha;Contagem_Fisica;Diferenca;Ultimo_Vlr_Unit;Impacto_Financeiro\n";
+            let csv = "Cod_Produto;Unidade;Saldo_Entrada_Menos_Saida;Contagem_Fisica;Diferenca;Ultimo_Vlr_Unit;Impacto_Financeiro\n";
             blindInventoryItems.forEach(i => {
                 const diff = i.countedQty - i.systemQty;
                 const unitStr = i.vlrUnit.toFixed(2).replace('.', ',');
