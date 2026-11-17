@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consolidar Tudo</title>
+  <!-- Biblioteca para leitura/escrita de arquivos Excel (.xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #0056b3;
+      --primary-hover: #004085;
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text: #212529;
+      --border: #dee2e6;
+      --ok: #1e7e34;
+      --warn: #b45309;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 { margin-top: 0; color: var(--primary); font-size: 1.8rem; }
+    h2 { margin: 0; font-size: 1.2rem; }
+    p.sub { color: #6c757d; margin-bottom: 24px; }
+
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 32px;
+      text-align: center;
+      background-color: #fafafa;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    .upload-area:hover, .upload-area.drag {
+      border-color: var(--primary);
+      background-color: #f0f7ff;
+    }
+    .upload-area small { display: block; margin-top: 10px; color: #6c757d; }
+    input[type="file"] { display: none; }
+
+    .btn {
+      display: inline-block;
+      font-weight: 600;
+      color: #fff;
+      background-color: var(--primary);
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background-color 0.2s;
+    }
+    .btn:hover { background-color: var(--primary-hover); }
+    .btn.secondary { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+    .btn.secondary:hover { background: #f0f7ff; }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .card {
+      background-color: #f1f5f9;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary);
+    }
+    .card .title { font-size: 0.85rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
+    .card .value { font-size: 1.4rem; font-weight: bold; margin-top: 6px; }
+
+    .check { margin-top: 16px; font-size: 0.9rem; padding: 10px 14px; border-radius: 6px; }
+    .check.ok { background: #e8f5ec; color: var(--ok); }
+    .check.warn { background: #fff4e5; color: var(--warn); }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 32px;
+      margin-bottom: 8px;
+    }
+    .actions .btns { display: flex; gap: 8px; }
+    .note { color: #6c757d; font-size: 0.85rem; margin: 0 0 8px; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap; }
+    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background-color: #f1f5f9; font-weight: 600; color: #334155; position: sticky; top: 0; }
+    tr:hover { background-color: #f8fafc; }
+    td.text-right, th.text-right { text-align: right; }
+    td.prod { white-space: normal; min-width: 280px; max-width: 420px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Consolidar Tudo</h1>
+    <p class="sub">Selecione ou arraste a planilha de Saldo de Estoque para gerar a lista de entradas, com um registro por produto em cada depósito.</p>
+
+    <div class="upload-area" id="dropArea">
+      <span class="btn">Selecionar Planilha (.xlsx)</span>
+      <small>ou arraste o arquivo para cá</small>
+      <input type="file" id="fileInput" accept=".xlsx, .xls">
+    </div>
+
+    <div id="resultSection" class="hidden">
+      <div class="summary-cards">
+        <div class="card">
+          <div class="title">Data do Relatório</div>
+          <div class="value" id="dataRelatorio">-</div>
+        </div>
+        <div class="card">
+          <div class="title">Depósitos</div>
+          <div class="value" id="totalDepositos">0</div>
+        </div>
+        <div class="card">
+          <div class="title">Linhas (produtos)</div>
+          <div class="value" id="totalLinhas">0</div>
+        </div>
+        <div class="card">
+          <div class="title">Valor Total Geral</div>
+          <div class="value" id="valorTotalGeral">R$ 0,00</div>
+        </div>
+      </div>
+
+      <div id="checkBox" class="check hidden"></div>
+
+      <div class="actions">
+        <h2>Entradas por Produto</h2>
+        <div class="btns">
+          <button class="btn secondary" onclick="exportToCSV()">Exportar CSV</button>
+          <button class="btn" onclick="exportToXLSX()">Exportar Excel (.xlsx)</button>
+        </div>
+      </div>
+      <p class="note" id="previewNote"></p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mov.</th>
+              <th>Nº</th>
+              <th>Data / Hora</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th>Depósito</th>
+              <th>Nome do Depósito</th>
+              <th>Cód.</th>
+              <th>Produto</th>
+              <th>Un.</th>
+              <th class="text-right">Qtd.</th>
+              <th class="text-right">Vlr. unit.</th>
+              <th class="text-right">Vlr. total</th>
+              <th>Documento</th>
+              <th>CNPJ / C. Custo</th>
+              <th>Observação</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const HEADERS = [
+      'Mov.', 'Nº', 'Data / Hora', 'Tipo', 'Estado', 'Depósito', 'Nome do Depósito', 'Cód.', 'Produto',
+      'Un.', 'Qtd.', 'Vlr. unit.', 'Vlr. total', 'Documento', 'CNPJ / C. Custo', 'Observação'
+    ];
+    const PREVIEW_LIMIT = 200;
+    let outputRows = [];
+
+    const fileInput = document.getElementById('fileInput');
+    const dropArea = document.getElementById('dropArea');
+
+    dropArea.addEventListener('click', () => fileInput.click());
+    dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('drag'); });
+    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag'));
+    dropArea.addEventListener('drop', e => {
+      e.preventDefault();
+      dropArea.classList.remove('drag');
+      if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => {
+      if (e.target.files[0]) readFile(e.target.files[0]);
+    });
+
+    function readFile(file) {
+      const reader = new FileReader();
+      reader.onload = function (evt) {
+        const workbook = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        processExcelData(rows);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    const cell = (row, i) => (row[i] !== undefined && row[i] !== null) ? String(row[i]).replace(/ /g, ' ').trim() : '';
+
+    function toNumber(v) {
+      if (typeof v === 'number') return v;
+      if (v === undefined || v === null || v === '') return 0;
+      const s = String(v).trim();
+      const n = s.includes(',') ? parseFloat(s.replace(/\./g, '').replace(',', '.')) : parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function todayBR() {
+      const d = new Date();
+      return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    }
+
+    // Lê a data do relatório no cabeçalho ("Período final: dd/mm/aaaa")
+    function findReportDate(rows) {
+      for (let i = 0; i < Math.min(rows.length, 15); i++) {
+        for (const v of rows[i] || []) {
+          if (typeof v !== 'string') continue;
+          const m = v.match(/Per[ií]odo final:\s*(\d{2}\/\d{2}\/\d{4})/i);
+          if (m) return m[1];
+        }
+      }
+      return todayBR();
+    }
+
+    function splitProduct(text) {
+      const m = text.match(/^(\S+)\s+-\s+([\s\S]*)$/);
+      return m ? { cod: m[1], nome: m[2] } : { cod: '', nome: text };
+    }
+
+    // "84 - ADMINISTRAÇÃO/GÁS" -> código "84" e nome "ADMINISTRAÇÃO/GÁS"
+    function splitDeposito(text) {
+      const m = text.match(/^(\S+)\s+-\s+([\s\S]*)$/);
+      return m ? { cod: m[1], nome: m[2].trim() } : { cod: '', nome: text };
+    }
+
+    function processExcelData(rows) {
+      const dataRelatorio = findReportDate(rows);
+      const items = [];
+      let currentDeposito = null;
+      let pending = null;        // último produto lido (para juntar linhas de continuação da descrição)
+      let footerCount = null, footerTotal = null;
+
+      rows.forEach(row => {
+        row = row || [];
+        const col0 = cell(row, 0);
+        const col1 = cell(row, 1);
+        const col7 = cell(row, 7);
+        const hasValor = row[12] !== undefined && row[12] !== null && row[12] !== '';
+
+        if (col0 === 'Depósito:') {
+          currentDeposito = col1;
+          pending = null;
+          return;
+        }
+
+        if (col0.startsWith('Total de Produtos Encontrados')) {
+          footerCount = toNumber(row[5]);
+          footerTotal = toNumber(row[12]);
+          pending = null;
+          return;
+        }
+
+        // Linha de produto: texto em col0 + unidade preenchida
+        const isProduct = col0 !== '' && col7 !== '' && col7 !== 'Unidade' && col7 !== 'Qtd. Total:' && currentDeposito;
+        if (isProduct) {
+          const { cod, nome } = splitProduct(col0);
+          pending = {
+            deposito: currentDeposito,
+            cod: cod,
+            nome: nome,
+            un: col7,
+            qtd: toNumber(row[8]),
+            unit: toNumber(row[10]),
+            total: toNumber(row[12])
+          };
+          items.push(pending);
+          return;
+        }
+
+        // Linha de continuação da descrição do produto anterior (ex.: "SINAPI 11686 -")
+        const isReserved = col0 === 'Produto' || col0.startsWith('Total') || col0.startsWith('Estoque Zerado');
+        if (col0 !== '' && col7 === '' && !hasValor && !isReserved && pending) {
+          // O relatório às vezes repete o final da descrição na linha seguinte: só acrescenta se for texto novo
+          const norm = t => t.replace(/[\s-]+$/, '');
+          if (!norm(pending.nome).endsWith(norm(col0))) pending.nome += ' ' + col0;
+          return;
+        }
+
+        pending = null;
+      });
+
+      // Monta as linhas finais, na ordem do relatório
+      outputRows = items.map(it => ({
+        mov: 'Entrada',
+        num: '',
+        data: dataRelatorio,
+        tipo: '',
+        estado: '',
+        deposito: splitDeposito(it.deposito).cod,
+        nomeDeposito: splitDeposito(it.deposito).nome,
+        cod: it.cod,
+        produto: it.nome.replace(/\s+/g, ' ').replace(/\s*-\s*$/, '').trim(),
+        un: it.un,
+        qtd: it.qtd,
+        unit: it.unit,
+        total: it.total,
+        documento: '',
+        cnpj: '',
+        obs: ''
+      }));
+
+      const valorGeral = outputRows.reduce((s, r) => s + r.total, 0);
+      const depositos = new Set(outputRows.map(r => r.deposito)).size;
+
+      renderResults(dataRelatorio, depositos, valorGeral, footerCount, footerTotal);
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function renderResults(dataRelatorio, depositos, valorGeral, footerCount, footerTotal) {
+      const tbody = document.getElementById('tableBody');
+      const preview = outputRows.slice(0, PREVIEW_LIMIT);
+
+      tbody.innerHTML = preview.map(r => `
+        <tr>
+          <td>${esc(r.mov)}</td>
+          <td>${esc(r.num)}</td>
+          <td>${esc(r.data)}</td>
+          <td>${esc(r.tipo)}</td>
+          <td>${esc(r.estado)}</td>
+          <td>${esc(r.deposito)}</td>
+          <td>${esc(r.nomeDeposito)}</td>
+          <td>${esc(r.cod)}</td>
+          <td class="prod">${esc(r.produto)}</td>
+          <td>${esc(r.un)}</td>
+          <td class="text-right">${r.qtd.toLocaleString('pt-BR')}</td>
+          <td class="text-right">${r.unit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+          <td class="text-right">${r.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td>${esc(r.documento)}</td>
+          <td>${esc(r.cnpj)}</td>
+          <td>${esc(r.obs)}</td>
+        </tr>`).join('');
+
+      document.getElementById('dataRelatorio').innerText = dataRelatorio;
+      document.getElementById('totalDepositos').innerText = depositos;
+      document.getElementById('totalLinhas').innerText = outputRows.length.toLocaleString('pt-BR');
+      document.getElementById('valorTotalGeral').innerText = formatCurrency(valorGeral);
+      document.getElementById('previewNote').innerText = outputRows.length > PREVIEW_LIMIT
+        ? `Mostrando as primeiras ${PREVIEW_LIMIT} de ${outputRows.length.toLocaleString('pt-BR')} linhas. A exportação contém todas.`
+        : '';
+
+      // Conferência com os totais impressos no rodapé do relatório
+      const box = document.getElementById('checkBox');
+      if (footerCount !== null) {
+        const okCount = footerCount === outputRows.length;
+        const okTotal = Math.abs(footerTotal - valorGeral) < 0.5;
+        box.className = 'check ' + (okCount && okTotal ? 'ok' : 'warn');
+        box.innerText = okCount && okTotal
+          ? `Conferência OK: ${outputRows.length.toLocaleString('pt-BR')} produtos e ${formatCurrency(valorGeral)} batem com o total do relatório.`
+          : `Atenção: o relatório informa ${footerCount.toLocaleString('pt-BR')} produtos e ${formatCurrency(footerTotal)}, mas foram lidos ${outputRows.length.toLocaleString('pt-BR')} produtos e ${formatCurrency(valorGeral)}.`;
+      } else {
+        box.className = 'check hidden';
+      }
+
+      document.getElementById('resultSection').classList.remove('hidden');
+    }
+
+    function formatCurrency(val) {
+      return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function rowToArray(r) {
+      return [r.mov, r.num, r.data, r.tipo, r.estado, r.deposito, r.nomeDeposito, r.cod, r.produto,
+              r.un, r.qtd, r.unit, r.total, r.documento, r.cnpj, r.obs];
+    }
+
+    function exportToXLSX() {
+      if (!outputRows.length) return;
+      const aoa = [HEADERS, ...outputRows.map(rowToArray)];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = [8, 6, 12, 10, 10, 10, 40, 10, 60, 10, 12, 14, 14, 14, 18, 20].map(w => ({ wch: w }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Entradas');
+      XLSX.writeFile(wb, 'consolidar_tudo.xlsx');
+    }
+
+    function exportToCSV() {
+      if (!outputRows.length) return;
+      const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+      const num = n => String(n).replace('.', ',');
+      let csv = HEADERS.map(q).join(';') + '\n';
+      outputRows.forEach(r => {
+        csv += [q(r.mov), q(r.num), q(r.data), q(r.tipo), q(r.estado), q(r.deposito), q(r.nomeDeposito), q(r.cod), q(r.produto),
+                q(r.un), num(r.qtd), num(r.unit), num(r.total), q(r.documento), q(r.cnpj), q(r.obs)].join(';') + '\n';
+      });
+
+      const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'consolidar_tudo.csv';
+      link.click();
+    }
+  </script>
+
+</body>
+</html>
