@@ -264,7 +264,7 @@
                 </a>
                 <a class="nav-link" data-page="page-consulta" onclick="navigateTo('page-consulta', this)">
                     <i class="bi bi-upc-scan"></i>
-                    <span>Consulta / Cód. Produto</span>
+                    <span>Consulta / Produto</span>
                 </a>
                 <a class="nav-link" data-page="page-inventario" onclick="navigateTo('page-inventario', this)">
                     <i class="bi bi-clipboard-check"></i>
@@ -391,7 +391,7 @@
                                         <small class="text-muted">Valor em estoque = (Entradas − Saídas) × Último Vlr. unit. encontrado no depósito</small>
                                     </div>
                                     <div class="d-flex gap-2 align-items-center">
-                                        <input type="text" id="saldoSearchInput" class="form-control form-control-sm" placeholder="Filtrar Cód. ou Depósito..." oninput="renderStockPositionTable()">
+                                        <input type="text" id="saldoSearchInput" class="form-control form-control-sm" placeholder="Filtrar Cód., Nome ou Depósito..." oninput="renderStockPositionTable()">
                                         <select id="saldoFilterMode" class="form-select form-select-sm" onchange="renderStockPositionTable()">
                                             <option value="ALL">Todos os itens</option>
                                             <option value="POS">Saldo Positivo (&gt; 0)</option>
@@ -405,7 +405,8 @@
                                     <table class="table table-hover table-sm mb-0">
                                         <thead class="table-light sticky-top">
                                             <tr>
-                                                <th>Cód. Produto</th>
+                                                <th>Cód.</th>
+                                                <th>Nome do Produto</th>
                                                 <th>Depósito</th>
                                                 <th class="text-end">Entradas (+)</th>
                                                 <th class="text-end">Saídas (−)</th>
@@ -432,18 +433,18 @@
                     </div>
                 </div>
 
-                <!-- SUBPÁGINA 2: CONSULTA RÁPIDA / CÓDIGO DE BARRAS / CÂMERA -->
+                <!-- SUBPÁGINA 2: CONSULTA RÁPIDA / CÓDIGO OU NOME / CÂMERA -->
                 <div id="page-consulta" class="subpage d-none">
                     <div class="row g-4">
                         <div class="col-12 col-lg-5">
                             <div class="kpi-card p-4">
                                 <h5 class="fw-bold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Consulta de Produto</h5>
-                                <p class="text-muted small mb-3">Bipe ou digite o <strong>Cód.Produto</strong> para ver Saldo (Entrada − Saída) e último valor por depósito.</p>
+                                <p class="text-muted small mb-3">Bipe o <strong>Cód.Produto</strong> ou digite o <strong>Nome do Produto</strong> para ver Saldo e último valor.</p>
 
                                 <form onsubmit="searchProductByInput(event)" class="mb-3">
-                                    <label for="barcodeInput" class="form-label small fw-semibold text-uppercase text-secondary">Código do Produto</label>
+                                    <label for="barcodeInput" class="form-label small fw-semibold text-uppercase text-secondary">Código ou Nome do Produto</label>
                                     <div class="input-group input-group-lg">
-                                        <input type="text" class="form-control fw-bold" id="barcodeInput" placeholder="Ex: 1001..." autocomplete="off">
+                                        <input type="text" class="form-control fw-bold" id="barcodeInput" placeholder="Ex: 1001 ou Papel..." autocomplete="off">
                                         <button class="btn btn-primary px-4" type="submit">
                                             <i class="bi bi-search"></i>
                                         </button>
@@ -462,7 +463,7 @@
                                 </div>
 
                                 <div class="border-top pt-3">
-                                    <small class="text-muted fw-semibold d-block mb-2">Amostra de códigos da planilha:</small>
+                                    <small class="text-muted fw-semibold d-block mb-2">Amostra de produtos da planilha:</small>
                                     <div class="d-flex flex-wrap gap-2" id="quickSampleCodes"></div>
                                 </div>
                             </div>
@@ -473,15 +474,15 @@
                                 <div class="bg-light rounded-circle p-4 mb-3 text-secondary">
                                     <i class="bi bi-upc fs-1"></i>
                                 </div>
-                                <h5 class="fw-bold text-secondary">Aguardando leitura ou código</h5>
-                                <p class="text-muted small mb-0" style="max-width: 360px;">Digite ou bipe o código de um produto para visualizar Entradas, Saídas, Saldo Real e Último Valor Unitário.</p>
+                                <h5 class="fw-bold text-secondary">Aguardando leitura ou busca</h5>
+                                <p class="text-muted small mb-0" style="max-width: 360px;">Bipe ou digite o código/nome de um produto para visualizar Entradas, Saídas, Saldo Real e Último Valor Unitário.</p>
                             </div>
 
                             <div id="consultaResultCard" class="kpi-card p-4 d-none">
                                 <div class="d-flex flex-wrap justify-content-between align-items-start border-bottom pb-3 mb-3 gap-2">
                                     <div>
                                         <span class="badge bg-secondary mb-1" id="resProdCode">CÓD: 0000</span>
-                                        <h4 class="fw-bold mb-0 text-dark" id="resProdName">Produto</h4>
+                                        <h4 class="fw-bold mb-0 text-dark" id="resProdName">Nome do Produto</h4>
                                         <small class="text-muted" id="resProdUnit">Unidade: UN</small>
                                     </div>
                                     <div class="text-end">
@@ -607,7 +608,8 @@
                                     <table class="table table-hover mb-0">
                                         <thead class="table-light" id="blindTableHead">
                                             <tr>
-                                                <th>Cód. Produto</th>
+                                                <th>Cód.</th>
+                                                <th>Nome do Produto</th>
                                                 <th>Un.</th>
                                                 <th class="text-end">Qtd. Contada</th>
                                                 <th class="text-center">Ação</th>
@@ -615,7 +617,7 @@
                                         </thead>
                                         <tbody id="blindTableBody">
                                             <tr>
-                                                <td colspan="4" class="text-center text-muted py-4">Nenhum item bipado ainda.</td>
+                                                <td colspan="5" class="text-center text-muted py-4">Nenhum item bipado ainda.</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -632,7 +634,7 @@
                             <div class="col-12 col-md-5">
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                                    <input type="text" class="form-control" id="extratoSearchInput" placeholder="Busca inteligente (Cód, Nº, Doc, CNPJ, Tipo, Obs)..." oninput="renderExtratoTable()">
+                                    <input type="text" class="form-control" id="extratoSearchInput" placeholder="Busca inteligente (Cód, Produto, Nº, Doc, CNPJ, Tipo)..." oninput="renderExtratoTable()">
                                 </div>
                             </div>
                             <div class="col-6 col-md-3">
@@ -661,6 +663,7 @@
                                         <th>Depósito</th>
                                         <th>Nome do Depósito</th>
                                         <th>Cód.Produto</th>
+                                        <th>Nome do Produto</th>
                                         <th>Un.</th>
                                         <th class="text-end">Qtd.</th>
                                         <th class="text-end">Vlr. unit.</th>
@@ -689,6 +692,7 @@
         let movimentacoes = [];
         let estoqueConsolidadoCache = [];
         let depositosMap = new Map();
+        let produtosNomeMap = new Map(); // cod -> Nome do Produto
         let fuseExtrato = null;
         let fuseProdutos = null;
 
@@ -774,7 +778,10 @@
 
         function processarLinhasPlanilha(rawRows) {
             depositosMap.clear();
+            produtosNomeMap.clear();
 
+            // Cabeçalho atualizado:
+            // Mov. | Nº | Data / Hora | Tipo | Estado | Depósito | Nome do Depósito | Cód.Produto | Nome do Produto | Un. | Qtd. | Vlr. unit. | Vlr. total | Documento | CNPJ / C. Custo | Observação
             movimentacoes = rawRows.map((r, rowIndex) => {
                 const movRaw = String(getCol(r, ['Mov.', 'Mov', 'Movimento'])).trim();
                 const numStr = String(getCol(r, ['Nº', 'No', 'Numero', 'Número'])).trim();
@@ -798,6 +805,12 @@
                 }
 
                 const codProduto = normCod(getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cod Produto', 'Cód.', 'Código']));
+                const nomeProdutoRaw = String(getCol(r, ['Nome do Produto', 'Nome Produto', 'Produto', 'Descrição', 'Descricao'])).trim();
+
+                if (codProduto && nomeProdutoRaw) {
+                    produtosNomeMap.set(codProduto, nomeProdutoRaw);
+                }
+
                 const un = String(getCol(r, ['Un.', 'Un', 'Unidade'])).trim() || 'UN';
                 const qtd = parseNumBR(getCol(r, ['Qtd.', 'Qtd', 'Quantidade']));
                 let vlrUnit = parseNumBR(getCol(r, ['Vlr. unit.', 'Vlr. Unit.', 'Vlr unit', 'Valor Unitario']));
@@ -826,6 +839,7 @@
                     deposito: deposito || '0',
                     depositoNome: nomeDepPlanilha || (deposito ? `Depósito ${deposito}` : 'Sem Depósito'),
                     cod: codProduto,
+                    nomeProduto: nomeProdutoRaw,
                     un: un,
                     qtd: qtd,
                     vlrUnit: vlrUnit,
@@ -835,6 +849,15 @@
                     observacao: observacao
                 };
             }).filter(m => m.cod || m.mov);
+
+            // Garante preenchimento do Nome do Produto caso alguma linha venha vazia mas outra linha do mesmo código tenha o nome
+            movimentacoes.forEach(m => {
+                if (!m.nomeProduto && m.cod && produtosNomeMap.has(m.cod)) {
+                    m.nomeProduto = produtosNomeMap.get(m.cod);
+                } else if (!m.nomeProduto) {
+                    m.nomeProduto = m.cod ? `Produto ${m.cod}` : 'Sem descrição';
+                }
+            });
 
             // Ordena do mais recente para o mais antigo para exibição no extrato
             movimentacoes.sort((a, b) => {
@@ -847,7 +870,7 @@
 
             if (typeof Fuse !== 'undefined') {
                 fuseExtrato = new Fuse(movimentacoes, {
-                    keys: ['cod', 'num', 'documento', 'cnpjCentroCusto', 'tipo', 'observacao', 'deposito', 'depositoNome'],
+                    keys: ['cod', 'nomeProduto', 'num', 'documento', 'cnpjCentroCusto', 'tipo', 'observacao', 'deposito', 'depositoNome'],
                     threshold: 0.3,
                     ignoreLocation: true
                 });
@@ -862,7 +885,6 @@
             const stockMap = new Map();
             const ultimoPrecoGlobalProduto = new Map();
 
-            // Ordena cronologicamente (mais antigo -> mais recente) para identificar o último preço de cada depósito
             const movsCronologicas = [...movimentacoes].sort((a, b) => {
                 const ta = a.dataObj ? a.dataObj.getTime() : 0;
                 const tb = b.dataObj ? b.dataObj.getTime() : 0;
@@ -872,7 +894,6 @@
             });
 
             movsCronologicas.forEach(m => {
-                // Ignora movimentações estornadas totalmente
                 if (m.estado && m.estado.toLowerCase().includes('estornada total')) return;
                 if (!m.cod) return;
 
@@ -882,10 +903,11 @@
                         deposito: m.deposito,
                         depositoNome: m.depositoNome,
                         cod: m.cod,
+                        nomeProduto: m.nomeProduto || produtosNomeMap.get(m.cod) || `Produto ${m.cod}`,
                         un: m.un || 'UN',
                         entradasQtd: 0,
                         saidasQtd: 0,
-                        saldo: 0, // Sempre Entradas - Saídas
+                        saldo: 0,
                         ultimoVlrUnit: 0,
                         dataUltimoVlr: '',
                         lastMovDate: null,
@@ -894,27 +916,25 @@
                 }
 
                 const entry = stockMap.get(key);
+                if (m.nomeProduto) entry.nomeProduto = m.nomeProduto;
                 if (m.un) entry.un = m.un;
 
                 const qtd = Number(m.qtd || 0);
                 const vlrUnit = Number(m.vlrUnit || 0);
                 const movLower = m.mov.toLowerCase();
 
-                // Captura o último Vlr. unit. (> 0) registrado para o produto naquele depósito
                 if (vlrUnit > 0) {
                     entry.ultimoVlrUnit = vlrUnit;
                     entry.dataUltimoVlr = m.dataHora;
                     ultimoPrecoGlobalProduto.set(m.cod, vlrUnit);
                 }
 
-                // Acumula Entradas e Saídas
                 if (movLower.startsWith('ent') || movLower === 'e') {
                     entry.entradasQtd += qtd;
                 } else if (movLower.startsWith('sa') || movLower === 's') {
                     entry.saidasQtd += qtd;
                 }
 
-                // Saldo = Entrada - Saída
                 entry.saldo = entry.entradasQtd - entry.saidasQtd;
 
                 if (m.dataObj) {
@@ -926,7 +946,6 @@
                 }
             });
 
-            // Fallback se um depósito específico teve saída sem preço unitário informado
             stockMap.forEach(entry => {
                 if (entry.ultimoVlrUnit <= 0 && ultimoPrecoGlobalProduto.has(entry.cod)) {
                     entry.ultimoVlrUnit = ultimoPrecoGlobalProduto.get(entry.cod);
@@ -939,8 +958,8 @@
 
             if (typeof Fuse !== 'undefined') {
                 fuseProdutos = new Fuse(estoqueConsolidadoCache, {
-                    keys: ['cod', 'deposito', 'depositoNome'],
-                    threshold: 0.25
+                    keys: ['cod', 'nomeProduto', 'deposito', 'depositoNome'],
+                    threshold: 0.3
                 });
             }
         }
@@ -1070,7 +1089,7 @@
 
             const titles = {
                 'page-kpis': 'Posição Real de Estoque',
-                'page-consulta': 'Consulta / Cód. Produto',
+                'page-consulta': 'Consulta / Produto',
                 'page-inventario': 'Inventário às Cegas',
                 'page-extrato': 'Extrato Movimentações'
             };
@@ -1106,7 +1125,6 @@
                 ? allStock
                 : allStock.filter(item => item.deposito === activeDepotFilter);
 
-            // Soma sempre o Saldo Real = (Entradas - Saídas) × Último Vlr. Unitário
             let valorPosicaoReal = 0;
             let saldoFisicoReal = 0;
             let totalUnidadesEntrada = 0;
@@ -1120,7 +1138,6 @@
                 totalUnidadesSaida += item.saidasQtd;
             });
 
-            // Totais financeiros registrados nas movimentações
             const scopedMovs = movimentacoes.filter(m => {
                 const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
                 const validState = !m.estado.toLowerCase().includes('estornada total');
@@ -1184,7 +1201,7 @@
                 if (mode === 'NEG' && saldoReal >= 0) return false;
                 if (mode === 'ZERO' && Math.abs(saldoReal) > 0.0001) return false;
                 if (mode === 'STAG30' && (saldoReal <= 0 || item.daysWithoutMov < 30 || item.daysWithoutMov >= 999)) return false;
-                if (search && !`${item.cod} ${item.deposito} ${item.depositoNome}`.toLowerCase().includes(search)) return false;
+                if (search && !`${item.cod} ${item.nomeProduto} ${item.deposito} ${item.depositoNome}`.toLowerCase().includes(search)) return false;
                 return true;
             });
 
@@ -1192,7 +1209,7 @@
 
             const tbody = $('stockPositionTableBody');
             if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">Nenhum item encontrado para o filtro selecionado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">Nenhum item encontrado para o filtro selecionado.</td></tr>`;
                 return;
             }
 
@@ -1203,6 +1220,7 @@
                 return `
                     <tr style="cursor:pointer;" onclick="abrirConsultaDireta('${item.cod}')" title="Clique para ver detalhes do produto ${item.cod}">
                         <td class="fw-bold text-primary">${item.cod}</td>
+                        <td class="fw-medium">${item.nomeProduto}</td>
                         <td><span class="badge bg-light text-dark border">${item.deposito} - ${item.depositoNome}</span></td>
                         <td class="text-end text-primary">${item.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
                         <td class="text-end text-danger">${item.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
@@ -1264,14 +1282,23 @@
         }
 
         /**
-         * 6. SUBPÁGINA 2: CONSULTA RÁPIDA DE PRODUTO
+         * 6. SUBPÁGINA 2: CONSULTA RÁPIDA DE PRODUTO (CÓDIGO OU NOME)
          */
         function renderQuickSampleCodes() {
-            const uniqueCodes = [...new Set(movimentacoes.map(i => i.cod).filter(Boolean))].slice(0, 12);
+            const uniqueItems = [];
+            const seen = new Set();
+            for (const m of movimentacoes) {
+                if (m.cod && !seen.has(m.cod)) {
+                    seen.add(m.cod);
+                    uniqueItems.push({ cod: m.cod, nome: m.nomeProduto });
+                    if (uniqueItems.length >= 8) break;
+                }
+            }
+
             const container = $('quickSampleCodes');
-            container.innerHTML = uniqueCodes.map(cod => `
-                <button type="button" class="btn btn-sm btn-light border fw-semibold" onclick="triggerSampleLookup('${cod}')">
-                    <i class="bi bi-upc me-1 text-muted"></i>${cod}
+            container.innerHTML = uniqueItems.map(item => `
+                <button type="button" class="btn btn-sm btn-light border fw-semibold text-truncate" style="max-width: 100%;" onclick="triggerSampleLookup('${item.cod}')" title="${item.cod} - ${item.nome}">
+                    <i class="bi bi-upc me-1 text-muted"></i><strong>${item.cod}</strong> · ${item.nome}
                 </button>
             `).join('');
         }
@@ -1284,9 +1311,9 @@
         function searchProductByInput(e) {
             e.preventDefault();
             const input = $('barcodeInput');
-            const code = input.value.trim();
-            if (!code) return;
-            displayProductDetails(code);
+            const query = input.value.trim();
+            if (!query) return;
+            displayProductDetails(query);
             input.select();
         }
 
@@ -1295,8 +1322,17 @@
             const allStock = getConsolidatedStock();
             let matches = allStock.filter(item => item.cod.toLowerCase() === cleanQuery.toLowerCase());
 
+            // Busca por substring no nome do produto
+            if (matches.length === 0) {
+                const subMatch = allStock.find(item => item.nomeProduto.toLowerCase().includes(query.toLowerCase()));
+                if (subMatch) {
+                    matches = allStock.filter(item => item.cod === subMatch.cod);
+                }
+            }
+
+            // Busca aproximada via Fuse.js (código ou nome)
             if (matches.length === 0 && fuseProdutos) {
-                const fuzzy = fuseProdutos.search(cleanQuery);
+                const fuzzy = fuseProdutos.search(query);
                 if (fuzzy.length > 0) {
                     const bestCod = fuzzy[0].item.cod;
                     matches = allStock.filter(item => item.cod === bestCod);
@@ -1316,7 +1352,7 @@
             resCodeEl.textContent = `CÓD. PRODUTO: ${sampleItem.cod}`;
             resCodeEl.dataset.code = sampleItem.cod;
 
-            $('resProdName').textContent = `Produto Cód. ${sampleItem.cod}`;
+            $('resProdName').textContent = sampleItem.nomeProduto;
             $('resProdUnit').textContent = `Unidade: ${sampleItem.un}`;
 
             let scopedEnt = 0;
@@ -1495,6 +1531,7 @@
             } else {
                 blindInventoryItems.push({
                     cod: sample.cod,
+                    nomeProduto: sample.nomeProduto,
                     un: sample.un,
                     vlrUnit: ultimoUnit,
                     systemQty: systemQty,
@@ -1507,7 +1544,7 @@
             codeInput.focus();
 
             renderBlindTable();
-            showToast(`Contagem registrada: Cód. ${sample.cod}`, 'success');
+            showToast(`Contagem registrada: ${sample.cod} - ${sample.nomeProduto}`, 'success');
         }
 
         function removeBlindItem(index) {
@@ -1525,16 +1562,17 @@
             btnFinish.disabled = blindInventoryItems.length === 0 || isBlindFinished;
 
             if (blindInventoryItems.length === 0) {
-                thead.innerHTML = `<tr><th>Cód. Produto</th><th>Un.</th><th class="text-end">Qtd. Contada</th><th class="text-center">Ação</th></tr>`;
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Nenhum item bipado ainda.</td></tr>`;
+                thead.innerHTML = `<tr><th>Cód.</th><th>Nome do Produto</th><th>Un.</th><th class="text-end">Qtd. Contada</th><th class="text-center">Ação</th></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Nenhum item bipado ainda.</td></tr>`;
                 return;
             }
 
             if (!isBlindFinished) {
-                thead.innerHTML = `<tr><th>Cód. Produto</th><th>Un.</th><th class="text-end">Qtd. Contada</th><th class="text-center">Ação</th></tr>`;
+                thead.innerHTML = `<tr><th>Cód.</th><th>Nome do Produto</th><th>Un.</th><th class="text-end">Qtd. Contada</th><th class="text-center">Ação</th></tr>`;
                 tbody.innerHTML = blindInventoryItems.map((item, idx) => `
                     <tr>
                         <td class="fw-bold text-primary">${item.cod}</td>
+                        <td>${item.nomeProduto}</td>
                         <td>${item.un}</td>
                         <td class="text-end fw-bold fs-6">${item.countedQty}</td>
                         <td class="text-center">
@@ -1545,7 +1583,8 @@
             } else {
                 thead.innerHTML = `
                     <tr>
-                        <th>Cód. Produto</th>
+                        <th>Cód.</th>
+                        <th>Nome do Produto</th>
                         <th class="text-end">Saldo (Ent. − Saí.)</th>
                         <th class="text-end">Contagem Física</th>
                         <th class="text-end">Diferença</th>
@@ -1562,6 +1601,7 @@
                     return `
                         <tr>
                             <td class="fw-bold">${item.cod}</td>
+                            <td>${item.nomeProduto}</td>
                             <td class="text-end ${item.systemQty < 0 ? 'text-danger fw-bold' : 'text-muted'}">${item.systemQty.toLocaleString('pt-BR')} ${item.un}</td>
                             <td class="text-end fw-bold">${item.countedQty.toLocaleString('pt-BR')} ${item.un}</td>
                             <td class="text-end">${diffBadge}</td>
@@ -1594,12 +1634,13 @@
         }
 
         function exportBlindCsv() {
-            let csv = "Cod_Produto;Unidade;Saldo_Entrada_Menos_Saida;Contagem_Fisica;Diferenca;Ultimo_Vlr_Unit;Impacto_Financeiro\n";
+            let csv = "Cod_Produto;Nome_Produto;Unidade;Saldo_Entrada_Menos_Saida;Contagem_Fisica;Diferenca;Ultimo_Vlr_Unit;Impacto_Financeiro\n";
             blindInventoryItems.forEach(i => {
                 const diff = i.countedQty - i.systemQty;
                 const unitStr = i.vlrUnit.toFixed(2).replace('.', ',');
                 const impact = (diff * i.vlrUnit).toFixed(2).replace('.', ',');
-                csv += `${i.cod};${i.un};${i.systemQty};${i.countedQty};${diff};${unitStr};${impact}\n`;
+                const nomeEscaped = `"${String(i.nomeProduto || '').replace(/"/g, '""')}"`;
+                csv += `${i.cod};${nomeEscaped};${i.un};${i.systemQty};${i.countedQty};${diff};${unitStr};${impact}\n`;
             });
             const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
@@ -1632,7 +1673,7 @@
 
             const tbody = $('extratoTableBody');
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="15" class="text-center text-muted py-4">Nenhuma movimentação encontrada.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="16" class="text-center text-muted py-4">Nenhuma movimentação encontrada.</td></tr>`;
                 return;
             }
 
@@ -1649,6 +1690,7 @@
                         <td class="text-center fw-bold">${m.deposito}</td>
                         <td class="text-nowrap text-muted">${m.depositoNome}</td>
                         <td class="fw-bold text-primary">${m.cod}</td>
+                        <td class="text-nowrap">${m.nomeProduto}</td>
                         <td>${m.un}</td>
                         <td class="text-end fw-bold">${m.qtd.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}</td>
                         <td class="text-end text-nowrap">${formatCurrency(m.vlrUnit)}</td>
