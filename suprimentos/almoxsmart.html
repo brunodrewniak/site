@@ -317,7 +317,7 @@
 
             <main class="p-3 p-md-4 flex-grow-1">
 
-                <!-- SUBPÁGINA 1: POSIÇÃO REAL DE ESTOQUE (ENTRADA - SAÍDA) -->
+                <!-- SUBPÁGINA 1: POSIÇÃO REAL DE ESTOQUE (QUANTIDADES: ENTRADA - SAÍDA) -->
                 <div id="page-kpis" class="subpage">
                     <div class="row g-3 mb-4">
                         <div class="col-12 col-sm-6 col-xl-3">
@@ -325,13 +325,13 @@
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <p class="text-muted small fw-semibold text-uppercase mb-1">Saldo Real (Entrada − Saída)</p>
-                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalValue">R$ 0,00</h4>
+                                        <h4 class="fw-bold mb-0 text-success" id="kpiTotalUnits">0 un.</h4>
                                     </div>
                                     <div class="kpi-icon bg-success-subtle text-success" id="kpiSaldoIcon">
                                         <i class="bi bi-calculator"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiValSub">A último preço: R$ 0,00</small>
+                                <small class="text-muted mt-2 d-block" id="kpiSaldoSub">Quantidade líquida em estoque</small>
                             </div>
                         </div>
 
@@ -340,13 +340,13 @@
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <p class="text-muted small fw-semibold text-uppercase mb-1">Total Entradas (+)</p>
-                                        <h4 class="fw-bold mb-0 text-primary" id="kpiEntradasVal">R$ 0,00</h4>
+                                        <h4 class="fw-bold mb-0 text-primary" id="kpiEntradasQtd">0 un.</h4>
                                     </div>
                                     <div class="kpi-icon bg-primary-subtle text-primary">
                                         <i class="bi bi-box-arrow-in-down"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiEntradasQtd">0 unidades / 0 lançamentos</small>
+                                <small class="text-muted mt-2 d-block" id="kpiEntradasLanc">0 lançamentos de entrada</small>
                             </div>
                         </div>
 
@@ -355,13 +355,13 @@
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <p class="text-muted small fw-semibold text-uppercase mb-1">Total Saídas (−)</p>
-                                        <h4 class="fw-bold mb-0 text-danger" id="kpiSaidasVal">R$ 0,00</h4>
+                                        <h4 class="fw-bold mb-0 text-danger" id="kpiSaidasQtd">0 un.</h4>
                                     </div>
                                     <div class="kpi-icon bg-danger-subtle text-danger">
                                         <i class="bi bi-box-arrow-up"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiSaidasQtd">0 unidades / 0 lançamentos</small>
+                                <small class="text-muted mt-2 d-block" id="kpiSaidasLanc">0 lançamentos de saída</small>
                             </div>
                         </div>
 
@@ -369,26 +369,26 @@
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Saldo Físico (Ent. − Saí.)</p>
-                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalUnits">0 un.</h4>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Produtos Distintos</p>
+                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalItems">0 itens</h4>
                                     </div>
                                     <div class="kpi-icon bg-info-subtle text-info">
                                         <i class="bi bi-boxes"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiTotalItems">0 produtos distintos</small>
+                                <small class="text-muted mt-2 d-block" id="kpiTotalItemsSub">SKUs movimentados no escopo</small>
                             </div>
                         </div>
                     </div>
 
                     <div class="row g-4">
-                        <!-- Tabela Consolidada de Saldos (Entrada - Saída) -->
+                        <!-- Tabela Consolidada de Saldos (Entrada - Saída em Quantidades) -->
                         <div class="col-12 col-xl-8">
                             <div class="table-container h-100">
                                 <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white">
                                     <div>
                                         <h6 class="fw-bold mb-0"><i class="bi bi-layers-fill text-primary me-2"></i>Posição Real por Produto e Depósito (Entrada − Saída)</h6>
-                                        <small class="text-muted">Saldo Real (R$ Entradas − R$ Saídas) e avaliação pelo último Vlr. unit. do depósito</small>
+                                        <small class="text-muted">Controle físico de quantidades (Entradas − Saídas) por produto e depósito</small>
                                     </div>
                                     <div class="d-flex gap-2 align-items-center">
                                         <input type="text" id="saldoSearchInput" class="form-control form-control-sm" placeholder="Filtrar Cód., Nome ou Depósito..." oninput="renderStockPositionTable()">
@@ -410,10 +410,7 @@
                                                 <th>Depósito</th>
                                                 <th class="text-end">Entradas (+)</th>
                                                 <th class="text-end">Saídas (−)</th>
-                                                <th class="text-end">Saldo (E − S)</th>
-                                                <th class="text-end">Último Vlr. Unit.</th>
-                                                <th class="text-end">Saldo Real (R$)</th>
-                                                <th class="text-end">Vlr. Últ. Preço</th>
+                                                <th class="text-end">Saldo Real (E − S)</th>
                                                 <th class="text-center">Última Mov.</th>
                                             </tr>
                                         </thead>
@@ -423,11 +420,11 @@
                             </div>
                         </div>
 
-                        <!-- Consumo por Centro de Custo / CNPJ -->
+                        <!-- Consumo por Centro de Custo / CNPJ (em Quantidade) -->
                         <div class="col-12 col-xl-4">
                             <div class="kpi-card p-3 h-100">
                                 <h6 class="fw-bold mb-1"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Top Saídas por C. Custo / CNPJ</h6>
-                                <p class="text-muted small mb-3">Maiores destinos registrados na planilha</p>
+                                <p class="text-muted small mb-3">Maiores destinos por quantidade retirada</p>
                                 <div id="costCenterContainer" class="d-flex flex-column gap-3" style="max-height: 440px; overflow-y: auto;"></div>
                             </div>
                         </div>
@@ -479,7 +476,7 @@
                                     <i class="bi bi-upc fs-1"></i>
                                 </div>
                                 <h5 class="fw-bold text-secondary">Aguardando leitura ou busca</h5>
-                                <p class="text-muted small mb-0" style="max-width: 360px;">Bipe o código de barras ou digite o código/nome do produto para visualizar Entradas, Saídas, Saldo Real e Último Valor Unitário.</p>
+                                <p class="text-muted small mb-0" style="max-width: 360px;">Bipe o código de barras ou digite o código/nome do produto para visualizar Entradas, Saídas e Saldo Real em estoque.</p>
                             </div>
 
                             <div id="consultaResultCard" class="kpi-card p-4 d-none">
@@ -496,21 +493,24 @@
 
                                 <div class="row g-3 mb-4">
                                     <div class="col-12 col-sm-6">
-                                        <div class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle">
+                                        <div class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle h-100">
                                             <small class="text-primary fw-bold text-uppercase d-block mb-1">Saldo Real (Entrada − Saída)</small>
                                             <div class="d-flex align-items-baseline gap-2">
                                                 <span class="saldo-destaque text-primary" id="resStockQty">0</span>
                                                 <span class="fw-bold text-primary fs-5" id="resStockUnit">UN</span>
                                             </div>
-                                            <small class="text-muted d-block mt-1" id="resEntSaiBreakdown">Entradas: 0 | Saídas: 0</small>
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-6">
-                                        <div class="p-3 rounded-3 bg-light border">
-                                            <small class="text-secondary fw-bold text-uppercase d-block mb-1">Saldo Financeiro (Entrada − Saída)</small>
-                                            <h3 class="fw-bold text-dark mb-1" id="resStockTotalVal">R$ 0,00</h3>
-                                            <small class="text-muted fw-semibold d-block" id="resUnitVal">Último Vlr. Unitário: R$ 0,00</small>
-                                            <small class="text-muted d-block" id="resLastPriceTotalVal">A último preço: R$ 0,00</small>
+                                        <div class="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-center">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="small fw-bold text-uppercase text-secondary">Total Entradas (+)</span>
+                                                <span class="fw-bold text-primary fs-5" id="resTotalEntradasProd">0 UN</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="small fw-bold text-uppercase text-secondary">Total Saídas (−)</span>
+                                                <span class="fw-bold text-danger fs-5" id="resTotalSaidasProd">0 UN</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -523,9 +523,7 @@
                                                 <th>Depósito</th>
                                                 <th class="text-end">Entradas (+)</th>
                                                 <th class="text-end">Saídas (−)</th>
-                                                <th class="text-end">Saldo (E − S)</th>
-                                                <th class="text-end">Último Vlr. Unit.</th>
-                                                <th class="text-end">Saldo Real (R$)</th>
+                                                <th class="text-end">Saldo Real (E − S)</th>
                                             </tr>
                                         </thead>
                                         <tbody id="resDepotsBreakdownBody"></tbody>
@@ -543,8 +541,6 @@
                                                 <th>Tipo</th>
                                                 <th>Dep.</th>
                                                 <th class="text-end">Qtd.</th>
-                                                <th class="text-end">Vlr. Unit.</th>
-                                                <th class="text-end">Vlr. Total</th>
                                                 <th>Doc.</th>
                                                 <th>CNPJ / C. Custo</th>
                                             </tr>
@@ -563,7 +559,7 @@
                         <i class="bi bi-eye-slash-fill fs-3 text-info"></i>
                         <div>
                             <h6 class="fw-bold mb-0">Modo de Contagem às Cegas Ativo</h6>
-                            <small>Compara a contagem física contra o saldo <strong>(Entradas − Saídas)</strong> usando o <strong>último Vlr. unit. do depósito</strong>.</small>
+                            <small>Compara a quantidade física contada contra o saldo <strong>(Entradas − Saídas)</strong> do sistema.</small>
                         </div>
                     </div>
 
@@ -682,8 +678,6 @@
                                         <th>Nome do Produto</th>
                                         <th>Un.</th>
                                         <th class="text-end">Qtd.</th>
-                                        <th class="text-end">Vlr. unit.</th>
-                                        <th class="text-end">Vlr. total</th>
                                         <th>Documento</th>
                                         <th>CNPJ / C. Custo</th>
                                         <th>Observação</th>
@@ -702,7 +696,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwk6xDCeugOO6Ykk-FPMdof6-Q1mNWVXqU-KSYbhU1y14IfoClWBKpfs8uI6ejjXPOQPd5llEtlK5A/pub?output=xlsx";
+        const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRWiRG_thI_ZW6oaD4uveXFc_2HhUfDy3_3E81sEPj3Udyo03RcY2IIE7sb98uZKQjpumCZXH4UcHil/pub?output=xlsx";
         const $ = id => document.getElementById(id);
 
         let movimentacoes = [];
@@ -840,15 +834,6 @@
 
                 const un = String(getCol(r, ['Un.', 'Un', 'Unidade'])).trim() || 'UN';
                 const qtd = parseNumBR(getCol(r, ['Qtd.', 'Qtd', 'Quantidade']));
-                let vlrUnit = parseNumBR(getCol(r, ['Vlr. unit.', 'Vlr. Unit.', 'Vlr unit', 'Valor Unitario']));
-                let vlrTotal = parseNumBR(getCol(r, ['Vlr. total', 'Vlr. Total', 'Vlr total', 'Valor Total']));
-
-                if (vlrUnit <= 0 && vlrTotal > 0 && qtd > 0) {
-                    vlrUnit = vlrTotal / qtd;
-                }
-                if (vlrTotal <= 0 && vlrUnit > 0 && qtd > 0) {
-                    vlrTotal = vlrUnit * qtd;
-                }
 
                 const documento = String(getCol(r, ['Documento'])).trim();
                 const cnpjCentroCusto = String(getCol(r, ['CNPJ / C. Custo', 'CNPJ / C.Custo'])).trim();
@@ -869,8 +854,6 @@
                     nomeProduto: nomeProdutoRaw,
                     un: un,
                     qtd: qtd,
-                    vlrUnit: vlrUnit,
-                    vlrTotal: vlrTotal,
                     documento: documento,
                     cnpjCentroCusto: cnpjCentroCusto,
                     observacao: observacao
@@ -903,12 +886,11 @@
         }
 
         /**
-         * 2. MOTOR DE CÁLCULO: SALDO (ENTRADA - SAÍDA) FÍSICO E FINANCEIRO + ÚLTIMO VLR. UNITÁRIO
+         * 2. MOTOR DE CÁLCULO: SALDO FÍSICO (ENTRADA - SAÍDA) POR PRODUTO E DEPÓSITO
          */
         function recalcularEstoqueConsolidado() {
             const today = new Date();
             const stockMap = new Map();
-            const ultimoPrecoGlobalProduto = new Map();
 
             const movsCronologicas = [...movimentacoes].sort((a, b) => {
                 const ta = a.dataObj ? a.dataObj.getTime() : 0;
@@ -932,12 +914,7 @@
                         un: m.un || 'UN',
                         entradasQtd: 0,
                         saidasQtd: 0,
-                        entradasVal: 0,
-                        saidasVal: 0,
                         saldo: 0,
-                        saldoFinanceiroReal: 0,
-                        ultimoVlrUnit: 0,
-                        dataUltimoVlr: '',
                         lastMovDate: null,
                         daysWithoutMov: 999
                     });
@@ -948,26 +925,15 @@
                 if (m.un) entry.un = m.un;
 
                 const qtd = Number(m.qtd || 0);
-                const vlrUnit = Number(m.vlrUnit || 0);
-                const vlrTotal = Number(m.vlrTotal || 0);
                 const movLower = m.mov.toLowerCase();
-
-                if (vlrUnit > 0) {
-                    entry.ultimoVlrUnit = vlrUnit;
-                    entry.dataUltimoVlr = m.dataHora;
-                    ultimoPrecoGlobalProduto.set(m.cod, vlrUnit);
-                }
 
                 if (movLower.startsWith('ent') || movLower === 'e') {
                     entry.entradasQtd += qtd;
-                    entry.entradasVal += vlrTotal;
                 } else if (movLower.startsWith('sa') || movLower === 's') {
                     entry.saidasQtd += qtd;
-                    entry.saidasVal += vlrTotal;
                 }
 
                 entry.saldo = entry.entradasQtd - entry.saidasQtd;
-                entry.saldoFinanceiroReal = entry.entradasVal - entry.saidasVal;
 
                 if (m.dataObj) {
                     if (!entry.lastMovDate || m.dataObj >= entry.lastMovDate.obj) {
@@ -979,12 +945,7 @@
             });
 
             stockMap.forEach(entry => {
-                if (entry.ultimoVlrUnit <= 0 && ultimoPrecoGlobalProduto.has(entry.cod)) {
-                    entry.ultimoVlrUnit = ultimoPrecoGlobalProduto.get(entry.cod);
-                }
                 entry.saldo = entry.entradasQtd - entry.saidasQtd;
-                entry.saldoFinanceiroReal = entry.entradasVal - entry.saidasVal;
-                entry.valorUltimoPreco = entry.saldo * entry.ultimoVlrUnit;
             });
 
             estoqueConsolidadoCache = Array.from(stockMap.values());
@@ -1150,77 +1111,58 @@
         }
 
         /**
-         * 5. SUBPÁGINA 1: KPIs E POSIÇÃO REAL DE ESTOQUE (ENTRADA - SAÍDA)
+         * 5. SUBPÁGINA 1: KPIs E POSIÇÃO REAL DE ESTOQUE EM QUANTIDADES (ENTRADA - SAÍDA)
          */
         function renderKPIsAndStockPosition() {
-            const allStock = getConsolidatedStock();
-            const filteredStock = activeDepotFilter === 'ALL'
-                ? allStock
-                : allStock.filter(item => item.deposito === activeDepotFilter);
-
-            let valorUltimoPrecoTotal = 0;
-            let saldoFisicoReal = 0;
-            let totalUnidadesEntrada = 0;
-            let totalUnidadesSaida = 0;
-
-            filteredStock.forEach(item => {
-                const saldoItem = item.entradasQtd - item.saidasQtd;
-                saldoFisicoReal += saldoItem;
-                valorUltimoPrecoTotal += (saldoItem * item.ultimoVlrUnit);
-                totalUnidadesEntrada += item.entradasQtd;
-                totalUnidadesSaida += item.saidasQtd;
-            });
-
-            // Totais financeiros exatos das movimentações (mesma base dos cards Total Entradas e Total Saídas)
             const scopedMovs = movimentacoes.filter(m => {
                 const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
                 const validState = !m.estado.toLowerCase().includes('estornada total');
                 return matchDepot && validState;
             });
 
-            let totalEntradasVal = 0, qtdLancEntradas = 0;
-            let totalSaidasVal = 0, qtdLancSaidas = 0;
+            let totalEntradasQtd = 0, qtdLancEntradas = 0;
+            let totalSaidasQtd = 0, qtdLancSaidas = 0;
+            const produtosDistintosSet = new Set();
 
             scopedMovs.forEach(m => {
+                if (m.cod) produtosDistintosSet.add(m.cod);
+                const qtd = Number(m.qtd || 0);
                 const movLower = m.mov.toLowerCase();
+
                 if (movLower.startsWith('ent') || movLower === 'e') {
-                    totalEntradasVal += m.vlrTotal;
+                    totalEntradasQtd += qtd;
                     qtdLancEntradas++;
                 } else if (movLower.startsWith('sa') || movLower === 's') {
-                    totalSaidasVal += m.vlrTotal;
+                    totalSaidasQtd += qtd;
                     qtdLancSaidas++;
                 }
             });
 
-            // Saldo Real = Total Entradas (+) - Total Saídas (-)
-            const saldoRealFinanceiro = totalEntradasVal - totalSaidasVal;
+            // Saldo Real (Entrada - Saída) exatamente igual à diferença entre Total Entradas e Total Saídas
+            const saldoRealQtd = totalEntradasQtd - totalSaidasQtd;
 
-            const kpiValEl = $('kpiTotalValue');
+            const kpiUnitsEl = $('kpiTotalUnits');
             const kpiIconEl = $('kpiSaldoIcon');
-            kpiValEl.textContent = formatCurrency(saldoRealFinanceiro);
+            kpiUnitsEl.textContent = `${formatQty(saldoRealQtd)} un.`;
 
-            if (saldoRealFinanceiro < -0.005) {
-                kpiValEl.className = "fw-bold mb-0 text-danger";
+            if (saldoRealQtd < -0.0001) {
+                kpiUnitsEl.className = "fw-bold mb-0 text-danger";
                 kpiIconEl.className = "kpi-icon bg-danger-subtle text-danger";
             } else {
-                kpiValEl.className = "fw-bold mb-0 text-success";
+                kpiUnitsEl.className = "fw-bold mb-0 text-success";
                 kpiIconEl.className = "kpi-icon bg-success-subtle text-success";
             }
 
-            $('kpiValSub').textContent = `A último preço: ${formatCurrency(valorUltimoPrecoTotal)}`;
+            $('kpiSaldoSub').textContent = `${formatQty(totalEntradasQtd)} ent. − ${formatQty(totalSaidasQtd)} saí.`;
 
-            $('kpiEntradasVal').textContent = formatCurrency(totalEntradasVal);
-            $('kpiEntradasQtd').textContent = `${totalUnidadesEntrada.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un. (${qtdLancEntradas} lanç.)`;
+            $('kpiEntradasQtd').textContent = `${formatQty(totalEntradasQtd)} un.`;
+            $('kpiEntradasLanc').textContent = `${qtdLancEntradas.toLocaleString('pt-BR')} lançamentos de entrada`;
 
-            $('kpiSaidasVal').textContent = formatCurrency(totalSaidasVal);
-            $('kpiSaidasQtd').textContent = `${totalUnidadesSaida.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un. (${qtdLancSaidas} lanç.)`;
+            $('kpiSaidasQtd').textContent = `${formatQty(totalSaidasQtd)} un.`;
+            $('kpiSaidasLanc').textContent = `${qtdLancSaidas.toLocaleString('pt-BR')} lançamentos de saída`;
 
-            const kpiUnitsEl = $('kpiTotalUnits');
-            kpiUnitsEl.textContent = `${saldoFisicoReal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un.`;
-            kpiUnitsEl.className = `fw-bold mb-0 ${saldoFisicoReal < 0 ? 'text-danger' : 'text-dark'}`;
-
-            const produtosDistintos = new Set(filteredStock.map(i => i.cod)).size;
-            $('kpiTotalItems').textContent = `${produtosDistintos.toLocaleString('pt-BR')} produtos distintos`;
+            $('kpiTotalItems').textContent = `${produtosDistintosSet.size.toLocaleString('pt-BR')} itens`;
+            $('kpiTotalItemsSub').textContent = activeDepotFilter === 'ALL' ? 'Produtos distintos (todos depósitos)' : 'Produtos distintos neste depósito';
 
             renderStockPositionTable();
             renderCostCenterChart();
@@ -1242,31 +1184,25 @@
                 return true;
             });
 
-            rows.sort((a, b) => Math.abs(b.saldoFinanceiroReal) - Math.abs(a.saldoFinanceiroReal));
+            rows.sort((a, b) => Math.abs(b.saldo) - Math.abs(a.saldo));
 
             const tbody = $('stockPositionTableBody');
             if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">Nenhum item encontrado para o filtro selecionado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Nenhum item encontrado para o filtro selecionado.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = rows.slice(0, 300).map(item => {
                 const saldoReal = item.entradasQtd - item.saidasQtd;
-                const saldoFin = item.entradasVal - item.saidasVal;
-                const vlrUltPreco = saldoReal * item.ultimoVlrUnit;
-                const saldoClass = saldoReal < 0 ? 'text-danger' : (saldoReal > 0 ? 'text-success' : 'text-muted');
-                const finClass = saldoFin < -0.005 ? 'text-danger' : (saldoFin > 0.005 ? 'text-success' : 'text-muted');
+                const saldoClass = saldoReal < -0.0001 ? 'text-danger' : (saldoReal > 0.0001 ? 'text-success' : 'text-muted');
                 return `
                     <tr style="cursor:pointer;" onclick="abrirConsultaDireta('${item.cod}')" title="Clique para ver detalhes do produto ${item.cod}">
                         <td class="fw-bold text-primary">${item.cod}</td>
                         <td class="fw-medium">${item.nomeProduto}</td>
                         <td><span class="badge bg-light text-dark border">${item.deposito} - ${item.depositoNome}</span></td>
-                        <td class="text-end text-primary">${item.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
-                        <td class="text-end text-danger">${item.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
-                        <td class="text-end fw-bold ${saldoClass}">${saldoReal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${item.un}</td>
-                        <td class="text-end text-nowrap">${formatCurrency(item.ultimoVlrUnit)}</td>
-                        <td class="text-end fw-semibold text-nowrap ${finClass}">${formatCurrency(saldoFin)}</td>
-                        <td class="text-end text-muted text-nowrap">${formatCurrency(vlrUltPreco)}</td>
+                        <td class="text-end text-primary">${formatQty(item.entradasQtd)}</td>
+                        <td class="text-end text-danger">${formatQty(item.saidasQtd)}</td>
+                        <td class="text-end fw-bold ${saldoClass}">${formatQty(saldoReal)} ${item.un}</td>
                         <td class="text-center text-muted small">${item.lastMovDate ? item.lastMovDate.str : '-'}</td>
                     </tr>
                 `;
@@ -1292,9 +1228,9 @@
 
             filteredMovs.forEach(m => {
                 const cc = m.cnpjCentroCusto || 'Não Informado';
-                const val = Number(m.vlrTotal || 0);
-                ccTotals[cc] = (ccTotals[cc] || 0) + val;
-                grandTotal += val;
+                const qtd = Number(m.qtd || 0);
+                ccTotals[cc] = (ccTotals[cc] || 0) + qtd;
+                grandTotal += qtd;
             });
 
             const sortedCC = Object.entries(ccTotals).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -1305,13 +1241,13 @@
                 return;
             }
 
-            container.innerHTML = sortedCC.map(([name, total]) => {
-                const pct = grandTotal > 0 ? Math.max(1, Math.round((total / grandTotal) * 100)) : 0;
+            container.innerHTML = sortedCC.map(([name, totalQtd]) => {
+                const pct = grandTotal > 0 ? Math.max(1, Math.round((totalQtd / grandTotal) * 100)) : 0;
                 return `
                     <div>
                         <div class="d-flex justify-content-between small mb-1">
                             <span class="fw-semibold text-truncate" style="max-width: 62%;" title="${name}">${name}</span>
-                            <span class="fw-bold text-dark">${formatCurrency(total)} <span class="text-muted fw-normal">(${pct}%)</span></span>
+                            <span class="fw-bold text-dark">${formatQty(totalQtd)} un. <span class="text-muted fw-normal">(${pct}%)</span></span>
                         </div>
                         <div class="progress" style="height: 8px;">
                             <div class="progress-bar bg-primary" role="progressbar" style="width: ${pct}%"></div>
@@ -1414,58 +1350,40 @@
             let scopedEnt = 0;
             let scopedSai = 0;
             let scopedQty = 0;
-            let scopedSaldoRealFin = 0;
-            let scopedUltPrecoVal = 0;
-            let ultimoUnitExibido = 0;
             let depotLabel = '';
 
             if (activeDepotFilter === 'ALL') {
                 scopedEnt = matches.reduce((acc, m) => acc + m.entradasQtd, 0);
                 scopedSai = matches.reduce((acc, m) => acc + m.saidasQtd, 0);
                 scopedQty = scopedEnt - scopedSai;
-                scopedSaldoRealFin = matches.reduce((acc, m) => acc + (m.entradasVal - m.saidasVal), 0);
-                scopedUltPrecoVal = matches.reduce((acc, m) => acc + ((m.entradasQtd - m.saidasQtd) * m.ultimoVlrUnit), 0);
-                const comPreco = matches.filter(m => m.ultimoVlrUnit > 0);
-                ultimoUnitExibido = comPreco.length > 0 ? comPreco[comPreco.length - 1].ultimoVlrUnit : 0;
                 depotLabel = 'Todos os Depósitos';
             } else {
                 const targetDepot = matches.find(m => m.deposito === activeDepotFilter);
                 scopedEnt = targetDepot ? targetDepot.entradasQtd : 0;
                 scopedSai = targetDepot ? targetDepot.saidasQtd : 0;
                 scopedQty = scopedEnt - scopedSai;
-                scopedSaldoRealFin = targetDepot ? (targetDepot.entradasVal - targetDepot.saidasVal) : 0;
-                ultimoUnitExibido = targetDepot ? targetDepot.ultimoVlrUnit : 0;
-                scopedUltPrecoVal = scopedQty * ultimoUnitExibido;
                 depotLabel = currentSession.label;
             }
 
             $('resDepotContext').textContent = depotLabel;
             const qtyEl = $('resStockQty');
-            qtyEl.textContent = scopedQty.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
-            qtyEl.className = `saldo-destaque ${scopedQty < 0 ? 'text-danger' : 'text-primary'}`;
+            qtyEl.textContent = formatQty(scopedQty);
+            qtyEl.className = `saldo-destaque ${scopedQty < -0.0001 ? 'text-danger' : 'text-primary'}`;
 
             $('resStockUnit').textContent = sampleItem.un;
-            $('resEntSaiBreakdown').textContent = `Entradas: ${scopedEnt.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} | Saídas: ${scopedSai.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
-
-            const valEl = $('resStockTotalVal');
-            valEl.textContent = formatCurrency(scopedSaldoRealFin);
-            valEl.className = `fw-bold mb-1 ${scopedSaldoRealFin < -0.005 ? 'text-danger' : 'text-dark'}`;
-            $('resUnitVal').textContent = `Último Vlr. Unitário: ${formatCurrency(ultimoUnitExibido)}`;
-            $('resLastPriceTotalVal').textContent = `A último preço (Saldo × Últ. Vlr.): ${formatCurrency(scopedUltPrecoVal)}`;
+            $('resTotalEntradasProd').textContent = `${formatQty(scopedEnt)} ${sampleItem.un}`;
+            $('resTotalSaidasProd').textContent = `${formatQty(scopedSai)} ${sampleItem.un}`;
 
             const breakdownBody = $('resDepotsBreakdownBody');
             breakdownBody.innerHTML = matches.sort((a, b) => Number(a.deposito) - Number(b.deposito)).map(m => {
                 const saldoDep = m.entradasQtd - m.saidasQtd;
-                const saldoRealFinDep = m.entradasVal - m.saidasVal;
                 const isSelected = activeDepotFilter !== 'ALL' && m.deposito === activeDepotFilter;
                 return `
                     <tr class="${isSelected ? 'table-primary fw-semibold' : ''}">
                         <td>${m.deposito} - ${m.depositoNome}</td>
-                        <td class="text-end text-primary">${m.entradasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
-                        <td class="text-end text-danger">${m.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
-                        <td class="text-end fw-bold ${saldoDep < 0 ? 'text-danger' : 'text-success'}">${saldoDep.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${m.un}</td>
-                        <td class="text-end">${formatCurrency(m.ultimoVlrUnit)}</td>
-                        <td class="text-end fw-bold ${saldoRealFinDep < -0.005 ? 'text-danger' : ''}">${formatCurrency(saldoRealFinDep)}</td>
+                        <td class="text-end text-primary">${formatQty(m.entradasQtd)}</td>
+                        <td class="text-end text-danger">${formatQty(m.saidasQtd)}</td>
+                        <td class="text-end fw-bold ${saldoDep < -0.0001 ? 'text-danger' : 'text-success'}">${formatQty(saldoDep)} ${m.un}</td>
                     </tr>
                 `;
             }).join('');
@@ -1478,7 +1396,7 @@
 
             const histBody = $('resHistoryBody');
             if (itemMovs.length === 0) {
-                histBody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-3">Sem movimentações para este depósito.</td></tr>`;
+                histBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-3">Sem movimentações para este depósito.</td></tr>`;
             } else {
                 histBody.innerHTML = itemMovs.map(m => {
                     const isEntry = m.mov.toLowerCase().startsWith('ent');
@@ -1489,9 +1407,7 @@
                             <td class="fw-semibold">${m.num}</td>
                             <td class="small">${m.tipo}</td>
                             <td>${m.deposito}</td>
-                            <td class="text-end fw-bold">${isEntry ? '+' : '-'}${m.qtd.toLocaleString('pt-BR')}</td>
-                            <td class="text-end text-nowrap">${formatCurrency(m.vlrUnit)}</td>
-                            <td class="text-end text-nowrap">${formatCurrency(m.vlrTotal)}</td>
+                            <td class="text-end fw-bold">${isEntry ? '+' : '-'}${formatQty(m.qtd)}</td>
                             <td class="small">${m.documento || '-'}</td>
                             <td class="small text-muted">${m.cnpjCentroCusto || '-'}</td>
                         </tr>
@@ -1602,7 +1518,7 @@
         }
 
         /**
-         * 7. SUBPÁGINA 3: INVENTÁRIO ÀS CEGAS
+         * 7. SUBPÁGINA 3: INVENTÁRIO ÀS CEGAS (APENAS QUANTIDADES)
          */
         function addBlindCountItem(e) {
             e.preventDefault();
@@ -1633,16 +1549,12 @@
 
             const sample = productMatches[0];
             let systemQty = 0;
-            let ultimoUnit = 0;
 
             if (activeDepotFilter === 'ALL') {
                 systemQty = productMatches.reduce((s, x) => s + (x.entradasQtd - x.saidasQtd), 0);
-                const comPreco = productMatches.filter(x => x.ultimoVlrUnit > 0);
-                ultimoUnit = comPreco.length > 0 ? comPreco[comPreco.length - 1].ultimoVlrUnit : 0;
             } else {
                 const depEntry = productMatches.find(x => x.deposito === activeDepotFilter);
                 systemQty = depEntry ? (depEntry.entradasQtd - depEntry.saidasQtd) : 0;
-                ultimoUnit = depEntry ? depEntry.ultimoVlrUnit : 0;
             }
 
             const existing = blindInventoryItems.find(i => i.cod === sample.cod);
@@ -1653,7 +1565,6 @@
                     cod: sample.cod,
                     nomeProduto: sample.nomeProduto,
                     un: sample.un,
-                    vlrUnit: ultimoUnit,
                     systemQty: systemQty,
                     countedQty: countedQty
                 });
@@ -1694,7 +1605,7 @@
                         <td class="fw-bold text-primary">${item.cod}</td>
                         <td>${item.nomeProduto}</td>
                         <td>${item.un}</td>
-                        <td class="text-end fw-bold fs-6">${item.countedQty}</td>
+                        <td class="text-end fw-bold fs-6">${formatQty(item.countedQty)}</td>
                         <td class="text-center">
                             <button class="btn btn-sm btn-outline-danger" onclick="removeBlindItem(${idx})"><i class="bi bi-trash"></i></button>
                         </td>
@@ -1707,28 +1618,21 @@
                         <th>Nome do Produto</th>
                         <th class="text-end">Saldo (Ent. − Saí.)</th>
                         <th class="text-end">Contagem Física</th>
-                        <th class="text-end">Diferença</th>
-                        <th class="text-end">Último Vlr. Unit.</th>
-                        <th class="text-end">Impacto (R$)</th>
+                        <th class="text-end">Diferença (Qtd.)</th>
                     </tr>`;
                 tbody.innerHTML = blindInventoryItems.map(item => {
                     const diff = item.countedQty - item.systemQty;
-                    const financialImpact = diff * item.vlrUnit;
                     let diffBadge = `<span class="badge bg-success-subtle text-success">OK (0)</span>`;
-                    if (diff > 0) diffBadge = `<span class="badge bg-primary">+${diff.toLocaleString('pt-BR')} (Sobra)</span>`;
-                    if (diff < 0) diffBadge = `<span class="badge bg-danger">${diff.toLocaleString('pt-BR')} (Falta)</span>`;
+                    if (diff > 0.0001) diffBadge = `<span class="badge bg-primary">+${formatQty(diff)} (Sobra)</span>`;
+                    if (diff < -0.0001) diffBadge = `<span class="badge bg-danger">${formatQty(diff)} (Falta)</span>`;
 
                     return `
                         <tr>
                             <td class="fw-bold">${item.cod}</td>
                             <td>${item.nomeProduto}</td>
-                            <td class="text-end ${item.systemQty < 0 ? 'text-danger fw-bold' : 'text-muted'}">${item.systemQty.toLocaleString('pt-BR')} ${item.un}</td>
-                            <td class="text-end fw-bold">${item.countedQty.toLocaleString('pt-BR')} ${item.un}</td>
+                            <td class="text-end ${item.systemQty < 0 ? 'text-danger fw-bold' : 'text-muted'}">${formatQty(item.systemQty)} ${item.un}</td>
+                            <td class="text-end fw-bold">${formatQty(item.countedQty)} ${item.un}</td>
                             <td class="text-end">${diffBadge}</td>
-                            <td class="text-end">${formatCurrency(item.vlrUnit)}</td>
-                            <td class="text-end fw-semibold ${financialImpact < 0 ? 'text-danger' : (financialImpact > 0 ? 'text-primary' : 'text-muted')}">
-                                ${formatCurrency(financialImpact)}
-                            </td>
                         </tr>
                     `;
                 }).join('');
@@ -1738,7 +1642,7 @@
         function finishBlindInventory() {
             isBlindFinished = true;
             $('blindTableTitle').innerHTML = `<i class="bi bi-clipboard-data text-success me-2"></i>Resultado da Auditoria de Inventário`;
-            $('blindTableSubtitle').textContent = `Comparativo entre Saldo (Entrada − Saída) e contagem física`;
+            $('blindTableSubtitle').textContent = `Comparativo de quantidades entre Saldo (Entrada − Saída) e contagem física`;
             $('btnExportBlindCsv').classList.remove('d-none');
             renderBlindTable();
             showToast('Apuração concluída!', 'info');
@@ -1754,13 +1658,11 @@
         }
 
         function exportBlindCsv() {
-            let csv = "Cod_Produto;Nome_Produto;Unidade;Saldo_Entrada_Menos_Saida;Contagem_Fisica;Diferenca;Ultimo_Vlr_Unit;Impacto_Financeiro\n";
+            let csv = "Cod_Produto;Nome_Produto;Unidade;Saldo_Entrada_Menos_Saida;Contagem_Fisica;Diferenca\n";
             blindInventoryItems.forEach(i => {
                 const diff = i.countedQty - i.systemQty;
-                const unitStr = i.vlrUnit.toFixed(2).replace('.', ',');
-                const impact = (diff * i.vlrUnit).toFixed(2).replace('.', ',');
                 const nomeEscaped = `"${String(i.nomeProduto || '').replace(/"/g, '""')}"`;
-                csv += `${i.cod};${nomeEscaped};${i.un};${i.systemQty};${i.countedQty};${diff};${unitStr};${impact}\n`;
+                csv += `${i.cod};${nomeEscaped};${i.un};${i.systemQty};${i.countedQty};${diff}\n`;
             });
             const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
@@ -1793,7 +1695,7 @@
 
             const tbody = $('extratoTableBody');
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="16" class="text-center text-muted py-4">Nenhuma movimentação encontrada.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="14" class="text-center text-muted py-4">Nenhuma movimentação encontrada.</td></tr>`;
                 return;
             }
 
@@ -1812,9 +1714,7 @@
                         <td class="fw-bold text-primary">${m.cod}</td>
                         <td class="text-nowrap">${m.nomeProduto}</td>
                         <td>${m.un}</td>
-                        <td class="text-end fw-bold">${m.qtd.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}</td>
-                        <td class="text-end text-nowrap">${formatCurrency(m.vlrUnit)}</td>
-                        <td class="text-end fw-semibold text-nowrap">${formatCurrency(m.vlrTotal)}</td>
+                        <td class="text-end fw-bold">${formatQty(m.qtd)}</td>
                         <td class="text-nowrap">${m.documento || '-'}</td>
                         <td class="text-nowrap small">${m.cnpjCentroCusto || '-'}</td>
                         <td class="small text-muted text-nowrap" title="${m.observacao}">${m.observacao || '-'}</td>
@@ -1886,8 +1786,8 @@
             return `${pad(dateObj.getDate())}/${pad(dateObj.getMonth() + 1)}/${dateObj.getFullYear()} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
         }
 
-        function formatCurrency(value) {
-            return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        function formatQty(value) {
+            return Number(value || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
         }
 
         function showToast(message, type = 'primary') {
