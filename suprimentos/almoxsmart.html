@@ -369,14 +369,14 @@
                             <div class="kpi-card p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Produtos Distintos</p>
+                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Produtos em Estoque</p>
                                         <h4 class="fw-bold mb-0 text-dark" id="kpiTotalItems">0 itens</h4>
                                     </div>
                                     <div class="kpi-icon bg-info-subtle text-info">
                                         <i class="bi bi-boxes"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiTotalItemsSub">SKUs movimentados no escopo</small>
+                                <small class="text-muted mt-2 d-block" id="kpiTotalItemsSub">Com saldo positivo em estoque</small>
                             </div>
                         </div>
                     </div>
@@ -1122,20 +1122,32 @@
 
             let totalEntradasQtd = 0, qtdLancEntradas = 0;
             let totalSaidasQtd = 0, qtdLancSaidas = 0;
-            const produtosDistintosSet = new Set();
+            const saldoPorProduto = new Map();
 
             scopedMovs.forEach(m => {
-                if (m.cod) produtosDistintosSet.add(m.cod);
                 const qtd = Number(m.qtd || 0);
                 const movLower = m.mov.toLowerCase();
+                let delta = 0;
 
                 if (movLower.startsWith('ent') || movLower === 'e') {
                     totalEntradasQtd += qtd;
                     qtdLancEntradas++;
+                    delta = qtd;
                 } else if (movLower.startsWith('sa') || movLower === 's') {
                     totalSaidasQtd += qtd;
                     qtdLancSaidas++;
+                    delta = -qtd;
                 }
+
+                if (m.cod) {
+                    saldoPorProduto.set(m.cod, (saldoPorProduto.get(m.cod) || 0) + delta);
+                }
+            });
+
+            // Conta apenas produtos distintos que possuem saldo positivo (> 0) no escopo
+            let produtosComSaldoCount = 0;
+            saldoPorProduto.forEach(saldo => {
+                if (saldo > 0.0001) produtosComSaldoCount++;
             });
 
             // Saldo Real (Entrada - Saída) exatamente igual à diferença entre Total Entradas e Total Saídas
@@ -1161,8 +1173,10 @@
             $('kpiSaidasQtd').textContent = `${formatQty(totalSaidasQtd)} un.`;
             $('kpiSaidasLanc').textContent = `${qtdLancSaidas.toLocaleString('pt-BR')} lançamentos de saída`;
 
-            $('kpiTotalItems').textContent = `${produtosDistintosSet.size.toLocaleString('pt-BR')} itens`;
-            $('kpiTotalItemsSub').textContent = activeDepotFilter === 'ALL' ? 'Produtos distintos (todos depósitos)' : 'Produtos distintos neste depósito';
+            $('kpiTotalItems').textContent = `${produtosComSaldoCount.toLocaleString('pt-BR')} itens`;
+            $('kpiTotalItemsSub').textContent = activeDepotFilter === 'ALL'
+                ? 'Produtos distintos com saldo > 0'
+                : 'Com saldo > 0 neste depósito';
 
             renderStockPositionTable();
             renderCostCenterChart();
