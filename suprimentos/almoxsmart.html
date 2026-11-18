@@ -331,7 +331,7 @@
                                         <i class="bi bi-calculator"></i>
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block" id="kpiValSub">(Qtd. Entrada − Qtd. Saída) × Últ. Vlr.</small>
+                                <small class="text-muted mt-2 d-block" id="kpiValSub">A último preço: R$ 0,00</small>
                             </div>
                         </div>
 
@@ -388,7 +388,7 @@
                                 <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white">
                                     <div>
                                         <h6 class="fw-bold mb-0"><i class="bi bi-layers-fill text-primary me-2"></i>Posição Real por Produto e Depósito (Entrada − Saída)</h6>
-                                        <small class="text-muted">Valor em estoque = (Entradas − Saídas) × Último Vlr. unit. encontrado no depósito</small>
+                                        <small class="text-muted">Saldo Real (R$ Entradas − R$ Saídas) e avaliação pelo último Vlr. unit. do depósito</small>
                                     </div>
                                     <div class="d-flex gap-2 align-items-center">
                                         <input type="text" id="saldoSearchInput" class="form-control form-control-sm" placeholder="Filtrar Cód., Nome ou Depósito..." oninput="renderStockPositionTable()">
@@ -412,7 +412,8 @@
                                                 <th class="text-end">Saídas (−)</th>
                                                 <th class="text-end">Saldo (E − S)</th>
                                                 <th class="text-end">Último Vlr. Unit.</th>
-                                                <th class="text-end">Valor Posição</th>
+                                                <th class="text-end">Saldo Real (R$)</th>
+                                                <th class="text-end">Vlr. Últ. Preço</th>
                                                 <th class="text-center">Última Mov.</th>
                                             </tr>
                                         </thead>
@@ -506,9 +507,10 @@
                                     </div>
                                     <div class="col-12 col-sm-6">
                                         <div class="p-3 rounded-3 bg-light border">
-                                            <small class="text-secondary fw-bold text-uppercase d-block mb-1">Valor da Posição (Saldo × Últ. Vlr.)</small>
+                                            <small class="text-secondary fw-bold text-uppercase d-block mb-1">Saldo Financeiro (Entrada − Saída)</small>
                                             <h3 class="fw-bold text-dark mb-1" id="resStockTotalVal">R$ 0,00</h3>
-                                            <small class="text-muted fw-semibold" id="resUnitVal">Último Vlr. Unitário: R$ 0,00</small>
+                                            <small class="text-muted fw-semibold d-block" id="resUnitVal">Último Vlr. Unitário: R$ 0,00</small>
+                                            <small class="text-muted d-block" id="resLastPriceTotalVal">A último preço: R$ 0,00</small>
                                         </div>
                                     </div>
                                 </div>
@@ -523,7 +525,7 @@
                                                 <th class="text-end">Saídas (−)</th>
                                                 <th class="text-end">Saldo (E − S)</th>
                                                 <th class="text-end">Último Vlr. Unit.</th>
-                                                <th class="text-end">Valor Posição</th>
+                                                <th class="text-end">Saldo Real (R$)</th>
                                             </tr>
                                         </thead>
                                         <tbody id="resDepotsBreakdownBody"></tbody>
@@ -700,7 +702,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwk6xDCeugOO6Ykk-FPMdof6-Q1mNWVXqU-KSYbhU1y14IfoClWBKpfs8uI6ejjXPOQPd5llEtlK5A/pub?output=xlsx";
+        const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRWiRG_thI_ZW6oaD4uveXFc_2HhUfDy3_3E81sEPj3Udyo03RcY2IIE7sb98uZKQjpumCZXH4UcHil/pub?output=xlsx";
         const $ = id => document.getElementById(id);
 
         let movimentacoes = [];
@@ -713,24 +715,20 @@
         let currentSession = null;
         let activeDepotFilter = 'ALL';
         let html5QrcodeScanner = null;
-        let activeScannerContext = null; // 'consulta' | 'inventario' | null
+        let activeScannerContext = null;
         let blindInventoryItems = [];
         let isBlindFinished = false;
         const LIMITE_EXTRATO = 500;
 
         /**
          * SANITIZADOR DE CÓDIGO DE BARRAS (ESTILO CODE 128 NUMÉRICO INTEIRO)
-         * Ignora casas decimais (ex: "131.00" ou "131,0") e remove quaisquer letras/símbolos (ex: "COD131" -> "131").
          */
         function extrairCodigoNumerico(raw) {
             let s = String(raw ?? "").trim();
             if (!s) return "";
-            // Remove parte decimal antes de extrair dígitos (ex: "131.00" -> "131", "131,5" -> "131")
             s = s.replace(/[.,]\d+$/, '');
-            // Mantém apenas dígitos 0-9
             const digitsOnly = s.replace(/\D+/g, '');
             if (!digitsOnly) return "";
-            // Remove zeros à esquerda se houver (ex: "00131" -> "131"), preservando "0" se for só zero
             return String(parseInt(digitsOnly, 10));
         }
 
@@ -832,7 +830,6 @@
                     }
                 }
 
-                // Normaliza o código do produto ignorando decimais e letras (ex: "131.0" -> "131")
                 const rawCodVal = getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cod Produto', 'Cód.', 'Código']);
                 const codProduto = extrairCodigoNumerico(rawCodVal) || normCod(rawCodVal);
                 const nomeProdutoRaw = String(getCol(r, ['Nome do Produto', 'Nome Produto', 'Produto', 'Descrição', 'Descricao'])).trim();
@@ -906,7 +903,7 @@
         }
 
         /**
-         * 2. MOTOR DE CÁLCULO: SALDO (ENTRADA - SAÍDA) E ÚLTIMO VLR. UNITÁRIO POR DEPÓSITO
+         * 2. MOTOR DE CÁLCULO: SALDO (ENTRADA - SAÍDA) FÍSICO E FINANCEIRO + ÚLTIMO VLR. UNITÁRIO
          */
         function recalcularEstoqueConsolidado() {
             const today = new Date();
@@ -935,7 +932,10 @@
                         un: m.un || 'UN',
                         entradasQtd: 0,
                         saidasQtd: 0,
+                        entradasVal: 0,
+                        saidasVal: 0,
                         saldo: 0,
+                        saldoFinanceiroReal: 0,
                         ultimoVlrUnit: 0,
                         dataUltimoVlr: '',
                         lastMovDate: null,
@@ -949,6 +949,7 @@
 
                 const qtd = Number(m.qtd || 0);
                 const vlrUnit = Number(m.vlrUnit || 0);
+                const vlrTotal = Number(m.vlrTotal || 0);
                 const movLower = m.mov.toLowerCase();
 
                 if (vlrUnit > 0) {
@@ -959,11 +960,14 @@
 
                 if (movLower.startsWith('ent') || movLower === 'e') {
                     entry.entradasQtd += qtd;
+                    entry.entradasVal += vlrTotal;
                 } else if (movLower.startsWith('sa') || movLower === 's') {
                     entry.saidasQtd += qtd;
+                    entry.saidasVal += vlrTotal;
                 }
 
                 entry.saldo = entry.entradasQtd - entry.saidasQtd;
+                entry.saldoFinanceiroReal = entry.entradasVal - entry.saidasVal;
 
                 if (m.dataObj) {
                     if (!entry.lastMovDate || m.dataObj >= entry.lastMovDate.obj) {
@@ -979,7 +983,8 @@
                     entry.ultimoVlrUnit = ultimoPrecoGlobalProduto.get(entry.cod);
                 }
                 entry.saldo = entry.entradasQtd - entry.saidasQtd;
-                entry.valorTotalCalculado = entry.saldo * entry.ultimoVlrUnit;
+                entry.saldoFinanceiroReal = entry.entradasVal - entry.saidasVal;
+                entry.valorUltimoPreco = entry.saldo * entry.ultimoVlrUnit;
             });
 
             estoqueConsolidadoCache = Array.from(stockMap.values());
@@ -1153,7 +1158,7 @@
                 ? allStock
                 : allStock.filter(item => item.deposito === activeDepotFilter);
 
-            let valorPosicaoReal = 0;
+            let valorUltimoPrecoTotal = 0;
             let saldoFisicoReal = 0;
             let totalUnidadesEntrada = 0;
             let totalUnidadesSaida = 0;
@@ -1161,11 +1166,12 @@
             filteredStock.forEach(item => {
                 const saldoItem = item.entradasQtd - item.saidasQtd;
                 saldoFisicoReal += saldoItem;
-                valorPosicaoReal += (saldoItem * item.ultimoVlrUnit);
+                valorUltimoPrecoTotal += (saldoItem * item.ultimoVlrUnit);
                 totalUnidadesEntrada += item.entradasQtd;
                 totalUnidadesSaida += item.saidasQtd;
             });
 
+            // Totais financeiros exatos das movimentações (mesma base dos cards Total Entradas e Total Saídas)
             const scopedMovs = movimentacoes.filter(m => {
                 const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
                 const validState = !m.estado.toLowerCase().includes('estornada total');
@@ -1186,11 +1192,14 @@
                 }
             });
 
+            // Saldo Real = Total Entradas (+) - Total Saídas (-)
+            const saldoRealFinanceiro = totalEntradasVal - totalSaidasVal;
+
             const kpiValEl = $('kpiTotalValue');
             const kpiIconEl = $('kpiSaldoIcon');
-            kpiValEl.textContent = formatCurrency(valorPosicaoReal);
+            kpiValEl.textContent = formatCurrency(saldoRealFinanceiro);
 
-            if (valorPosicaoReal < -0.005) {
+            if (saldoRealFinanceiro < -0.005) {
                 kpiValEl.className = "fw-bold mb-0 text-danger";
                 kpiIconEl.className = "kpi-icon bg-danger-subtle text-danger";
             } else {
@@ -1198,7 +1207,7 @@
                 kpiIconEl.className = "kpi-icon bg-success-subtle text-success";
             }
 
-            $('kpiValSub').textContent = `(Entradas − Saídas) × Último Vlr. Unit.`;
+            $('kpiValSub').textContent = `A último preço: ${formatCurrency(valorUltimoPrecoTotal)}`;
 
             $('kpiEntradasVal').textContent = formatCurrency(totalEntradasVal);
             $('kpiEntradasQtd').textContent = `${totalUnidadesEntrada.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} un. (${qtdLancEntradas} lanç.)`;
@@ -1233,18 +1242,20 @@
                 return true;
             });
 
-            rows.sort((a, b) => Math.abs(b.valorTotalCalculado) - Math.abs(a.valorTotalCalculado));
+            rows.sort((a, b) => Math.abs(b.saldoFinanceiroReal) - Math.abs(a.saldoFinanceiroReal));
 
             const tbody = $('stockPositionTableBody');
             if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">Nenhum item encontrado para o filtro selecionado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">Nenhum item encontrado para o filtro selecionado.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = rows.slice(0, 300).map(item => {
                 const saldoReal = item.entradasQtd - item.saidasQtd;
-                const valorPosicao = saldoReal * item.ultimoVlrUnit;
+                const saldoFin = item.entradasVal - item.saidasVal;
+                const vlrUltPreco = saldoReal * item.ultimoVlrUnit;
                 const saldoClass = saldoReal < 0 ? 'text-danger' : (saldoReal > 0 ? 'text-success' : 'text-muted');
+                const finClass = saldoFin < -0.005 ? 'text-danger' : (saldoFin > 0.005 ? 'text-success' : 'text-muted');
                 return `
                     <tr style="cursor:pointer;" onclick="abrirConsultaDireta('${item.cod}')" title="Clique para ver detalhes do produto ${item.cod}">
                         <td class="fw-bold text-primary">${item.cod}</td>
@@ -1254,7 +1265,8 @@
                         <td class="text-end text-danger">${item.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
                         <td class="text-end fw-bold ${saldoClass}">${saldoReal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${item.un}</td>
                         <td class="text-end text-nowrap">${formatCurrency(item.ultimoVlrUnit)}</td>
-                        <td class="text-end fw-semibold text-nowrap ${saldoClass}">${formatCurrency(valorPosicao)}</td>
+                        <td class="text-end fw-semibold text-nowrap ${finClass}">${formatCurrency(saldoFin)}</td>
+                        <td class="text-end text-muted text-nowrap">${formatCurrency(vlrUltPreco)}</td>
                         <td class="text-center text-muted small">${item.lastMovDate ? item.lastMovDate.str : '-'}</td>
                     </tr>
                 `;
@@ -1343,7 +1355,6 @@
             const rawQuery = input.value.trim();
             if (!rawQuery) return;
 
-            // Se contiver qualquer dígito (ex: "131", "131.00", "COD131"), normaliza para número inteiro sem letras/decimais
             const numericCode = extrairCodigoNumerico(rawQuery);
             if (numericCode && !/[a-zA-Z]{3,}/.test(rawQuery)) {
                 input.value = numericCode;
@@ -1403,7 +1414,8 @@
             let scopedEnt = 0;
             let scopedSai = 0;
             let scopedQty = 0;
-            let scopedVal = 0;
+            let scopedSaldoRealFin = 0;
+            let scopedUltPrecoVal = 0;
             let ultimoUnitExibido = 0;
             let depotLabel = '';
 
@@ -1411,7 +1423,8 @@
                 scopedEnt = matches.reduce((acc, m) => acc + m.entradasQtd, 0);
                 scopedSai = matches.reduce((acc, m) => acc + m.saidasQtd, 0);
                 scopedQty = scopedEnt - scopedSai;
-                scopedVal = matches.reduce((acc, m) => acc + ((m.entradasQtd - m.saidasQtd) * m.ultimoVlrUnit), 0);
+                scopedSaldoRealFin = matches.reduce((acc, m) => acc + (m.entradasVal - m.saidasVal), 0);
+                scopedUltPrecoVal = matches.reduce((acc, m) => acc + ((m.entradasQtd - m.saidasQtd) * m.ultimoVlrUnit), 0);
                 const comPreco = matches.filter(m => m.ultimoVlrUnit > 0);
                 ultimoUnitExibido = comPreco.length > 0 ? comPreco[comPreco.length - 1].ultimoVlrUnit : 0;
                 depotLabel = 'Todos os Depósitos';
@@ -1420,8 +1433,9 @@
                 scopedEnt = targetDepot ? targetDepot.entradasQtd : 0;
                 scopedSai = targetDepot ? targetDepot.saidasQtd : 0;
                 scopedQty = scopedEnt - scopedSai;
+                scopedSaldoRealFin = targetDepot ? (targetDepot.entradasVal - targetDepot.saidasVal) : 0;
                 ultimoUnitExibido = targetDepot ? targetDepot.ultimoVlrUnit : 0;
-                scopedVal = scopedQty * ultimoUnitExibido;
+                scopedUltPrecoVal = scopedQty * ultimoUnitExibido;
                 depotLabel = currentSession.label;
             }
 
@@ -1434,14 +1448,15 @@
             $('resEntSaiBreakdown').textContent = `Entradas: ${scopedEnt.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} | Saídas: ${scopedSai.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
 
             const valEl = $('resStockTotalVal');
-            valEl.textContent = formatCurrency(scopedVal);
-            valEl.className = `fw-bold mb-1 ${scopedVal < 0 ? 'text-danger' : 'text-dark'}`;
+            valEl.textContent = formatCurrency(scopedSaldoRealFin);
+            valEl.className = `fw-bold mb-1 ${scopedSaldoRealFin < -0.005 ? 'text-danger' : 'text-dark'}`;
             $('resUnitVal').textContent = `Último Vlr. Unitário: ${formatCurrency(ultimoUnitExibido)}`;
+            $('resLastPriceTotalVal').textContent = `A último preço (Saldo × Últ. Vlr.): ${formatCurrency(scopedUltPrecoVal)}`;
 
             const breakdownBody = $('resDepotsBreakdownBody');
             breakdownBody.innerHTML = matches.sort((a, b) => Number(a.deposito) - Number(b.deposito)).map(m => {
                 const saldoDep = m.entradasQtd - m.saidasQtd;
-                const vlrTotalDep = saldoDep * m.ultimoVlrUnit;
+                const saldoRealFinDep = m.entradasVal - m.saidasVal;
                 const isSelected = activeDepotFilter !== 'ALL' && m.deposito === activeDepotFilter;
                 return `
                     <tr class="${isSelected ? 'table-primary fw-semibold' : ''}">
@@ -1450,7 +1465,7 @@
                         <td class="text-end text-danger">${m.saidasQtd.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</td>
                         <td class="text-end fw-bold ${saldoDep < 0 ? 'text-danger' : 'text-success'}">${saldoDep.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${m.un}</td>
                         <td class="text-end">${formatCurrency(m.ultimoVlrUnit)}</td>
-                        <td class="text-end fw-bold ${vlrTotalDep < 0 ? 'text-danger' : ''}">${formatCurrency(vlrTotalDep)}</td>
+                        <td class="text-end fw-bold ${saldoRealFinDep < -0.005 ? 'text-danger' : ''}">${formatCurrency(saldoRealFinDep)}</td>
                     </tr>
                 `;
             }).join('');
@@ -1487,7 +1502,6 @@
 
         /**
          * LEITOR DE CÓDIGO DE BARRAS OTIMIZADO PARA CODE 128 / 1D LINEAR (EX: 131)
-         * Ignora letras e casas decimais na captura óptica.
          */
         function toggleCameraScanner(context = 'consulta') {
             if (activeScannerContext === context) {
@@ -1512,7 +1526,6 @@
             }
 
             try {
-                // Configura explicitamente para leitura de código de barras 1D (Code 128, Code 39, EAN, ITF)
                 const scannerConfig = {
                     verbose: false,
                     experimentalFeatures: { useBarCodeDetectorIfSupported: true }
@@ -1534,7 +1547,6 @@
                     { facingMode: "environment" },
                     {
                         fps: 15,
-                        // Caixa horizontal retangular ideal para barras estilo Code 128 (ex: 131)
                         qrbox: (viewfinderWidth, viewfinderHeight) => {
                             const w = Math.min(340, Math.floor(viewfinderWidth * 0.88));
                             const h = Math.min(130, Math.floor(viewfinderHeight * 0.45));
@@ -1543,7 +1555,6 @@
                         aspectRatio: 1.777778
                     },
                     (decodedText) => {
-                        // Sanitiza: ignora letras e casas decimais, mantendo apenas o código numérico inteiro
                         const cleanCode = extrairCodigoNumerico(decodedText);
                         if (!cleanCode) return;
 
@@ -1602,7 +1613,6 @@
 
             const codeInput = $('blindCodeInput');
             const qtyInput = $('blindQtyInput');
-            // Ignora letras e casas decimais no código bipado/digitado
             const code = extrairCodigoNumerico(codeInput.value.trim());
             const countedQty = parseFloat(qtyInput.value);
 
