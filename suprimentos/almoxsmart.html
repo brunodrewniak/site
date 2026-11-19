@@ -1,1826 +1,1094 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Almoxarifado Smart - Posição Real de Estoque</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    
-    <!-- SheetJS & Fuse.js & HTML5-QRCode -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Almoxarifado Smart - Posição Real de Estoque</title>
 
-    <style>
-        :root {
-            --primary-color: #0f172a;
-            --accent-color: #2563eb;
-            --bg-light: #f1f5f9;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            --sidebar-width: 260px;
-        }
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-light);
-            color: #1e293b;
-            overflow-x: hidden;
-        }
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-        /* ================= TELA DE LOGIN ================= */
-        #login-screen {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
+<style>
+/* ===== Tema herdado do dashboard "Estoque" (Transparência) ===== */
+:root {
+  --cor-primaria: #1f2a44;
+  --cor-entrada: #611f69;
+  --cor-entrada-esc: #4a154b;
+  --cor-saida: #00897b;
+  --cor-neutra: #34415f;
+  --fundo: #f3f5f9;
+  --texto-escuro: #1d2433;
+  --sidebar-width: 260px;
+}
+body { background: var(--fundo); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--texto-escuro); overflow-x: hidden; }
 
-        .login-card {
-            background: #ffffff;
-            border-radius: 1rem;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-            max-width: 460px;
-            width: 100%;
-            padding: 2.5rem 2rem;
-        }
+/* Sobrescreve o azul padrão do Bootstrap pela paleta do tema */
+.btn-primary { --bs-btn-bg: var(--cor-entrada); --bs-btn-border-color: var(--cor-entrada); --bs-btn-hover-bg: var(--cor-entrada-esc); --bs-btn-hover-border-color: var(--cor-entrada-esc); --bs-btn-active-bg: var(--cor-entrada-esc); --bs-btn-active-border-color: var(--cor-entrada-esc); --bs-btn-disabled-bg: var(--cor-entrada); --bs-btn-disabled-border-color: var(--cor-entrada); font-weight: 600; }
+.btn-outline-primary { --bs-btn-color: var(--cor-entrada); --bs-btn-border-color: var(--cor-entrada); --bs-btn-hover-bg: var(--cor-entrada); --bs-btn-hover-border-color: var(--cor-entrada); --bs-btn-active-bg: var(--cor-entrada); }
+.btn-success { --bs-btn-bg: var(--cor-saida); --bs-btn-border-color: var(--cor-saida); --bs-btn-hover-bg: #00695c; --bs-btn-hover-border-color: #00695c; --bs-btn-disabled-bg: var(--cor-saida); --bs-btn-disabled-border-color: var(--cor-saida); }
+.btn-outline-success { --bs-btn-color: var(--cor-saida); --bs-btn-border-color: var(--cor-saida); --bs-btn-hover-bg: var(--cor-saida); --bs-btn-hover-border-color: var(--cor-saida); }
+.text-primary { color: var(--cor-entrada) !important; }
+.bg-primary { background-color: var(--cor-entrada) !important; }
+.bg-primary-subtle { background-color: #f7f0f9 !important; }
+.border-primary-subtle { border-color: #e4cde9 !important; }
+.border-primary { border-color: var(--cor-entrada) !important; }
+.form-control:focus, .form-select:focus { border-color: var(--cor-entrada); box-shadow: 0 0 0 .2rem rgba(97,31,105,.18); }
+.progress-bar { background-color: var(--cor-saida); }
+.t-ent { color: var(--cor-entrada); }
+.t-sai { color: var(--cor-saida); }
+.neg { color: #c62828 !important; }
+.small-muted { font-size: .82rem; color: #6c757d; }
 
-        .login-icon-box {
-            width: 64px;
-            height: 64px;
-            background: #eff6ff;
-            color: var(--accent-color);
-            border-radius: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            margin: 0 auto 1.25rem;
-        }
+/* Login */
+#login-screen { min-height: 100vh; background: linear-gradient(135deg, var(--cor-primaria), #0e1424); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.login-card { background: #fff; border-radius: 1rem; box-shadow: 0 20px 40px rgba(0,0,0,.35); max-width: 460px; width: 100%; padding: 2.25rem 2rem; }
+.login-icon-box { width: 64px; height: 64px; background: #f7f0f9; color: var(--cor-entrada); border-radius: 1rem; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.1rem; }
 
-        /* ================= LAYOUT PRINCIPAL ================= */
-        #app-wrapper { display: none; min-height: 100vh; }
+/* Layout */
+#app-wrapper { display: none; min-height: 100vh; }
+.sidebar { width: var(--sidebar-width); background: var(--cor-primaria); color: #f8fafc; position: fixed; inset: 0 auto 0 0; z-index: 1030; transition: transform .3s ease; display: flex; flex-direction: column; box-shadow: 2px 0 12px rgba(0,0,0,.15); }
+.sidebar-header { padding: 1.25rem; border-bottom: 1px solid rgba(255,255,255,.1); }
+.nav-sidebar .nav-link { color: #cbd5e1; padding: .8rem 1.1rem; margin: .2rem .75rem; border-radius: .6rem; font-weight: 500; display: flex; align-items: center; gap: .75rem; transition: all .2s; cursor: pointer; background: none; border: 0; text-align: left; width: calc(100% - 1.5rem); }
+.nav-sidebar .nav-link:hover { background: rgba(255,255,255,.08); color: #fff; }
+.nav-sidebar .nav-link.active { background: var(--cor-entrada); color: #fff; box-shadow: 0 4px 12px rgba(97,31,105,.45); }
+.main-content { margin-left: var(--sidebar-width); min-height: 100vh; display: flex; flex-direction: column; transition: margin-left .3s ease; }
+.topbar { background: linear-gradient(135deg, var(--cor-primaria), #0e1424); color: #fff; padding: .85rem 1.5rem; position: sticky; top: 0; z-index: 1020; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+.topbar .badge-hero { background: #fff; color: var(--cor-primaria); font-size: .66rem; letter-spacing: .04em; }
 
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--primary-color);
-            color: #f8fafc;
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 1030;
-            transition: transform 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
+/* Cards (mesmo padrão do estoque: sem borda, sombra suave) */
+.kpi-card, .table-container { background: #fff; border: 0; border-radius: .85rem; box-shadow: 0 4px 18px rgba(0,0,0,.07); }
+.table-container { overflow: hidden; }
+.kpi { border-left: 5px solid var(--cor-neutra); }
+.kpi.k-ent { border-left-color: var(--cor-entrada); }
+.kpi.k-sai { border-left-color: var(--cor-saida); }
+.kpi.k-est { border-left-color: #dc3545; }
+.kpi .valor { font-size: 1.3rem; font-weight: 700; color: var(--cor-primaria); }
 
-        .sidebar-header {
-            padding: 1.5rem 1.25rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
+/* Tabelas no padrão table.est */
+table.est { font-size: .85rem; white-space: nowrap; border-collapse: separate; border-spacing: 0; margin: 0; }
+table.est th, table.est td { padding: .35rem .6rem; border-bottom: 1px solid #e3e6ee; vertical-align: middle; }
+table.est thead th { position: sticky; top: 0; z-index: 3; color: #fff; font-weight: 600; background: var(--cor-primaria); }
+table.est thead th.g-ent { background: var(--cor-entrada); }
+table.est thead th.g-sai { background: var(--cor-saida); }
+table.est td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.est tbody tr:hover td { background: #f6f1f8; }
+.sub-ent { background: #f7f0f9; }
+.sub-sai { background: #eaf7f5; }
+.tr-est { background: #fff8e1; }
+.tr-click { cursor: pointer; }
+.tabela-wrap { max-height: 520px; overflow: auto; }
 
-        .nav-sidebar .nav-link {
-            color: #cbd5e1;
-            padding: 0.85rem 1.25rem;
-            margin: 0.25rem 0.75rem;
-            border-radius: 0.6rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
+.saldo-destaque { font-size: 2.75rem; font-weight: 800; line-height: 1; letter-spacing: -.03em; color: var(--cor-primaria); }
+.scanner-reader { width: 100%; max-width: 480px; margin: 0 auto; border-radius: .75rem; overflow: hidden; }
+.toast-container { z-index: 1090; }
+footer.rodape { background: #212529; color: #fff; font-size: .85rem; }
 
-        .nav-sidebar .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
-        .nav-sidebar .nav-link.active {
-            background-color: var(--accent-color);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-        }
-
-        .main-content {
-            margin-left: var(--sidebar-width);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            transition: margin-left 0.3s ease;
-        }
-
-        .topbar {
-            background: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 0.85rem 1.5rem;
-            position: sticky;
-            top: 0;
-            z-index: 1020;
-        }
-
-        .kpi-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.85rem;
-            box-shadow: var(--card-shadow);
-        }
-
-        .kpi-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-        }
-
-        .table-container {
-            background: #ffffff;
-            border-radius: 0.85rem;
-            border: 1px solid #e2e8f0;
-            box-shadow: var(--card-shadow);
-            overflow: hidden;
-        }
-
-        .table-sticky-header { max-height: 560px; overflow-y: auto; }
-        .table-sticky-header thead th {
-            position: sticky;
-            top: 0;
-            background-color: #f8fafc;
-            z-index: 10;
-            border-bottom: 2px solid #e2e8f0;
-            font-size: 0.76rem;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: #475569;
-            white-space: nowrap;
-        }
-
-        .table tbody td { font-size: 0.86rem; vertical-align: middle; }
-        .scanner-reader { width: 100%; max-width: 480px; margin: 0 auto; border-radius: 0.75rem; overflow: hidden; }
-        .saldo-destaque { font-size: 2.75rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
-        .toast-container { z-index: 1090; }
-
-        @media (max-width: 991.98px) {
-            .sidebar { transform: translateX(-100%); }
-            .sidebar.show { transform: translateX(0); }
-            .main-content { margin-left: 0; }
-            .sidebar-backdrop {
-                display: none;
-                position: fixed;
-                inset: 0;
-                background: rgba(15, 23, 42, 0.5);
-                z-index: 1025;
-            }
-            .sidebar-backdrop.show { display: block; }
-        }
-    </style>
+@media (max-width: 991.98px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.show { transform: translateX(0); }
+  .main-content { margin-left: 0; }
+  .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 1025; }
+  .sidebar-backdrop.show { display: block; }
+}
+</style>
 </head>
 <body>
 
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
 
-    <!-- 1. TELA DE LOGIN -->
-    <section id="login-screen">
-        <div class="login-card">
-            <div class="login-icon-box">
-                <i class="bi bi-file-earmark-spreadsheet-fill"></i>
-            </div>
-            <h4 class="text-center fw-bold mb-1">Controle de Almoxarifado</h4>
-            <p class="text-center text-muted small mb-3">Conectado ao Google Planilhas</p>
+<!-- LOGIN -->
+<section id="login-screen">
+  <div class="login-card">
+    <div class="login-icon-box"><i class="bi bi-boxes"></i></div>
+    <h4 class="text-center fw-bold mb-1">Controle de Almoxarifado</h4>
+    <p class="text-center text-muted small mb-3">Conectado ao Google Planilhas</p>
 
-            <div id="sheetSyncStatus" class="alert alert-info py-2 px-3 small text-center mb-3">
-                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                Carregando dados da planilha Google...
-            </div>
-
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="mb-3">
-                    <label for="accessCodeInput" class="form-label fw-semibold small text-uppercase text-secondary">Código ou Número do Depósito</label>
-                    <div class="input-group input-group-lg">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-qr-code-scan text-primary"></i></span>
-                        <input type="text" class="form-control border-start-0 text-uppercase fw-bold" id="accessCodeInput" placeholder="Ex: GERAL ou Nº Depósito" autocomplete="off" autofocus required>
-                    </div>
-                    <div id="loginErrorMsg" class="text-danger small mt-2 d-none">
-                        <i class="bi bi-exclamation-circle-fill me-1"></i> Depósito não encontrado na planilha. Digite <strong>GERAL</strong> ou um número de depósito válido.
-                    </div>
-                </div>
-
-                <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-lg w-100 fw-semibold rounded-3 shadow-sm mb-4" disabled>
-                    Acessar Painel <i class="bi bi-arrow-right ms-1"></i>
-                </button>
-            </form>
-
-            <div class="border-top pt-3">
-                <p class="text-center text-muted small mb-2 fw-medium">Acesso Rápido (Depósitos detectados):</p>
-                <div class="d-grid gap-2" id="dynamicDepotShortcuts" style="max-height: 200px; overflow-y: auto;">
-                    <button type="button" class="btn btn-outline-dark btn-sm d-flex justify-content-between align-items-center px-3 py-2 rounded-3" onclick="quickLogin('GERAL')">
-                        <span><strong>GERAL</strong> — Visão Gerencial</span>
-                        <span class="badge bg-dark">Todos Depósitos</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 2. DASHBOARD PRINCIPAL -->
-    <div id="app-wrapper">
-        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
-
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="bg-primary rounded-3 p-2 d-flex align-items-center justify-content-center">
-                        <i class="bi bi-boxes text-white fs-5"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-0 fw-bold text-white">AlmoxSmart</h6>
-                        <small class="text-secondary" style="font-size: 0.72rem;">Entradas − Saídas</small>
-                    </div>
-                </div>
-                <button class="btn btn-sm btn-link text-white d-lg-none" onclick="toggleSidebar()">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-
-            <div class="px-3 py-3 border-bottom border-secondary border-opacity-25">
-                <small class="text-uppercase text-secondary fw-bold d-block mb-1" style="font-size: 0.68rem;">Unidade Conectada</small>
-                <div class="d-flex align-items-center gap-2 text-info fw-semibold small" id="sidebarDepotLabel">
-                    <i class="bi bi-geo-alt-fill"></i>
-                    <span>Carregando...</span>
-                </div>
-            </div>
-
-            <nav class="nav flex-column nav-sidebar mt-3 flex-grow-1">
-                <a class="nav-link active" data-page="page-kpis" onclick="navigateTo('page-kpis', this)">
-                    <i class="bi bi-speedometer2"></i>
-                    <span>Posição Real de Estoque</span>
-                </a>
-                <a class="nav-link" data-page="page-consulta" onclick="navigateTo('page-consulta', this)">
-                    <i class="bi bi-upc-scan"></i>
-                    <span>Consulta / Produto</span>
-                </a>
-                <a class="nav-link" data-page="page-inventario" onclick="navigateTo('page-inventario', this)">
-                    <i class="bi bi-clipboard-check"></i>
-                    <span>Inventário às Cegas</span>
-                </a>
-                <a class="nav-link" data-page="page-extrato" onclick="navigateTo('page-extrato', this)">
-                    <i class="bi bi-table"></i>
-                    <span>Extrato Movimentações</span>
-                </a>
-            </nav>
-
-            <div class="p-3 border-top border-secondary border-opacity-25 d-grid gap-2">
-                <button class="btn btn-outline-info btn-sm w-100 rounded-3 d-flex align-items-center justify-content-center gap-2" onclick="carregarDadosGoogleSheets(true)">
-                    <i class="bi bi-arrow-repeat"></i> Atualizar Planilha
-                </button>
-                <button class="btn btn-outline-light btn-sm w-100 rounded-3 d-flex align-items-center justify-content-center gap-2" onclick="logout()">
-                    <i class="bi bi-box-arrow-left"></i> Trocar Depósito / Sair
-                </button>
-            </div>
-        </aside>
-
-        <div class="main-content">
-            <header class="topbar d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-light border d-lg-none" onclick="toggleSidebar()">
-                        <i class="bi bi-list fs-5"></i>
-                    </button>
-                    <div>
-                        <h5 class="mb-0 fw-bold text-dark" id="pageTitle">Posição Real de Estoque</h5>
-                        <small class="text-muted d-none d-sm-inline" id="currentDateDisplay"></small>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-center gap-2">
-                    <div id="depotFilterContainer" class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fs-6 fw-semibold" id="lockedDepotBadge">
-                            <i class="bi bi-lock-fill me-1"></i> Depósito
-                        </span>
-
-                        <select id="globalDepotSelect" class="form-select form-select-sm fw-semibold border-primary d-none" style="min-width: 240px;" onchange="onGlobalDepotChange()">
-                            <option value="ALL">🌐 Todos os Depósitos (Consolidado)</option>
-                        </select>
-                    </div>
-
-                    <button class="btn btn-outline-primary btn-sm rounded-3 d-inline-flex align-items-center gap-1" onclick="carregarDadosGoogleSheets(true)" title="Recarregar dados do Google Planilhas">
-                        <i class="bi bi-cloud-arrow-down"></i> <span class="d-none d-md-inline">Sincronizar</span>
-                    </button>
-                </div>
-            </header>
-
-            <main class="p-3 p-md-4 flex-grow-1">
-
-                <!-- SUBPÁGINA 1: POSIÇÃO REAL DE ESTOQUE (QUANTIDADES: ENTRADA - SAÍDA) -->
-                <div id="page-kpis" class="subpage">
-                    <div class="row g-3 mb-4">
-                        <div class="col-12 col-sm-6 col-xl-3">
-                            <div class="kpi-card p-3 h-100">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Saldo Real (Entrada − Saída)</p>
-                                        <h4 class="fw-bold mb-0 text-success" id="kpiTotalUnits">0 un.</h4>
-                                    </div>
-                                    <div class="kpi-icon bg-success-subtle text-success" id="kpiSaldoIcon">
-                                        <i class="bi bi-calculator"></i>
-                                    </div>
-                                </div>
-                                <small class="text-muted mt-2 d-block" id="kpiSaldoSub">Quantidade líquida em estoque</small>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-sm-6 col-xl-3">
-                            <div class="kpi-card p-3 h-100">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Entradas (+)</p>
-                                        <h4 class="fw-bold mb-0 text-primary" id="kpiEntradasQtd">0 un.</h4>
-                                    </div>
-                                    <div class="kpi-icon bg-primary-subtle text-primary">
-                                        <i class="bi bi-box-arrow-in-down"></i>
-                                    </div>
-                                </div>
-                                <small class="text-muted mt-2 d-block" id="kpiEntradasLanc">0 lançamentos de entrada</small>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-sm-6 col-xl-3">
-                            <div class="kpi-card p-3 h-100">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Total Saídas (−)</p>
-                                        <h4 class="fw-bold mb-0 text-danger" id="kpiSaidasQtd">0 un.</h4>
-                                    </div>
-                                    <div class="kpi-icon bg-danger-subtle text-danger">
-                                        <i class="bi bi-box-arrow-up"></i>
-                                    </div>
-                                </div>
-                                <small class="text-muted mt-2 d-block" id="kpiSaidasLanc">0 lançamentos de saída</small>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-sm-6 col-xl-3">
-                            <div class="kpi-card p-3 h-100">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <p class="text-muted small fw-semibold text-uppercase mb-1">Produtos em Estoque</p>
-                                        <h4 class="fw-bold mb-0 text-dark" id="kpiTotalItems">0 itens</h4>
-                                    </div>
-                                    <div class="kpi-icon bg-info-subtle text-info">
-                                        <i class="bi bi-boxes"></i>
-                                    </div>
-                                </div>
-                                <small class="text-muted mt-2 d-block" id="kpiTotalItemsSub">Com saldo positivo em estoque</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-4">
-                        <!-- Tabela Consolidada de Saldos (Entrada - Saída em Quantidades) -->
-                        <div class="col-12 col-xl-8">
-                            <div class="table-container h-100">
-                                <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white">
-                                    <div>
-                                        <h6 class="fw-bold mb-0"><i class="bi bi-layers-fill text-primary me-2"></i>Posição Real por Produto e Depósito (Entrada − Saída)</h6>
-                                        <small class="text-muted">Controle físico de quantidades (Entradas − Saídas) por produto e depósito</small>
-                                    </div>
-                                    <div class="d-flex gap-2 align-items-center">
-                                        <input type="text" id="saldoSearchInput" class="form-control form-control-sm" placeholder="Filtrar Cód., Nome ou Depósito..." oninput="renderStockPositionTable()">
-                                        <select id="saldoFilterMode" class="form-select form-select-sm" onchange="renderStockPositionTable()">
-                                            <option value="ALL">Todos os itens</option>
-                                            <option value="POS">Saldo Positivo (&gt; 0)</option>
-                                            <option value="NEG">Saldo Negativo (&lt; 0)</option>
-                                            <option value="ZERO">Saldo Zerado (= 0)</option>
-                                            <option value="STAG30">Sem giro (+30d)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="table-responsive" style="max-height: 460px;">
-                                    <table class="table table-hover table-sm mb-0">
-                                        <thead class="table-light sticky-top">
-                                            <tr>
-                                                <th>Cód.</th>
-                                                <th>Nome do Produto</th>
-                                                <th>Depósito</th>
-                                                <th class="text-end">Entradas (+)</th>
-                                                <th class="text-end">Saídas (−)</th>
-                                                <th class="text-end">Saldo Real (E − S)</th>
-                                                <th class="text-center">Última Mov.</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="stockPositionTableBody"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Consumo por Centro de Custo / CNPJ (em Quantidade) -->
-                        <div class="col-12 col-xl-4">
-                            <div class="kpi-card p-3 h-100">
-                                <h6 class="fw-bold mb-1"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Top Saídas por C. Custo / CNPJ</h6>
-                                <p class="text-muted small mb-3">Maiores destinos por quantidade retirada</p>
-                                <div id="costCenterContainer" class="d-flex flex-column gap-3" style="max-height: 440px; overflow-y: auto;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SUBPÁGINA 2: CONSULTA RÁPIDA / CÓDIGO DE BARRAS CODE 128 / NOME -->
-                <div id="page-consulta" class="subpage d-none">
-                    <div class="row g-4">
-                        <div class="col-12 col-lg-5">
-                            <div class="kpi-card p-4">
-                                <h5 class="fw-bold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Consulta de Produto</h5>
-                                <p class="text-muted small mb-3">Bipe o código de barras (ex: <strong>131</strong>) ou digite o <strong>Nome do Produto</strong>.</p>
-
-                                <form onsubmit="searchProductByInput(event)" class="mb-3">
-                                    <label for="barcodeInput" class="form-label small fw-semibold text-uppercase text-secondary">Código ou Nome do Produto</label>
-                                    <div class="input-group input-group-lg">
-                                        <input type="text" class="form-control fw-bold" id="barcodeInput" placeholder="Ex: 131 ou Papel..." autocomplete="off">
-                                        <button class="btn btn-primary px-4" type="submit">
-                                            <i class="bi bi-search"></i>
-                                        </button>
-                                    </div>
-                                    <div class="form-text small text-muted">
-                                        <i class="bi bi-magic me-1"></i>Leitor óptico extrai apenas números inteiros (ignora letras e casas decimais).
-                                    </div>
-                                </form>
-
-                                <div class="d-grid mb-3">
-                                    <button type="button" class="btn btn-outline-dark fw-semibold py-2 rounded-3" id="btnToggleCamera" onclick="toggleCameraScanner('consulta')">
-                                        <i class="bi bi-upc-scan me-2"></i>Ler Código de Barras (Câmera)
-                                    </button>
-                                </div>
-
-                                <div id="cameraWrapper" class="d-none mb-3 p-2 bg-dark rounded-3 text-center">
-                                    <div id="reader" class="scanner-reader"></div>
-                                    <small class="text-light d-block mt-2">Alinhe as barras verticais dentro da caixa horizontal</small>
-                                </div>
-
-                                <div class="border-top pt-3">
-                                    <small class="text-muted fw-semibold d-block mb-2">Amostra de produtos da planilha:</small>
-                                    <div class="d-flex flex-wrap gap-2" id="quickSampleCodes"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-lg-7">
-                            <div id="consultaEmptyState" class="kpi-card p-5 text-center h-100 d-flex flex-column justify-content-center align-items-center">
-                                <div class="bg-light rounded-circle p-4 mb-3 text-secondary">
-                                    <i class="bi bi-upc fs-1"></i>
-                                </div>
-                                <h5 class="fw-bold text-secondary">Aguardando leitura ou busca</h5>
-                                <p class="text-muted small mb-0" style="max-width: 360px;">Bipe o código de barras ou digite o código/nome do produto para visualizar Entradas, Saídas e Saldo Real em estoque.</p>
-                            </div>
-
-                            <div id="consultaResultCard" class="kpi-card p-4 d-none">
-                                <div class="d-flex flex-wrap justify-content-between align-items-start border-bottom pb-3 mb-3 gap-2">
-                                    <div>
-                                        <span class="badge bg-secondary mb-1" id="resProdCode">CÓD: 0000</span>
-                                        <h4 class="fw-bold mb-0 text-dark" id="resProdName">Nome do Produto</h4>
-                                        <small class="text-muted" id="resProdUnit">Unidade: UN</small>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2" id="resDepotContext">Depósito Atual</span>
-                                    </div>
-                                </div>
-
-                                <div class="row g-3 mb-4">
-                                    <div class="col-12 col-sm-6">
-                                        <div class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle h-100">
-                                            <small class="text-primary fw-bold text-uppercase d-block mb-1">Saldo Real (Entrada − Saída)</small>
-                                            <div class="d-flex align-items-baseline gap-2">
-                                                <span class="saldo-destaque text-primary" id="resStockQty">0</span>
-                                                <span class="fw-bold text-primary fs-5" id="resStockUnit">UN</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-sm-6">
-                                        <div class="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-center">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="small fw-bold text-uppercase text-secondary">Total Entradas (+)</span>
-                                                <span class="fw-bold text-primary fs-5" id="resTotalEntradasProd">0 UN</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="small fw-bold text-uppercase text-secondary">Total Saídas (−)</span>
-                                                <span class="fw-bold text-danger fs-5" id="resTotalSaidasProd">0 UN</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Posição por Depósito (Entrada − Saída)</h6>
-                                <div class="table-responsive border rounded-3 mb-4">
-                                    <table class="table table-sm mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Depósito</th>
-                                                <th class="text-end">Entradas (+)</th>
-                                                <th class="text-end">Saídas (−)</th>
-                                                <th class="text-end">Saldo Real (E − S)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="resDepotsBreakdownBody"></tbody>
-                                    </table>
-                                </div>
-
-                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Histórico de Movimentações na Planilha</h6>
-                                <div class="table-responsive border rounded-3" style="max-height: 260px;">
-                                    <table class="table table-sm table-striped mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Data/Hora</th>
-                                                <th>Mov.</th>
-                                                <th>Nº</th>
-                                                <th>Tipo</th>
-                                                <th>Dep.</th>
-                                                <th class="text-end">Qtd.</th>
-                                                <th>Doc.</th>
-                                                <th>CNPJ / C. Custo</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="resHistoryBody"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SUBPÁGINA 3: INVENTÁRIO ÀS CEGAS -->
-                <div id="page-inventario" class="subpage d-none">
-                    <div class="alert alert-info border-info-subtle d-flex align-items-center gap-3 rounded-3 mb-4">
-                        <i class="bi bi-eye-slash-fill fs-3 text-info"></i>
-                        <div>
-                            <h6 class="fw-bold mb-0">Modo de Contagem às Cegas Ativo</h6>
-                            <small>Compara a quantidade física contada contra o saldo <strong>(Entradas − Saídas)</strong> do sistema.</small>
-                        </div>
-                    </div>
-
-                    <div class="row g-4">
-                        <div class="col-12 col-lg-4">
-                            <div class="kpi-card p-4">
-                                <h6 class="fw-bold mb-3">Registrar Contagem Física</h6>
-                                <form onsubmit="addBlindCountItem(event)">
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold">Código do Produto (ex: 131)</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control fw-bold" id="blindCodeInput" placeholder="Bipe ou digite o código" required autocomplete="off">
-                                            <button type="button" class="btn btn-outline-dark" id="btnToggleBlindCamera" onclick="toggleCameraScanner('inventario')" title="Ler código de barras com câmera">
-                                                <i class="bi bi-upc-scan"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div id="blindCameraWrapper" class="d-none mb-3 p-2 bg-dark rounded-3 text-center">
-                                        <div id="blindReader" class="scanner-reader"></div>
-                                        <small class="text-light d-block mt-1">Alinhe o código de barras</small>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold">Quantidade Contada Fisicamente</label>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-lg fw-bold text-primary" id="blindQtyInput" placeholder="0" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">
-                                        <i class="bi bi-plus-circle me-1"></i> Adicionar à Contagem
-                                    </button>
-                                </form>
-
-                                <hr class="my-4">
-
-                                <div class="d-grid gap-2">
-                                    <button type="button" class="btn btn-success fw-bold py-2" id="btnFinishBlind" onclick="finishBlindInventory()" disabled>
-                                        <i class="bi bi-check2-all me-1"></i> Finalizar e Apurar Divergências
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetBlindInventory()">
-                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Limpar Contagem
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-lg-8">
-                            <div class="table-container">
-                                <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-white">
-                                    <div>
-                                        <h6 class="fw-bold mb-0" id="blindTableTitle">Itens Contados nesta Sessão (<span id="blindCountBadge">0</span>)</h6>
-                                        <small class="text-muted" id="blindTableSubtitle">Os saldos (Entrada − Saída) serão revelados após a finalização</small>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-success d-none" id="btnExportBlindCsv" onclick="exportBlindCsv()">
-                                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar CSV
-                                    </button>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light" id="blindTableHead">
-                                            <tr>
-                                                <th>Cód.</th>
-                                                <th>Nome do Produto</th>
-                                                <th>Un.</th>
-                                                <th class="text-end">Qtd. Contada</th>
-                                                <th class="text-center">Ação</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="blindTableBody">
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted py-4">Nenhum item bipado ainda.</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SUBPÁGINA 4: EXTRATO DE MOVIMENTAÇÕES -->
-                <div id="page-extrato" class="subpage d-none">
-                    <div class="kpi-card p-3 mb-3">
-                        <div class="row g-2 align-items-center">
-                            <div class="col-12 col-md-5">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                                    <input type="text" class="form-control" id="extratoSearchInput" placeholder="Busca inteligente (Cód, Produto, Nº, Doc, CNPJ, Tipo)..." oninput="renderExtratoTable()">
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <select class="form-select form-select-sm" id="extratoTypeFilter" onchange="renderExtratoTable()">
-                                    <option value="ALL">Entradas e Saídas</option>
-                                    <option value="Entrada">Somente Entradas</option>
-                                    <option value="Saída">Somente Saídas</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4 text-md-end">
-                                <span class="badge bg-light text-dark border py-2 px-3" id="extratoCountLabel">0 registros</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="table-container">
-                        <div class="table-responsive table-sticky-header">
-                            <table class="table table-striped table-hover mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Mov.</th>
-                                        <th>Nº</th>
-                                        <th>Data / Hora</th>
-                                        <th>Tipo</th>
-                                        <th>Estado</th>
-                                        <th>Depósito</th>
-                                        <th>Nome do Depósito</th>
-                                        <th>Cód.Produto</th>
-                                        <th>Nome do Produto</th>
-                                        <th>Un.</th>
-                                        <th class="text-end">Qtd.</th>
-                                        <th>Documento</th>
-                                        <th>CNPJ / C. Custo</th>
-                                        <th>Observação</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="extratoTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-            </main>
-        </div>
+    <div id="sheetSyncStatus" class="alert alert-info py-2 px-3 small text-center mb-3">
+      <span class="spinner-border spinner-border-sm me-2" role="status"></span>Carregando dados da planilha Google...
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwk6xDCeugOO6Ykk-FPMdof6-Q1mNWVXqU-KSYbhU1y14IfoClWBKpfs8uI6ejjXPOQPd5llEtlK5A/pub?output=xlsx";
-        const $ = id => document.getElementById(id);
-
-        let movimentacoes = [];
-        let estoqueConsolidadoCache = [];
-        let depositosMap = new Map();
-        let produtosNomeMap = new Map();
-        let fuseExtrato = null;
-        let fuseProdutos = null;
-
-        let currentSession = null;
-        let activeDepotFilter = 'ALL';
-        let html5QrcodeScanner = null;
-        let activeScannerContext = null;
-        let blindInventoryItems = [];
-        let isBlindFinished = false;
-        const LIMITE_EXTRATO = 500;
-
-        /**
-         * SANITIZADOR DE CÓDIGO DE BARRAS (ESTILO CODE 128 NUMÉRICO INTEIRO)
-         */
-        function extrairCodigoNumerico(raw) {
-            let s = String(raw ?? "").trim();
-            if (!s) return "";
-            s = s.replace(/[.,]\d+$/, '');
-            const digitsOnly = s.replace(/\D+/g, '');
-            if (!digitsOnly) return "";
-            return String(parseInt(digitsOnly, 10));
-        }
-
-        /**
-         * 1. INICIALIZAÇÃO E LEITURA DO GOOGLE SHEETS
-         */
-        window.addEventListener('DOMContentLoaded', async () => {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            $('currentDateDisplay').textContent = new Date().toLocaleDateString('pt-BR', options);
-
-            await carregarDadosGoogleSheets(false);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlCod = urlParams.get('cod');
-            if (urlCod) {
-                loginWithCode(urlCod.trim().toUpperCase());
-                return;
-            }
-
-            const savedSession = sessionStorage.getItem('almox_session_gs');
-            if (savedSession && movimentacoes.length > 0) {
-                currentSession = JSON.parse(savedSession);
-                initDashboard();
-            }
-        });
-
-        async function carregarDadosGoogleSheets(isManualRefresh = false) {
-            const statusEl = $('sheetSyncStatus');
-            const btnLogin = $('btnLoginSubmit');
-
-            if (isManualRefresh) {
-                showToast('Sincronizando dados com Google Planilhas...', 'info');
-            }
-
-            try {
-                const urlNoCache = `${PUB_XLSX_URL}&t=${Date.now()}`;
-                const response = await fetch(urlNoCache);
-                if (!response.ok) throw new Error(`HTTP ${response.status} ao acessar a planilha.`);
-
-                const arrayBuffer = await response.arrayBuffer();
-                const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
-
-                const sheetName = workbook.SheetNames.find(n => /moviment/i.test(n)) || workbook.SheetNames[0];
-                const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
-
-                processarLinhasPlanilha(rawRows);
-                recalcularEstoqueConsolidado();
-
-                if (statusEl) {
-                    statusEl.className = "alert alert-success py-2 px-3 small text-center mb-3";
-                    statusEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Planilha conectada: <strong>${movimentacoes.length.toLocaleString('pt-BR')}</strong> registros carregados.`;
-                }
-                if (btnLogin) btnLogin.disabled = false;
-
-                renderDynamicLoginShortcuts();
-                populateGlobalDepotSelect();
-
-                if (currentSession) {
-                    refreshAllViews();
-                }
-                if (isManualRefresh) {
-                    showToast(`Planilha atualizada! ${movimentacoes.length} lançamentos carregados.`, 'success');
-                }
-            } catch (err) {
-                console.error("Erro ao ler planilha Google:", err);
-                if (statusEl) {
-                    statusEl.className = "alert alert-danger py-2 px-3 small text-center mb-3";
-                    statusEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i> Erro ao conectar: ${err.message}`;
-                }
-                if (isManualRefresh) {
-                    showToast('Falha ao atualizar planilha: ' + err.message, 'danger');
-                }
-            }
-        }
-
-        function processarLinhasPlanilha(rawRows) {
-            depositosMap.clear();
-            produtosNomeMap.clear();
-
-            movimentacoes = rawRows.map((r, rowIndex) => {
-                const movRaw = String(getCol(r, ['Mov.', 'Mov', 'Movimento'])).trim();
-                const numStr = String(getCol(r, ['Nº', 'No', 'Numero', 'Número'])).trim();
-                const numInt = parseInt(numStr, 10) || 0;
-
-                const dataHoraRaw = getCol(r, ['Data / Hora', 'Data/Hora', 'Data']);
-                const dataHoraObj = parseDataHoraFlex(dataHoraRaw);
-                const dataHoraStr = formatDateTimeBR(dataHoraObj, dataHoraRaw);
-
-                const tipo = String(getCol(r, ['Tipo'])).trim();
-                const estado = String(getCol(r, ['Estado'])).trim() || 'Normal';
-                const deposito = normDep(getCol(r, ['Depósito', 'Deposito']));
-                const nomeDepPlanilha = String(getCol(r, ['Nome do Depósito', 'Nome Deposito'])).trim();
-
-                if (deposito) {
-                    if (nomeDepPlanilha) {
-                        depositosMap.set(deposito, nomeDepPlanilha);
-                    } else if (!depositosMap.has(deposito)) {
-                        depositosMap.set(deposito, `Depósito ${deposito}`);
-                    }
-                }
-
-                const rawCodVal = getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cod Produto', 'Cód.', 'Código']);
-                const codProduto = extrairCodigoNumerico(rawCodVal) || normCod(rawCodVal);
-                const nomeProdutoRaw = String(getCol(r, ['Nome do Produto', 'Nome Produto', 'Produto', 'Descrição', 'Descricao'])).trim();
-
-                if (codProduto && nomeProdutoRaw) {
-                    produtosNomeMap.set(codProduto, nomeProdutoRaw);
-                }
-
-                const un = String(getCol(r, ['Un.', 'Un', 'Unidade'])).trim() || 'UN';
-                const qtd = parseNumBR(getCol(r, ['Qtd.', 'Qtd', 'Quantidade']));
-
-                const documento = String(getCol(r, ['Documento'])).trim();
-                const cnpjCentroCusto = String(getCol(r, ['CNPJ / C. Custo', 'CNPJ / C.Custo'])).trim();
-                const observacao = String(getCol(r, ['Observação', 'Observacao'])).trim();
-
-                return {
-                    rowIndex,
-                    mov: movRaw,
-                    num: numStr,
-                    numInt: numInt,
-                    dataHora: dataHoraStr,
-                    dataObj: dataHoraObj,
-                    tipo: tipo,
-                    estado: estado,
-                    deposito: deposito || '0',
-                    depositoNome: nomeDepPlanilha || (deposito ? `Depósito ${deposito}` : 'Sem Depósito'),
-                    cod: codProduto,
-                    nomeProduto: nomeProdutoRaw,
-                    un: un,
-                    qtd: qtd,
-                    documento: documento,
-                    cnpjCentroCusto: cnpjCentroCusto,
-                    observacao: observacao
-                };
-            }).filter(m => m.cod || m.mov);
-
-            movimentacoes.forEach(m => {
-                if (!m.nomeProduto && m.cod && produtosNomeMap.has(m.cod)) {
-                    m.nomeProduto = produtosNomeMap.get(m.cod);
-                } else if (!m.nomeProduto) {
-                    m.nomeProduto = m.cod ? `Produto ${m.cod}` : 'Sem descrição';
-                }
-            });
-
-            movimentacoes.sort((a, b) => {
-                const ta = a.dataObj ? a.dataObj.getTime() : 0;
-                const tb = b.dataObj ? b.dataObj.getTime() : 0;
-                if (tb !== ta) return tb - ta;
-                if (b.numInt !== a.numInt) return b.numInt - a.numInt;
-                return b.rowIndex - a.rowIndex;
-            });
-
-            if (typeof Fuse !== 'undefined') {
-                fuseExtrato = new Fuse(movimentacoes, {
-                    keys: ['cod', 'nomeProduto', 'num', 'documento', 'cnpjCentroCusto', 'tipo', 'observacao', 'deposito', 'depositoNome'],
-                    threshold: 0.3,
-                    ignoreLocation: true
-                });
-            }
-        }
-
-        /**
-         * 2. MOTOR DE CÁLCULO: SALDO FÍSICO (ENTRADA - SAÍDA) POR PRODUTO E DEPÓSITO
-         */
-        function recalcularEstoqueConsolidado() {
-            const today = new Date();
-            const stockMap = new Map();
-
-            const movsCronologicas = [...movimentacoes].sort((a, b) => {
-                const ta = a.dataObj ? a.dataObj.getTime() : 0;
-                const tb = b.dataObj ? b.dataObj.getTime() : 0;
-                if (ta !== tb) return ta - tb;
-                if (a.numInt !== b.numInt) return a.numInt - b.numInt;
-                return a.rowIndex - b.rowIndex;
-            });
-
-            movsCronologicas.forEach(m => {
-                if (m.estado && m.estado.toLowerCase().includes('estornada total')) return;
-                if (!m.cod) return;
-
-                const key = `${m.deposito}_${m.cod}`;
-                if (!stockMap.has(key)) {
-                    stockMap.set(key, {
-                        deposito: m.deposito,
-                        depositoNome: m.depositoNome,
-                        cod: m.cod,
-                        nomeProduto: m.nomeProduto || produtosNomeMap.get(m.cod) || `Produto ${m.cod}`,
-                        un: m.un || 'UN',
-                        entradasQtd: 0,
-                        saidasQtd: 0,
-                        saldo: 0,
-                        lastMovDate: null,
-                        daysWithoutMov: 999
-                    });
-                }
-
-                const entry = stockMap.get(key);
-                if (m.nomeProduto) entry.nomeProduto = m.nomeProduto;
-                if (m.un) entry.un = m.un;
-
-                const qtd = Number(m.qtd || 0);
-                const movLower = m.mov.toLowerCase();
-
-                if (movLower.startsWith('ent') || movLower === 'e') {
-                    entry.entradasQtd += qtd;
-                } else if (movLower.startsWith('sa') || movLower === 's') {
-                    entry.saidasQtd += qtd;
-                }
-
-                entry.saldo = entry.entradasQtd - entry.saidasQtd;
-
-                if (m.dataObj) {
-                    if (!entry.lastMovDate || m.dataObj >= entry.lastMovDate.obj) {
-                        const diffDays = Math.max(0, Math.floor((today - m.dataObj) / (1000 * 60 * 60 * 24)));
-                        entry.lastMovDate = { str: m.dataHora.split(' ')[0], full: m.dataHora, obj: m.dataObj };
-                        entry.daysWithoutMov = diffDays;
-                    }
-                }
-            });
-
-            stockMap.forEach(entry => {
-                entry.saldo = entry.entradasQtd - entry.saidasQtd;
-            });
-
-            estoqueConsolidadoCache = Array.from(stockMap.values());
-
-            if (typeof Fuse !== 'undefined') {
-                fuseProdutos = new Fuse(estoqueConsolidadoCache, {
-                    keys: ['cod', 'nomeProduto', 'deposito', 'depositoNome'],
-                    threshold: 0.3
-                });
-            }
-        }
-
-        function getConsolidatedStock() {
-            return estoqueConsolidadoCache;
-        }
-
-        /**
-         * 3. LOGIN E CONTROLE DE DEPÓSITOS
-         */
-        function renderDynamicLoginShortcuts() {
-            const container = $('dynamicDepotShortcuts');
-            let html = `
-                <button type="button" class="btn btn-outline-dark btn-sm d-flex justify-content-between align-items-center px-3 py-2 rounded-3" onclick="quickLogin('GERAL')">
-                    <span><strong>GERAL</strong> — Visão Gerencial</span>
-                    <span class="badge bg-dark">Todos (${depositosMap.size} dep.)</span>
-                </button>
-            `;
-
-            const sortedDeps = Array.from(depositosMap.entries()).sort((a, b) => Number(a[0]) - Number(b[0]));
-            sortedDeps.forEach(([id, nome]) => {
-                html += `
-                    <button type="button" class="btn btn-outline-secondary btn-sm d-flex justify-content-between align-items-center px-3 py-2 rounded-3" onclick="quickLogin('${id}')">
-                        <span><strong class="text-dark">${id}</strong> — ${nome}</span>
-                        <span class="badge bg-primary-subtle text-primary">Restrito</span>
-                    </button>
-                `;
-            });
-            container.innerHTML = html;
-        }
-
-        function populateGlobalDepotSelect() {
-            const select = $('globalDepotSelect');
-            let html = `<option value="ALL">🌐 Todos os Depósitos (${depositosMap.size})</option>`;
-            const sortedDeps = Array.from(depositosMap.entries()).sort((a, b) => Number(a[0]) - Number(b[0]));
-            sortedDeps.forEach(([id, nome]) => {
-                html += `<option value="${id}">📦 ${id} - ${nome}</option>`;
-            });
-            select.innerHTML = html;
-        }
-
-        function handleLogin(e) {
-            e.preventDefault();
-            loginWithCode($('accessCodeInput').value.trim().toUpperCase());
-        }
-
-        function quickLogin(code) {
-            $('accessCodeInput').value = code;
-            loginWithCode(code);
-        }
-
-        function loginWithCode(code) {
-            const errorEl = $('loginErrorMsg');
-            const normCode = normDep(code);
-
-            if (code === 'GERAL' || code === 'ADMIN' || code === 'TODOS') {
-                errorEl.classList.add('d-none');
-                currentSession = { code: 'GERAL', depotId: 'ALL', label: 'Visão Gerencial (Todos)', isMaster: true };
-                sessionStorage.setItem('almox_session_gs', JSON.stringify(currentSession));
-                initDashboard();
-            } else if (depositosMap.has(normCode)) {
-                errorEl.classList.add('d-none');
-                const depNome = depositosMap.get(normCode);
-                currentSession = { code: normCode, depotId: normCode, label: `${normCode} - ${depNome}`, isMaster: false };
-                sessionStorage.setItem('almox_session_gs', JSON.stringify(currentSession));
-                initDashboard();
-            } else {
-                errorEl.classList.remove('d-none');
-                $('accessCodeInput').focus();
-            }
-        }
-
-        function logout() {
-            stopCameraIfRunning();
-            sessionStorage.removeItem('almox_session_gs');
-            currentSession = null;
-            $('app-wrapper').style.display = 'none';
-            $('login-screen').style.display = 'flex';
-            $('accessCodeInput').value = '';
-            $('accessCodeInput').focus();
-        }
-
-        function initDashboard() {
-            $('login-screen').style.display = 'none';
-            $('app-wrapper').style.display = 'block';
-
-            const sidebarLabel = $('sidebarDepotLabel');
-            const lockedBadge = $('lockedDepotBadge');
-            const globalSelect = $('globalDepotSelect');
-
-            sidebarLabel.innerHTML = `<i class="bi bi-geo-alt-fill"></i> <span>${currentSession.label}</span>`;
-
-            if (currentSession.isMaster) {
-                lockedBadge.classList.add('d-none');
-                globalSelect.classList.remove('d-none');
-                globalSelect.value = 'ALL';
-                activeDepotFilter = 'ALL';
-            } else {
-                globalSelect.classList.add('d-none');
-                lockedBadge.classList.remove('d-none');
-                lockedBadge.innerHTML = `<i class="bi bi-lock-fill me-1"></i> ${currentSession.label}`;
-                activeDepotFilter = currentSession.depotId;
-            }
-
-            renderQuickSampleCodes();
-            refreshAllViews();
-        }
-
-        function onGlobalDepotChange() {
-            activeDepotFilter = $('globalDepotSelect').value;
-            refreshAllViews();
-            const label = activeDepotFilter === 'ALL' ? 'Todos os Depósitos' : `Depósito ${activeDepotFilter}`;
-            showToast(`Visualizando: ${label}`, 'primary');
-        }
-
-        /**
-         * 4. NAVEGAÇÃO SPA
-         */
-        function navigateTo(pageId, navElement) {
-            stopCameraIfRunning();
-            document.querySelectorAll('.nav-sidebar .nav-link').forEach(el => el.classList.remove('active'));
-            if (navElement) navElement.classList.add('active');
-
-            document.querySelectorAll('.subpage').forEach(page => page.classList.add('d-none'));
-            $(pageId).classList.remove('d-none');
-
-            const titles = {
-                'page-kpis': 'Posição Real de Estoque',
-                'page-consulta': 'Consulta / Produto',
-                'page-inventario': 'Inventário às Cegas',
-                'page-extrato': 'Extrato Movimentações'
-            };
-            $('pageTitle').textContent = titles[pageId] || 'Dashboard';
-
-            $('sidebar').classList.remove('show');
-            $('sidebarBackdrop').classList.remove('show');
-
-            if (pageId === 'page-consulta') setTimeout(() => $('barcodeInput').focus(), 150);
-            else if (pageId === 'page-inventario') setTimeout(() => $('blindCodeInput').focus(), 150);
-        }
-
-        function toggleSidebar() {
-            $('sidebar').classList.toggle('show');
-            $('sidebarBackdrop').classList.toggle('show');
-        }
-
-        function refreshAllViews() {
-            renderKPIsAndStockPosition();
-            renderExtratoTable();
-            const currentResCode = $('resProdCode').dataset.code;
-            if (currentResCode && !$('consultaResultCard').classList.contains('d-none')) {
-                displayProductDetails(currentResCode, true);
-            }
-        }
-
-        /**
-         * 5. SUBPÁGINA 1: KPIs E POSIÇÃO REAL DE ESTOQUE EM QUANTIDADES (ENTRADA - SAÍDA)
-         */
-        function renderKPIsAndStockPosition() {
-            const scopedMovs = movimentacoes.filter(m => {
-                const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
-                const validState = !m.estado.toLowerCase().includes('estornada total');
-                return matchDepot && validState;
-            });
-
-            let totalEntradasQtd = 0, qtdLancEntradas = 0;
-            let totalSaidasQtd = 0, qtdLancSaidas = 0;
-            const saldoPorProduto = new Map();
-
-            scopedMovs.forEach(m => {
-                const qtd = Number(m.qtd || 0);
-                const movLower = m.mov.toLowerCase();
-                let delta = 0;
-
-                if (movLower.startsWith('ent') || movLower === 'e') {
-                    totalEntradasQtd += qtd;
-                    qtdLancEntradas++;
-                    delta = qtd;
-                } else if (movLower.startsWith('sa') || movLower === 's') {
-                    totalSaidasQtd += qtd;
-                    qtdLancSaidas++;
-                    delta = -qtd;
-                }
-
-                if (m.cod) {
-                    saldoPorProduto.set(m.cod, (saldoPorProduto.get(m.cod) || 0) + delta);
-                }
-            });
-
-            // Conta apenas produtos distintos que possuem saldo positivo (> 0) no escopo
-            let produtosComSaldoCount = 0;
-            saldoPorProduto.forEach(saldo => {
-                if (saldo > 0.0001) produtosComSaldoCount++;
-            });
-
-            // Saldo Real (Entrada - Saída) exatamente igual à diferença entre Total Entradas e Total Saídas
-            const saldoRealQtd = totalEntradasQtd - totalSaidasQtd;
-
-            const kpiUnitsEl = $('kpiTotalUnits');
-            const kpiIconEl = $('kpiSaldoIcon');
-            kpiUnitsEl.textContent = `${formatQty(saldoRealQtd)} un.`;
-
-            if (saldoRealQtd < -0.0001) {
-                kpiUnitsEl.className = "fw-bold mb-0 text-danger";
-                kpiIconEl.className = "kpi-icon bg-danger-subtle text-danger";
-            } else {
-                kpiUnitsEl.className = "fw-bold mb-0 text-success";
-                kpiIconEl.className = "kpi-icon bg-success-subtle text-success";
-            }
-
-            $('kpiSaldoSub').textContent = `${formatQty(totalEntradasQtd)} ent. − ${formatQty(totalSaidasQtd)} saí.`;
-
-            $('kpiEntradasQtd').textContent = `${formatQty(totalEntradasQtd)} un.`;
-            $('kpiEntradasLanc').textContent = `${qtdLancEntradas.toLocaleString('pt-BR')} lançamentos de entrada`;
-
-            $('kpiSaidasQtd').textContent = `${formatQty(totalSaidasQtd)} un.`;
-            $('kpiSaidasLanc').textContent = `${qtdLancSaidas.toLocaleString('pt-BR')} lançamentos de saída`;
-
-            $('kpiTotalItems').textContent = `${produtosComSaldoCount.toLocaleString('pt-BR')} itens`;
-            $('kpiTotalItemsSub').textContent = activeDepotFilter === 'ALL'
-                ? 'Produtos distintos com saldo > 0'
-                : 'Com saldo > 0 neste depósito';
-
-            renderStockPositionTable();
-            renderCostCenterChart();
-        }
-
-        function renderStockPositionTable() {
-            const allStock = getConsolidatedStock();
-            const search = $('saldoSearchInput').value.trim().toLowerCase();
-            const mode = $('saldoFilterMode').value;
-
-            let rows = allStock.filter(item => {
-                const saldoReal = item.entradasQtd - item.saidasQtd;
-                if (activeDepotFilter !== 'ALL' && item.deposito !== activeDepotFilter) return false;
-                if (mode === 'POS' && saldoReal <= 0) return false;
-                if (mode === 'NEG' && saldoReal >= 0) return false;
-                if (mode === 'ZERO' && Math.abs(saldoReal) > 0.0001) return false;
-                if (mode === 'STAG30' && (saldoReal <= 0 || item.daysWithoutMov < 30 || item.daysWithoutMov >= 999)) return false;
-                if (search && !`${item.cod} ${item.nomeProduto} ${item.deposito} ${item.depositoNome}`.toLowerCase().includes(search)) return false;
-                return true;
-            });
-
-            rows.sort((a, b) => Math.abs(b.saldo) - Math.abs(a.saldo));
-
-            const tbody = $('stockPositionTableBody');
-            if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Nenhum item encontrado para o filtro selecionado.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = rows.slice(0, 300).map(item => {
-                const saldoReal = item.entradasQtd - item.saidasQtd;
-                const saldoClass = saldoReal < -0.0001 ? 'text-danger' : (saldoReal > 0.0001 ? 'text-success' : 'text-muted');
-                return `
-                    <tr style="cursor:pointer;" onclick="abrirConsultaDireta('${item.cod}')" title="Clique para ver detalhes do produto ${item.cod}">
-                        <td class="fw-bold text-primary">${item.cod}</td>
-                        <td class="fw-medium">${item.nomeProduto}</td>
-                        <td><span class="badge bg-light text-dark border">${item.deposito} - ${item.depositoNome}</span></td>
-                        <td class="text-end text-primary">${formatQty(item.entradasQtd)}</td>
-                        <td class="text-end text-danger">${formatQty(item.saidasQtd)}</td>
-                        <td class="text-end fw-bold ${saldoClass}">${formatQty(saldoReal)} ${item.un}</td>
-                        <td class="text-center text-muted small">${item.lastMovDate ? item.lastMovDate.str : '-'}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function abrirConsultaDireta(cod) {
-            const navBtn = document.querySelector('[data-page="page-consulta"]');
-            navigateTo('page-consulta', navBtn);
-            triggerSampleLookup(cod);
-        }
-
-        function renderCostCenterChart() {
-            const filteredMovs = movimentacoes.filter(m => {
-                const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
-                const isSaida = m.mov.toLowerCase().startsWith('sa');
-                const validState = !m.estado.toLowerCase().includes('estornada total');
-                return matchDepot && isSaida && validState;
-            });
-
-            const ccTotals = {};
-            let grandTotal = 0;
-
-            filteredMovs.forEach(m => {
-                const cc = m.cnpjCentroCusto || 'Não Informado';
-                const qtd = Number(m.qtd || 0);
-                ccTotals[cc] = (ccTotals[cc] || 0) + qtd;
-                grandTotal += qtd;
-            });
-
-            const sortedCC = Object.entries(ccTotals).sort((a, b) => b[1] - a[1]).slice(0, 10);
-            const container = $('costCenterContainer');
-
-            if (sortedCC.length === 0) {
-                container.innerHTML = `<p class="text-muted small text-center my-4">Nenhuma saída registrada para este filtro.</p>`;
-                return;
-            }
-
-            container.innerHTML = sortedCC.map(([name, totalQtd]) => {
-                const pct = grandTotal > 0 ? Math.max(1, Math.round((totalQtd / grandTotal) * 100)) : 0;
-                return `
-                    <div>
-                        <div class="d-flex justify-content-between small mb-1">
-                            <span class="fw-semibold text-truncate" style="max-width: 62%;" title="${name}">${name}</span>
-                            <span class="fw-bold text-dark">${formatQty(totalQtd)} un. <span class="text-muted fw-normal">(${pct}%)</span></span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${pct}%"></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        /**
-         * 6. SUBPÁGINA 2: CONSULTA RÁPIDA E LEITOR DE CÓDIGO DE BARRAS (CODE 128)
-         */
-        function renderQuickSampleCodes() {
-            const uniqueItems = [];
-            const seen = new Set();
-            for (const m of movimentacoes) {
-                if (m.cod && !seen.has(m.cod)) {
-                    seen.add(m.cod);
-                    uniqueItems.push({ cod: m.cod, nome: m.nomeProduto });
-                    if (uniqueItems.length >= 8) break;
-                }
-            }
-
-            const container = $('quickSampleCodes');
-            container.innerHTML = uniqueItems.map(item => `
-                <button type="button" class="btn btn-sm btn-light border fw-semibold text-truncate" style="max-width: 100%;" onclick="triggerSampleLookup('${item.cod}')" title="${item.cod} - ${item.nome}">
-                    <i class="bi bi-upc me-1 text-muted"></i><strong>${item.cod}</strong> · ${item.nome}
-                </button>
-            `).join('');
-        }
-
-        function triggerSampleLookup(cod) {
-            const cleanCod = extrairCodigoNumerico(cod) || cod;
-            $('barcodeInput').value = cleanCod;
-            displayProductDetails(cleanCod, true);
-        }
-
-        function searchProductByInput(e) {
-            e.preventDefault();
-            const input = $('barcodeInput');
-            const rawQuery = input.value.trim();
-            if (!rawQuery) return;
-
-            const numericCode = extrairCodigoNumerico(rawQuery);
-            if (numericCode && !/[a-zA-Z]{3,}/.test(rawQuery)) {
-                input.value = numericCode;
-                displayProductDetails(numericCode, true);
-            } else {
-                displayProductDetails(rawQuery, false);
-            }
-            input.select();
-        }
-
-        function displayProductDetails(query, forceNumericOnly = false) {
-            const allStock = getConsolidatedStock();
-            const numericCode = extrairCodigoNumerico(query);
-            let matches = [];
-
-            if (forceNumericOnly) {
-                if (!numericCode) {
-                    showToast(`Código de barras inválido (nenhum número identificado).`, 'warning');
-                    return;
-                }
-                matches = allStock.filter(item => item.cod === numericCode);
-            } else {
-                if (numericCode) {
-                    matches = allStock.filter(item => item.cod === numericCode);
-                }
-                if (matches.length === 0) {
-                    const subMatch = allStock.find(item => item.nomeProduto.toLowerCase().includes(query.toLowerCase()));
-                    if (subMatch) {
-                        matches = allStock.filter(item => item.cod === subMatch.cod);
-                    }
-                }
-                if (matches.length === 0 && fuseProdutos) {
-                    const fuzzy = fuseProdutos.search(query);
-                    if (fuzzy.length > 0) {
-                        const bestCod = fuzzy[0].item.cod;
-                        matches = allStock.filter(item => item.cod === bestCod);
-                    }
-                }
-            }
-
-            if (matches.length === 0) {
-                showToast(`Produto "${forceNumericOnly ? numericCode : query}" não encontrado na planilha.`, 'warning');
-                return;
-            }
-
-            $('consultaEmptyState').classList.add('d-none');
-            $('consultaResultCard').classList.remove('d-none');
-
-            const sampleItem = matches[0];
-            const resCodeEl = $('resProdCode');
-            resCodeEl.textContent = `CÓD. PRODUTO: ${sampleItem.cod}`;
-            resCodeEl.dataset.code = sampleItem.cod;
-
-            $('resProdName').textContent = sampleItem.nomeProduto;
-            $('resProdUnit').textContent = `Unidade: ${sampleItem.un}`;
-
-            let scopedEnt = 0;
-            let scopedSai = 0;
-            let scopedQty = 0;
-            let depotLabel = '';
-
-            if (activeDepotFilter === 'ALL') {
-                scopedEnt = matches.reduce((acc, m) => acc + m.entradasQtd, 0);
-                scopedSai = matches.reduce((acc, m) => acc + m.saidasQtd, 0);
-                scopedQty = scopedEnt - scopedSai;
-                depotLabel = 'Todos os Depósitos';
-            } else {
-                const targetDepot = matches.find(m => m.deposito === activeDepotFilter);
-                scopedEnt = targetDepot ? targetDepot.entradasQtd : 0;
-                scopedSai = targetDepot ? targetDepot.saidasQtd : 0;
-                scopedQty = scopedEnt - scopedSai;
-                depotLabel = currentSession.label;
-            }
-
-            $('resDepotContext').textContent = depotLabel;
-            const qtyEl = $('resStockQty');
-            qtyEl.textContent = formatQty(scopedQty);
-            qtyEl.className = `saldo-destaque ${scopedQty < -0.0001 ? 'text-danger' : 'text-primary'}`;
-
-            $('resStockUnit').textContent = sampleItem.un;
-            $('resTotalEntradasProd').textContent = `${formatQty(scopedEnt)} ${sampleItem.un}`;
-            $('resTotalSaidasProd').textContent = `${formatQty(scopedSai)} ${sampleItem.un}`;
-
-            const breakdownBody = $('resDepotsBreakdownBody');
-            breakdownBody.innerHTML = matches.sort((a, b) => Number(a.deposito) - Number(b.deposito)).map(m => {
-                const saldoDep = m.entradasQtd - m.saidasQtd;
-                const isSelected = activeDepotFilter !== 'ALL' && m.deposito === activeDepotFilter;
-                return `
-                    <tr class="${isSelected ? 'table-primary fw-semibold' : ''}">
-                        <td>${m.deposito} - ${m.depositoNome}</td>
-                        <td class="text-end text-primary">${formatQty(m.entradasQtd)}</td>
-                        <td class="text-end text-danger">${formatQty(m.saidasQtd)}</td>
-                        <td class="text-end fw-bold ${saldoDep < -0.0001 ? 'text-danger' : 'text-success'}">${formatQty(saldoDep)} ${m.un}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            const itemMovs = movimentacoes.filter(m => {
-                const matchCode = m.cod === sampleItem.cod;
-                const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
-                return matchCode && matchDepot;
-            });
-
-            const histBody = $('resHistoryBody');
-            if (itemMovs.length === 0) {
-                histBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-3">Sem movimentações para este depósito.</td></tr>`;
-            } else {
-                histBody.innerHTML = itemMovs.map(m => {
-                    const isEntry = m.mov.toLowerCase().startsWith('ent');
-                    return `
-                        <tr>
-                            <td class="small text-nowrap">${m.dataHora}</td>
-                            <td><span class="badge ${isEntry ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">${m.mov}</span></td>
-                            <td class="fw-semibold">${m.num}</td>
-                            <td class="small">${m.tipo}</td>
-                            <td>${m.deposito}</td>
-                            <td class="text-end fw-bold">${isEntry ? '+' : '-'}${formatQty(m.qtd)}</td>
-                            <td class="small">${m.documento || '-'}</td>
-                            <td class="small text-muted">${m.cnpjCentroCusto || '-'}</td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-        }
-
-        /**
-         * LEITOR DE CÓDIGO DE BARRAS OTIMIZADO PARA CODE 128 / 1D LINEAR (EX: 131)
-         */
-        function toggleCameraScanner(context = 'consulta') {
-            if (activeScannerContext === context) {
-                stopCameraIfRunning();
-            } else {
-                stopCameraIfRunning();
-                startCameraScanner(context);
-            }
-        }
-
-        function startCameraScanner(context = 'consulta') {
-            const isBlind = context === 'inventario';
-            const wrapper = $(isBlind ? 'blindCameraWrapper' : 'cameraWrapper');
-            const readerElementId = isBlind ? 'blindReader' : 'reader';
-            const btn = $(isBlind ? 'btnToggleBlindCamera' : 'btnToggleCamera');
-
-            wrapper.classList.remove('d-none');
-            if (isBlind) {
-                btn.innerHTML = `<i class="bi bi-stop-circle-fill text-danger"></i>`;
-            } else {
-                btn.innerHTML = `<i class="bi bi-stop-circle-fill me-2 text-danger"></i>Fechar Câmera`;
-            }
-
-            try {
-                const scannerConfig = {
-                    verbose: false,
-                    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-                };
-                if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
-                    scannerConfig.formatsToSupport = [
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.CODE_93,
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.ITF,
-                        Html5QrcodeSupportedFormats.CODABAR
-                    ];
-                }
-
-                html5QrcodeScanner = new Html5Qrcode(readerElementId, scannerConfig);
-                html5QrcodeScanner.start(
-                    { facingMode: "environment" },
-                    {
-                        fps: 15,
-                        qrbox: (viewfinderWidth, viewfinderHeight) => {
-                            const w = Math.min(340, Math.floor(viewfinderWidth * 0.88));
-                            const h = Math.min(130, Math.floor(viewfinderHeight * 0.45));
-                            return { width: Math.max(200, w), height: Math.max(90, h) };
-                        },
-                        aspectRatio: 1.777778
-                    },
-                    (decodedText) => {
-                        const cleanCode = extrairCodigoNumerico(decodedText);
-                        if (!cleanCode) return;
-
-                        if (isBlind) {
-                            $('blindCodeInput').value = cleanCode;
-                            showToast(`Código lido: ${cleanCode}`, 'success');
-                            stopCameraIfRunning();
-                            setTimeout(() => $('blindQtyInput').focus(), 100);
-                        } else {
-                            $('barcodeInput').value = cleanCode;
-                            displayProductDetails(cleanCode, true);
-                            showToast(`Código de barras lido: ${cleanCode}`, 'success');
-                            stopCameraIfRunning();
-                        }
-                    },
-                    () => {}
-                ).catch(() => {
-                    showToast('Não foi possível acessar a câmera.', 'warning');
-                    stopCameraIfRunning();
-                });
-                activeScannerContext = context;
-            } catch (e) {
-                showToast('Leitor de câmera indisponível.', 'danger');
-                stopCameraIfRunning();
-            }
-        }
-
-        function stopCameraIfRunning() {
-            const w1 = $('cameraWrapper');
-            const w2 = $('blindCameraWrapper');
-            const b1 = $('btnToggleCamera');
-            const b2 = $('btnToggleBlindCamera');
-
-            if (w1) w1.classList.add('d-none');
-            if (w2) w2.classList.add('d-none');
-            if (b1) b1.innerHTML = `<i class="bi bi-upc-scan me-2"></i>Ler Código de Barras (Câmera)`;
-            if (b2) b2.innerHTML = `<i class="bi bi-upc-scan"></i>`;
-
-            if (html5QrcodeScanner && activeScannerContext) {
-                const scannerRef = html5QrcodeScanner;
-                html5QrcodeScanner = null;
-                scannerRef.stop().then(() => scannerRef.clear()).catch(() => {});
-            }
-            activeScannerContext = null;
-        }
-
-        /**
-         * 7. SUBPÁGINA 3: INVENTÁRIO ÀS CEGAS (APENAS QUANTIDADES)
-         */
-        function addBlindCountItem(e) {
-            e.preventDefault();
-            if (isBlindFinished) {
-                showToast('A contagem já foi finalizada. Clique em "Limpar Contagem".', 'warning');
-                return;
-            }
-
-            const codeInput = $('blindCodeInput');
-            const qtyInput = $('blindQtyInput');
-            const code = extrairCodigoNumerico(codeInput.value.trim());
-            const countedQty = parseFloat(qtyInput.value);
-
-            if (!code) {
-                showToast(`Informe um código numérico válido (ex: 131).`, 'warning');
-                codeInput.select();
-                return;
-            }
-
-            const allStock = getConsolidatedStock();
-            const productMatches = allStock.filter(i => i.cod === code);
-
-            if (productMatches.length === 0) {
-                showToast(`Código "${code}" não encontrado na planilha.`, 'danger');
-                codeInput.select();
-                return;
-            }
-
-            const sample = productMatches[0];
-            let systemQty = 0;
-
-            if (activeDepotFilter === 'ALL') {
-                systemQty = productMatches.reduce((s, x) => s + (x.entradasQtd - x.saidasQtd), 0);
-            } else {
-                const depEntry = productMatches.find(x => x.deposito === activeDepotFilter);
-                systemQty = depEntry ? (depEntry.entradasQtd - depEntry.saidasQtd) : 0;
-            }
-
-            const existing = blindInventoryItems.find(i => i.cod === sample.cod);
-            if (existing) {
-                existing.countedQty += countedQty;
-            } else {
-                blindInventoryItems.push({
-                    cod: sample.cod,
-                    nomeProduto: sample.nomeProduto,
-                    un: sample.un,
-                    systemQty: systemQty,
-                    countedQty: countedQty
-                });
-            }
-
-            codeInput.value = '';
-            qtyInput.value = '';
-            codeInput.focus();
-
-            renderBlindTable();
-            showToast(`Contagem registrada: ${sample.cod} - ${sample.nomeProduto}`, 'success');
-        }
-
-        function removeBlindItem(index) {
-            blindInventoryItems.splice(index, 1);
-            renderBlindTable();
-        }
-
-        function renderBlindTable() {
-            const tbody = $('blindTableBody');
-            const thead = $('blindTableHead');
-            const badge = $('blindCountBadge');
-            const btnFinish = $('btnFinishBlind');
-
-            badge.textContent = blindInventoryItems.length;
-            btnFinish.disabled = blindInventoryItems.length === 0 || isBlindFinished;
-
-            if (blindInventoryItems.length === 0) {
-                thead.innerHTML = `<tr><th>Cód.</th><th>Nome do Produto</th><th>Un.</th><th class="text-end">Qtd. Contada</th><th class="text-center">Ação</th></tr>`;
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Nenhum item bipado ainda.</td></tr>`;
-                return;
-            }
-
-            if (!isBlindFinished) {
-                thead.innerHTML = `<tr><th>Cód.</th><th>Nome do Produto</th><th>Un.</th><th class="text-end">Qtd. Contada</th><th class="text-center">Ação</th></tr>`;
-                tbody.innerHTML = blindInventoryItems.map((item, idx) => `
-                    <tr>
-                        <td class="fw-bold text-primary">${item.cod}</td>
-                        <td>${item.nomeProduto}</td>
-                        <td>${item.un}</td>
-                        <td class="text-end fw-bold fs-6">${formatQty(item.countedQty)}</td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-danger" onclick="removeBlindItem(${idx})"><i class="bi bi-trash"></i></button>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                thead.innerHTML = `
-                    <tr>
-                        <th>Cód.</th>
-                        <th>Nome do Produto</th>
-                        <th class="text-end">Saldo (Ent. − Saí.)</th>
-                        <th class="text-end">Contagem Física</th>
-                        <th class="text-end">Diferença (Qtd.)</th>
-                    </tr>`;
-                tbody.innerHTML = blindInventoryItems.map(item => {
-                    const diff = item.countedQty - item.systemQty;
-                    let diffBadge = `<span class="badge bg-success-subtle text-success">OK (0)</span>`;
-                    if (diff > 0.0001) diffBadge = `<span class="badge bg-primary">+${formatQty(diff)} (Sobra)</span>`;
-                    if (diff < -0.0001) diffBadge = `<span class="badge bg-danger">${formatQty(diff)} (Falta)</span>`;
-
-                    return `
-                        <tr>
-                            <td class="fw-bold">${item.cod}</td>
-                            <td>${item.nomeProduto}</td>
-                            <td class="text-end ${item.systemQty < 0 ? 'text-danger fw-bold' : 'text-muted'}">${formatQty(item.systemQty)} ${item.un}</td>
-                            <td class="text-end fw-bold">${formatQty(item.countedQty)} ${item.un}</td>
-                            <td class="text-end">${diffBadge}</td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-        }
-
-        function finishBlindInventory() {
-            isBlindFinished = true;
-            $('blindTableTitle').innerHTML = `<i class="bi bi-clipboard-data text-success me-2"></i>Resultado da Auditoria de Inventário`;
-            $('blindTableSubtitle').textContent = `Comparativo de quantidades entre Saldo (Entrada − Saída) e contagem física`;
-            $('btnExportBlindCsv').classList.remove('d-none');
-            renderBlindTable();
-            showToast('Apuração concluída!', 'info');
-        }
-
-        function resetBlindInventory() {
-            blindInventoryItems = [];
-            isBlindFinished = false;
-            $('blindTableTitle').innerHTML = `Itens Contados nesta Sessão (<span id="blindCountBadge">0</span>)`;
-            $('blindTableSubtitle').textContent = `Os saldos (Entrada − Saída) serão revelados após a finalização`;
-            $('btnExportBlindCsv').classList.add('d-none');
-            renderBlindTable();
-        }
-
-        function exportBlindCsv() {
-            let csv = "Cod_Produto;Nome_Produto;Unidade;Saldo_Entrada_Menos_Saida;Contagem_Fisica;Diferenca\n";
-            blindInventoryItems.forEach(i => {
-                const diff = i.countedQty - i.systemQty;
-                const nomeEscaped = `"${String(i.nomeProduto || '').replace(/"/g, '""')}"`;
-                csv += `${i.cod};${nomeEscaped};${i.un};${i.systemQty};${i.countedQty};${diff}\n`;
-            });
-            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `inventario_divergencias_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
-        }
-
-        /**
-         * 8. SUBPÁGINA 4: EXTRATO DE MOVIMENTAÇÕES
-         */
-        function renderExtratoTable() {
-            const searchTerm = $('extratoSearchInput').value.trim();
-            const typeFilter = $('extratoTypeFilter').value;
-
-            let baseList = movimentacoes;
-            if (searchTerm && fuseExtrato) {
-                baseList = fuseExtrato.search(searchTerm).map(r => r.item);
-            }
-
-            const filtered = baseList.filter(m => {
-                const matchDepot = activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter;
-                const matchType = typeFilter === 'ALL' || m.mov.toLowerCase().startsWith(typeFilter.toLowerCase().slice(0, 2));
-                return matchDepot && matchType;
-            });
-
-            $('extratoCountLabel').textContent = filtered.length > LIMITE_EXTRATO
-                ? `Mostrando ${LIMITE_EXTRATO} de ${filtered.length.toLocaleString('pt-BR')} registros`
-                : `${filtered.length.toLocaleString('pt-BR')} registros`;
-
-            const tbody = $('extratoTableBody');
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="14" class="text-center text-muted py-4">Nenhuma movimentação encontrada.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = filtered.slice(0, LIMITE_EXTRATO).map(m => {
-                const isEntry = m.mov.toLowerCase().startsWith('ent');
-                const isEstornada = m.estado.toLowerCase().includes('estornada');
-                return `
-                    <tr class="${isEstornada ? 'table-warning' : ''}">
-                        <td><span class="badge ${isEntry ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">${m.mov}</span></td>
-                        <td class="fw-bold">${m.num}</td>
-                        <td class="text-nowrap small">${m.dataHora}</td>
-                        <td class="text-nowrap">${m.tipo}</td>
-                        <td><span class="badge ${isEstornada ? 'bg-warning text-dark' : 'bg-light text-dark border'}">${m.estado}</span></td>
-                        <td class="text-center fw-bold">${m.deposito}</td>
-                        <td class="text-nowrap text-muted">${m.depositoNome}</td>
-                        <td class="fw-bold text-primary">${m.cod}</td>
-                        <td class="text-nowrap">${m.nomeProduto}</td>
-                        <td>${m.un}</td>
-                        <td class="text-end fw-bold">${formatQty(m.qtd)}</td>
-                        <td class="text-nowrap">${m.documento || '-'}</td>
-                        <td class="text-nowrap small">${m.cnpjCentroCusto || '-'}</td>
-                        <td class="small text-muted text-nowrap" title="${m.observacao}">${m.observacao || '-'}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        /**
-         * 9. UTILITÁRIOS DE NORMALIZAÇÃO, PARSING E FORMATAÇÃO
-         */
-        function normHeader(str) {
-            return String(str || '')
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-zA-Z0-9]/g, '')
-                .toLowerCase();
-        }
-
-        function getCol(row, candidates) {
-            const keys = Object.keys(row);
-            for (const c of candidates) {
-                const target = normHeader(c);
-                const found = keys.find(k => normHeader(k) === target);
-                if (found !== undefined) return row[found];
-            }
-            return "";
-        }
-
-        function normDep(val) {
-            const s = String(val ?? "").trim();
-            return /^\d+(\.0+)?$/.test(s) ? String(parseInt(s, 10)) : s;
-        }
-
-        function normCod(val) {
-            const s = String(val ?? "").trim();
-            return /^\d+\.0+$/.test(s) ? String(parseInt(s, 10)) : s;
-        }
-
-        function parseNumBR(val) {
-            if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
-            if (!val) return 0;
-            let s = String(val).replace(/R\$/gi, '').replace(/\s/g, '').trim();
-            if (!s) return 0;
-            if (s.includes(',')) {
-                s = s.replace(/\./g, '').replace(',', '.');
-            }
-            const n = Number(s);
-            return Number.isFinite(n) ? n : 0;
-        }
-
-        function parseDataHoraFlex(val) {
-            if (val instanceof Date && !isNaN(val)) return val;
-            if (!val) return null;
-            const str = String(val).trim();
-            const [dPart, hPart] = str.split(/\s+/);
-            const p = dPart.split('/');
-            if (p.length === 3) {
-                const [h = 0, m = 0, s = 0] = (hPart || '').split(':').map(Number);
-                return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]), h, m, s);
-            }
-            const iso = new Date(str);
-            return isNaN(iso) ? null : iso;
-        }
-
-        function formatDateTimeBR(dateObj, rawFallback) {
-            if (!dateObj || isNaN(dateObj)) return String(rawFallback || '');
-            const pad = n => String(n).padStart(2, '0');
-            return `${pad(dateObj.getDate())}/${pad(dateObj.getMonth() + 1)}/${dateObj.getFullYear()} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
-        }
-
-        function formatQty(value) {
-            return Number(value || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
-        }
-
-        function showToast(message, type = 'primary') {
-            const container = $('toastContainer');
-            const toastId = 'toast_' + Date.now();
-            const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0 shadow" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body fw-medium">${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
+    <form id="loginForm" autocomplete="off">
+      <div class="mb-3">
+        <label for="accessCodeInput" class="form-label fw-semibold small text-uppercase text-secondary">Número do Depósito ou GERAL</label>
+        <div class="input-group input-group-lg">
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-geo-alt text-primary"></i></span>
+          <input type="text" class="form-control border-start-0 text-uppercase fw-bold" id="accessCodeInput" placeholder="Ex: GERAL ou 5" autocomplete="off" autofocus required>
+        </div>
+        <div id="loginErrorMsg" class="text-danger small mt-2 d-none">
+          <i class="bi bi-exclamation-circle-fill me-1"></i>Depósito não encontrado. Digite <strong>GERAL</strong> ou um número de depósito válido.
+        </div>
+      </div>
+      <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-lg w-100 rounded-3 shadow-sm mb-2" disabled>
+        Acessar Painel <i class="bi bi-arrow-right ms-1"></i>
+      </button>
+      <button type="button" id="btnRetryLoad" class="btn btn-outline-secondary btn-sm w-100 mb-3 d-none" data-action="reload">
+        <i class="bi bi-arrow-repeat me-1"></i>Tentar novamente
+      </button>
+    </form>
+
+    <div class="border-top pt-3">
+      <p class="text-center text-muted small mb-2 fw-medium">Acesso rápido (depósitos detectados):</p>
+      <div class="d-grid gap-2" id="dynamicDepotShortcuts" style="max-height:200px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- APP -->
+<div id="app-wrapper">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" data-action="toggle-sidebar"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background:var(--cor-entrada)"><i class="bi bi-boxes text-white fs-5"></i></div>
+        <div>
+          <h6 class="mb-0 fw-bold text-white">AlmoxSmart</h6>
+          <small style="font-size:.72rem;color:#94a3b8;">Entradas − Saídas</small>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-link text-white d-lg-none" data-action="toggle-sidebar" aria-label="Fechar menu"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <div class="px-3 py-3 border-bottom border-secondary border-opacity-25">
+      <small class="text-uppercase fw-bold d-block mb-1" style="font-size:.68rem;color:#94a3b8;">Unidade conectada</small>
+      <div class="d-flex align-items-center gap-2 fw-semibold small" style="color:#e4cde9" id="sidebarDepotLabel"></div>
+    </div>
+
+    <nav class="nav flex-column nav-sidebar mt-3 flex-grow-1" aria-label="Navegação principal">
+      <button class="nav-link active" data-page="page-kpis"><i class="bi bi-speedometer2"></i><span>Posição Real de Estoque</span></button>
+      <button class="nav-link" data-page="page-consulta"><i class="bi bi-upc-scan"></i><span>Consulta / Produto</span></button>
+      <button class="nav-link" data-page="page-inventario"><i class="bi bi-clipboard-check"></i><span>Inventário às Cegas</span></button>
+      <button class="nav-link" data-page="page-extrato"><i class="bi bi-table"></i><span>Extrato Movimentações</span></button>
+    </nav>
+
+    <div class="p-3 border-top border-secondary border-opacity-25 d-grid gap-2">
+      <button class="btn btn-outline-light btn-sm rounded-3" data-action="reload"><i class="bi bi-arrow-repeat me-1"></i>Atualizar Planilha</button>
+      <button class="btn btn-outline-light btn-sm rounded-3" data-action="logout"><i class="bi bi-box-arrow-left me-1"></i>Trocar Depósito / Sair</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-outline-light d-lg-none" data-action="toggle-sidebar" aria-label="Abrir menu"><i class="bi bi-list fs-5"></i></button>
+        <div>
+          <span class="badge badge-hero mb-1">DADOS · ALMOXARIFADO</span>
+          <h5 class="mb-0 fw-bold" id="pageTitle">Posição Real de Estoque</h5>
+          <small class="opacity-75 d-none d-sm-inline" id="currentDateDisplay"></small>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <small class="opacity-75 d-none d-md-inline" id="lastSyncLabel"></small>
+        <span class="badge bg-light text-dark px-3 py-2 rounded-pill fw-semibold" id="lockedDepotBadge"></span>
+        <select id="globalDepotSelect" class="form-select form-select-sm fw-semibold d-none" style="min-width:240px;" aria-label="Filtrar depósito"></select>
+        <button class="btn btn-light btn-sm rounded-3" data-action="reload" title="Recarregar dados do Google Planilhas">
+          <i class="bi bi-cloud-arrow-down"></i> <span class="d-none d-md-inline">Sincronizar</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="p-3 p-md-4 flex-grow-1">
+
+      <!-- 1. POSIÇÃO REAL -->
+      <div id="page-kpis" class="subpage">
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-sm-6 col-xl-3"><div class="card kpi k-neutro h-100 border-0 shadow-sm"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-semibold">Saldo real (Entrada − Saída)</div>
+            <div class="valor" id="kpiTotalUnits">0</div>
+            <div class="small-muted" id="kpiSaldoSub">Quantidade líquida em estoque</div>
+          </div></div></div>
+          <div class="col-12 col-sm-6 col-xl-3"><div class="card kpi k-ent h-100 border-0 shadow-sm"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-semibold">Total entradas (+)</div>
+            <div class="valor t-ent" id="kpiEntradasQtd">0</div>
+            <div class="small-muted" id="kpiEntradasLanc">0 lançamentos</div>
+          </div></div></div>
+          <div class="col-12 col-sm-6 col-xl-3"><div class="card kpi k-sai h-100 border-0 shadow-sm"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-semibold">Total saídas (−)</div>
+            <div class="valor t-sai" id="kpiSaidasQtd">0</div>
+            <div class="small-muted" id="kpiSaidasLanc">0 lançamentos</div>
+          </div></div></div>
+          <div class="col-12 col-sm-6 col-xl-3"><div class="card kpi k-est h-100 border-0 shadow-sm"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-semibold">Produtos com saldo</div>
+            <div class="valor" id="kpiTotalItems">0</div>
+            <div class="small-muted" id="kpiTotalItemsSub">Com saldo positivo</div>
+          </div></div></div>
+        </div>
+        <div class="small-muted mb-3" id="avisoEstornos"></div>
+
+        <div class="row g-4">
+          <div class="col-12 col-xl-8">
+            <div class="table-container h-100">
+              <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                  <h6 class="fw-bold mb-0"><i class="bi bi-layers-fill text-primary me-2"></i>Posição por produto e depósito</h6>
+                  <small class="text-muted" id="saldoCountLabel"></small>
                 </div>
-            `;
-            container.insertAdjacentHTML('beforeend', toastHtml);
-            const toastEl = $(toastId);
-            const bsToast = new bootstrap.Toast(toastEl, { delay: 3200 });
-            bsToast.show();
-            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-        }
-    </script>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                  <input type="search" id="saldoSearchInput" class="form-control form-control-sm" style="width:210px" placeholder="Filtrar cód., nome ou depósito...">
+                  <select id="saldoFilterMode" class="form-select form-select-sm" style="width:auto">
+                    <option value="ALL">Todos os itens</option>
+                    <option value="POS">Saldo positivo (&gt; 0)</option>
+                    <option value="NEG">Saldo negativo (&lt; 0)</option>
+                    <option value="ZERO">Saldo zerado (= 0)</option>
+                    <option value="STAG30">Sem giro (+30d)</option>
+                  </select>
+                  <button class="btn btn-outline-secondary btn-sm" data-action="csv-saldo" title="Exportar posição em CSV"><i class="bi bi-file-earmark-spreadsheet"></i> CSV</button>
+                </div>
+              </div>
+              <div class="tabela-wrap" style="max-height:460px">
+                <table class="est w-100">
+                  <thead><tr>
+                    <th>Cód.</th><th>Nome do produto</th><th>Depósito</th>
+                    <th class="g-ent text-end">Entradas (+)</th><th class="g-sai text-end">Saídas (−)</th>
+                    <th class="text-end">Saldo real</th><th class="text-center">Últ. mov.</th>
+                  </tr></thead>
+                  <tbody id="stockPositionTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-4">
+            <div class="kpi-card p-3 h-100">
+              <h6 class="fw-bold mb-1"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Top saídas por C. Custo / CNPJ</h6>
+              <p class="small-muted mb-3">Maiores destinos por quantidade retirada</p>
+              <div id="costCenterContainer" class="d-flex flex-column gap-3" style="max-height:440px;overflow-y:auto;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. CONSULTA -->
+      <div id="page-consulta" class="subpage d-none">
+        <div class="row g-4">
+          <div class="col-12 col-lg-5">
+            <div class="kpi-card p-4">
+              <h5 class="fw-bold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Consulta de produto</h5>
+              <p class="text-muted small mb-3">Bipe o código de barras (ex: <strong>131</strong>) ou digite o <strong>nome do produto</strong>.</p>
+
+              <form id="searchForm" class="mb-3">
+                <label for="barcodeInput" class="form-label small fw-semibold text-uppercase text-secondary">Código ou nome</label>
+                <div class="input-group input-group-lg">
+                  <input type="text" class="form-control fw-bold" id="barcodeInput" placeholder="Ex: 131 ou Papel..." autocomplete="off">
+                  <button class="btn btn-primary px-4" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button>
+                </div>
+                <div class="form-text"><i class="bi bi-magic me-1"></i>Só números = busca por código; com letras = busca por nome.</div>
+              </form>
+
+              <div class="d-grid mb-3">
+                <button type="button" class="btn btn-outline-dark fw-semibold py-2 rounded-3" id="btnToggleCamera" data-action="camera" data-ctx="consulta">
+                  <i class="bi bi-upc-scan me-2"></i>Ler código de barras (câmera)
+                </button>
+              </div>
+              <div id="cameraWrapper" class="d-none mb-3 p-2 bg-dark rounded-3 text-center">
+                <div id="reader" class="scanner-reader"></div>
+                <small class="text-light d-block mt-2">Alinhe as barras dentro da caixa horizontal</small>
+              </div>
+
+              <div class="border-top pt-3">
+                <small class="text-muted fw-semibold d-block mb-2">Amostra de produtos da planilha:</small>
+                <div class="d-flex flex-wrap gap-2" id="quickSampleCodes"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-7">
+            <div id="consultaEmptyState" class="kpi-card p-5 text-center h-100 d-flex flex-column justify-content-center align-items-center">
+              <div class="rounded-circle p-4 mb-3 text-secondary" style="background:#f7f0f9"><i class="bi bi-upc fs-1"></i></div>
+              <h5 class="fw-bold text-secondary">Aguardando leitura ou busca</h5>
+              <p class="text-muted small mb-0" style="max-width:360px">Bipe o código ou digite o nome do produto para ver entradas, saídas e saldo real.</p>
+            </div>
+
+            <div id="consultaResultCard" class="kpi-card p-4 d-none">
+              <div class="d-flex flex-wrap justify-content-between align-items-start border-bottom pb-3 mb-3 gap-2">
+                <div>
+                  <span class="badge bg-secondary mb-1" id="resProdCode"></span>
+                  <h4 class="fw-bold mb-0" id="resProdName"></h4>
+                  <small class="text-muted" id="resProdUnit"></small>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2" id="resDepotContext"></span>
+              </div>
+
+              <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6">
+                  <div class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle h-100">
+                    <small class="text-primary fw-bold text-uppercase d-block mb-1">Saldo real (Entrada − Saída)</small>
+                    <div class="d-flex align-items-baseline gap-2">
+                      <span class="saldo-destaque" id="resStockQty">0</span>
+                      <span class="fw-bold fs-5" id="resStockUnit"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-sm-6">
+                  <div class="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-center">
+                    <div class="d-flex justify-content-between mb-2"><span class="small fw-bold text-uppercase text-secondary">Entradas (+)</span><span class="fw-bold t-ent fs-5" id="resTotalEntradasProd"></span></div>
+                    <div class="d-flex justify-content-between"><span class="small fw-bold text-uppercase text-secondary">Saídas (−)</span><span class="fw-bold t-sai fs-5" id="resTotalSaidasProd"></span></div>
+                  </div>
+                </div>
+              </div>
+
+              <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Posição por depósito</h6>
+              <div class="tabela-wrap border rounded-3 mb-4" style="max-height:220px">
+                <table class="est w-100">
+                  <thead><tr><th>Depósito</th><th class="g-ent text-end">Entradas (+)</th><th class="g-sai text-end">Saídas (−)</th><th class="text-end">Saldo real</th></tr></thead>
+                  <tbody id="resDepotsBreakdownBody"></tbody>
+                </table>
+              </div>
+
+              <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Histórico de movimentações</h6>
+              <div class="tabela-wrap border rounded-3" style="max-height:280px">
+                <table class="est w-100">
+                  <thead><tr><th>Data/Hora</th><th>Mov.</th><th>Nº</th><th>Tipo</th><th>Estado</th><th>Dep.</th><th class="text-end">Qtd.</th><th>Doc.</th><th>CNPJ / C. Custo</th></tr></thead>
+                  <tbody id="resHistoryBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. INVENTÁRIO -->
+      <div id="page-inventario" class="subpage d-none">
+        <div class="alert d-flex align-items-center gap-3 rounded-3 mb-4 border-0" style="background:#f7f0f9;color:var(--cor-entrada-esc)">
+          <i class="bi bi-eye-slash-fill fs-3"></i>
+          <div>
+            <h6 class="fw-bold mb-0">Contagem às cegas</h6>
+            <small>O saldo (Entradas − Saídas) só é revelado ao finalizar e é calculado <strong>no momento da apuração</strong>, para o depósito selecionado: <strong id="blindScopeLabel"></strong>.</small>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-12 col-lg-4">
+            <div class="kpi-card p-4">
+              <h6 class="fw-bold mb-3">Registrar contagem física</h6>
+              <form id="blindForm">
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Código do produto (ex: 131)</label>
+                  <div class="input-group">
+                    <input type="text" class="form-control fw-bold" id="blindCodeInput" placeholder="Bipe ou digite o código" required autocomplete="off">
+                    <button type="button" class="btn btn-outline-dark" id="btnToggleBlindCamera" data-action="camera" data-ctx="inventario" title="Ler com câmera" aria-label="Ler com câmera"><i class="bi bi-upc-scan"></i></button>
+                  </div>
+                </div>
+                <div id="blindCameraWrapper" class="d-none mb-3 p-2 bg-dark rounded-3 text-center">
+                  <div id="blindReader" class="scanner-reader"></div>
+                  <small class="text-light d-block mt-1">Alinhe o código de barras</small>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Quantidade contada</label>
+                  <input type="number" step="0.01" min="0" class="form-control form-control-lg fw-bold" id="blindQtyInput" placeholder="0" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-plus-circle me-1"></i>Adicionar à contagem</button>
+              </form>
+              <hr class="my-4">
+              <div class="d-grid gap-2">
+                <button type="button" class="btn btn-success fw-bold py-2" id="btnFinishBlind" data-action="blind-finish" disabled><i class="bi bi-check2-all me-1"></i>Finalizar e apurar divergências</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-action="blind-reset"><i class="bi bi-arrow-counterclockwise me-1"></i>Limpar contagem</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-8">
+            <div class="table-container">
+              <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="fw-bold mb-0" id="blindTableTitle"></h6>
+                  <small class="text-muted" id="blindTableSubtitle"></small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success d-none" id="btnExportBlindCsv" data-action="blind-csv"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Exportar CSV</button>
+              </div>
+              <div class="tabela-wrap">
+                <table class="est w-100">
+                  <thead id="blindTableHead"></thead>
+                  <tbody id="blindTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. EXTRATO -->
+      <div id="page-extrato" class="subpage d-none">
+        <div class="kpi-card p-3 mb-3">
+          <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-5">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="search" class="form-control" id="extratoSearchInput" placeholder="Busca inteligente (cód., produto, nº, doc., CNPJ, tipo)...">
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <select class="form-select form-select-sm" id="extratoTypeFilter">
+                <option value="ALL">Entradas e saídas</option>
+                <option value="E">Somente entradas</option>
+                <option value="S">Somente saídas</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-4 d-flex justify-content-md-end align-items-center gap-2">
+              <span class="badge bg-light text-dark border py-2 px-3" id="extratoCountLabel"></span>
+              <button class="btn btn-outline-secondary btn-sm" data-action="csv-extrato"><i class="bi bi-file-earmark-spreadsheet"></i> CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="tabela-wrap" style="max-height:620px">
+            <table class="est w-100">
+              <thead><tr>
+                <th>Mov.</th><th>Nº</th><th>Data / Hora</th><th>Tipo</th><th>Estado</th><th>Dep.</th><th>Nome do depósito</th>
+                <th>Cód.</th><th>Produto</th><th>Un.</th><th class="text-end">Qtd.</th><th>Documento</th><th>CNPJ / C. Custo</th><th>Observação</th>
+              </tr></thead>
+              <tbody id="extratoTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+    <footer class="rodape py-3 text-center">AlmoxSmart — Campo Largo/PR | Posição de estoque por quantidade</footer>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwk6xDCeugOO6Ykk-FPMdof6-Q1mNWVXqU-KSYbhU1y14IfoClWBKpfs8uI6ejjXPOQPd5llEtlK5A/pub?output=xlsx";
+const AUTO_REFRESH_MS = 10 * 60 * 1000;
+const LIMITE_EXTRATO = 500, LIMITE_SALDO = 300;
+const $ = id => document.getElementById(id);
+
+let movimentacoes = [], estoqueConsolidadoCache = [], estornadosIgnorados = 0;
+let depositosMap = new Map(), produtosNomeMap = new Map();
+let fuseExtrato = null, fuseProdutos = null;
+let currentSession = null, activeDepotFilter = 'ALL';
+let html5QrcodeScanner = null, activeScannerContext = null;
+let blindInventoryItems = [], isBlindFinished = false;
+let carregando = false;
+
+/* ---------- utilitários ---------- */
+function esc(v) { return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function debounce(fn, ms = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+const EPS = 0.0001;
+const isEntrada = m => { const s = String(m).toLowerCase(); return s.startsWith('ent') || s === 'e'; };
+const isSaida = m => { const s = String(m).toLowerCase(); return s.startsWith('sa') || s === 's'; };
+const isEstTotal = estado => String(estado || '').toLowerCase().includes('estornada total');
+const saldoClass = v => v < -EPS ? 'neg' : (v > EPS ? '' : 'text-muted');
+
+function extrairCodigoNumerico(raw) {
+  let s = String(raw ?? "").trim();
+  if (!s) return "";
+  s = s.replace(/[.,]\d+$/, '');
+  const d = s.replace(/\D+/g, '');
+  return d ? String(parseInt(d, 10)) : "";
+}
+function normHeader(str) { return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); }
+function getCol(row, candidates) {
+  const keys = Object.keys(row);
+  for (const c of candidates) { const t = normHeader(c); const f = keys.find(k => normHeader(k) === t); if (f !== undefined) return row[f]; }
+  return "";
+}
+function normDep(val) { const s = String(val ?? "").trim(); return /^\d+(\.0+)?$/.test(s) ? String(parseInt(s, 10)) : s; }
+function normCod(val) { const s = String(val ?? "").trim(); return /^\d+\.0+$/.test(s) ? String(parseInt(s, 10)) : s; }
+function parseNumBR(val) {
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  if (!val) return 0;
+  let s = String(val).replace(/R\$/gi, '').replace(/\s/g, '').trim();
+  if (!s) return 0;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+function parseDataHoraFlex(val) {
+  if (val instanceof Date && !isNaN(val)) return val;
+  if (!val) return null;
+  const str = String(val).trim();
+  const [dPart, hPart] = str.split(/\s+/);
+  const p = dPart.split('/');
+  if (p.length === 3) {
+    const [h = 0, m = 0, s = 0] = (hPart || '').split(':').map(Number);
+    return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]), h, m, s);
+  }
+  const iso = new Date(str);
+  return isNaN(iso) ? null : iso;
+}
+function formatDateTimeBR(d, fb) {
+  if (!d || isNaN(d)) return String(fb || '');
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function formatQty(v) { return Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 }); }
+
+function showToast(message, type = 'primary') {
+  const id = 'toast_' + Date.now() + Math.floor(Math.random() * 1000);
+  $('toastContainer').insertAdjacentHTML('beforeend', `
+    <div id="${id}" class="toast align-items-center text-bg-${type} border-0 shadow" role="alert">
+      <div class="d-flex"><div class="toast-body fw-medium">${esc(message)}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button></div>
+    </div>`);
+  const el = $(id);
+  new bootstrap.Toast(el, { delay: 3200 }).show();
+  el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+function baixarCsv(nome, linhas) {
+  const txt = "\uFEFF" + linhas.map(l => l.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8;' }));
+  a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const csvN = v => String(Number(v || 0)).replace('.', ',');
+
+/* ---------- carga da planilha ---------- */
+async function carregarDadosGoogleSheets(manual = false, silencioso = false) {
+  if (carregando) return;
+  carregando = true;
+  const statusEl = $('sheetSyncStatus'), btnLogin = $('btnLoginSubmit'), btnRetry = $('btnRetryLoad');
+  if (manual) showToast('Sincronizando com o Google Planilhas...', 'info');
+  try {
+    const resp = await fetch(`${PUB_XLSX_URL}&t=${Date.now()}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ao acessar a planilha.`);
+    const wb = XLSX.read(await resp.arrayBuffer(), { type: 'array', cellDates: true });
+    const sheetName = wb.SheetNames.find(n => /moviment/i.test(n)) || wb.SheetNames[0];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
+    processarLinhasPlanilha(rows);
+    recalcularEstoqueConsolidado();
+
+    statusEl.className = "alert alert-success py-2 px-3 small text-center mb-3";
+    statusEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Planilha conectada: <strong>${movimentacoes.length.toLocaleString('pt-BR')}</strong> registros.`;
+    btnLogin.disabled = false;
+    btnRetry.classList.add('d-none');
+    $('lastSyncLabel').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+
+    renderDynamicLoginShortcuts();
+    populateGlobalDepotSelect();
+    if (currentSession) refreshAllViews();
+    if (manual) showToast(`Planilha atualizada: ${movimentacoes.length.toLocaleString('pt-BR')} lançamentos.`, 'success');
+  } catch (err) {
+    console.error("Erro ao ler planilha:", err);
+    if (!movimentacoes.length) {
+      statusEl.className = "alert alert-danger py-2 px-3 small text-center mb-3";
+      statusEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Erro ao conectar: ${esc(err.message)}`;
+      btnRetry.classList.remove('d-none');
+    }
+    if (manual || silencioso) showToast('Falha ao atualizar a planilha. Mantendo dados anteriores.', 'danger');
+  } finally { carregando = false; }
+}
+
+function processarLinhasPlanilha(rawRows) {
+  depositosMap.clear(); produtosNomeMap.clear();
+  movimentacoes = rawRows.map((r, rowIndex) => {
+    const mov = String(getCol(r, ['Mov.', 'Mov', 'Movimento'])).trim();
+    const num = String(getCol(r, ['Nº', 'No', 'Numero', 'Número'])).trim();
+    const dataRaw = getCol(r, ['Data / Hora', 'Data/Hora', 'Data']);
+    const dataObj = parseDataHoraFlex(dataRaw);
+    const deposito = normDep(getCol(r, ['Depósito', 'Deposito']));
+    const nomeDep = String(getCol(r, ['Nome do Depósito', 'Nome Deposito'])).trim();
+    if (deposito) {
+      if (nomeDep) depositosMap.set(deposito, nomeDep);
+      else if (!depositosMap.has(deposito)) depositosMap.set(deposito, `Depósito ${deposito}`);
+    }
+    const rawCod = getCol(r, ['Cód.Produto', 'Cod.Produto', 'Cod Produto', 'Cód.', 'Código']);
+    const cod = extrairCodigoNumerico(rawCod) || normCod(rawCod);
+    const nomeProd = String(getCol(r, ['Nome do Produto', 'Nome Produto', 'Produto', 'Descrição', 'Descricao'])).trim();
+    if (cod && nomeProd) produtosNomeMap.set(cod, nomeProd);
+    return {
+      rowIndex, mov, num, numInt: parseInt(num, 10) || 0,
+      dataHora: formatDateTimeBR(dataObj, dataRaw), dataObj,
+      tipo: String(getCol(r, ['Tipo'])).trim(),
+      estado: String(getCol(r, ['Estado'])).trim() || 'Normal',
+      deposito: deposito || '0',
+      depositoNome: nomeDep || (deposito ? `Depósito ${deposito}` : 'Sem depósito'),
+      cod, nomeProduto: nomeProd,
+      un: String(getCol(r, ['Un.', 'Un', 'Unidade'])).trim() || 'UN',
+      qtd: parseNumBR(getCol(r, ['Qtd.', 'Qtd', 'Quantidade'])),
+      documento: String(getCol(r, ['Documento'])).trim(),
+      cnpjCentroCusto: String(getCol(r, ['CNPJ / C. Custo', 'CNPJ / C.Custo'])).trim(),
+      observacao: String(getCol(r, ['Observação', 'Observacao'])).trim()
+    };
+  }).filter(m => m.cod || m.mov);
+
+  movimentacoes.forEach(m => {
+    if (!m.nomeProduto) m.nomeProduto = (m.cod && produtosNomeMap.get(m.cod)) || (m.cod ? `Produto ${m.cod}` : 'Sem descrição');
+  });
+  movimentacoes.sort((a, b) => {
+    const ta = a.dataObj ? a.dataObj.getTime() : 0, tb = b.dataObj ? b.dataObj.getTime() : 0;
+    return (tb - ta) || (b.numInt - a.numInt) || (b.rowIndex - a.rowIndex);
+  });
+  if (typeof Fuse !== 'undefined') {
+    fuseExtrato = new Fuse(movimentacoes, { keys: ['cod','nomeProduto','num','documento','cnpjCentroCusto','tipo','observacao','deposito','depositoNome'], threshold: 0.3, ignoreLocation: true });
+  }
+}
+
+function recalcularEstoqueConsolidado() {
+  const hoje = new Date(), map = new Map();
+  estornadosIgnorados = 0;
+  movimentacoes.forEach(m => {
+    if (!m.cod) return;
+    if (isEstTotal(m.estado)) { estornadosIgnorados++; return; }
+    const key = `${m.deposito}_${m.cod}`;
+    let e = map.get(key);
+    if (!e) {
+      e = { deposito: m.deposito, depositoNome: m.depositoNome, cod: m.cod, nomeProduto: m.nomeProduto, un: m.un || 'UN',
+            entradasQtd: 0, saidasQtd: 0, saldo: 0, lastMovDate: null, daysWithoutMov: 999 };
+      map.set(key, e);
+    }
+    if (isEntrada(m.mov)) e.entradasQtd += m.qtd; else if (isSaida(m.mov)) e.saidasQtd += m.qtd;
+    if (m.dataObj && (!e.lastMovDate || m.dataObj > e.lastMovDate.obj)) {
+      e.lastMovDate = { str: m.dataHora.split(' ')[0], obj: m.dataObj };
+      e.daysWithoutMov = Math.max(0, Math.floor((hoje - m.dataObj) / 86400000));
+    }
+  });
+  map.forEach(e => { e.saldo = e.entradasQtd - e.saidasQtd; });
+  estoqueConsolidadoCache = [...map.values()];
+  if (typeof Fuse !== 'undefined') {
+    fuseProdutos = new Fuse(estoqueConsolidadoCache, { keys: ['cod','nomeProduto','deposito','depositoNome'], threshold: 0.3 });
+  }
+}
+
+/* ---------- login / sessão ---------- */
+const depsOrdenados = () => [...depositosMap.entries()].sort((a, b) => Number(a[0]) - Number(b[0]) || String(a[0]).localeCompare(String(b[0])));
+
+function renderDynamicLoginShortcuts() {
+  let html = `<button type="button" class="btn btn-outline-dark btn-sm d-flex justify-content-between align-items-center px-3 py-2 rounded-3" data-login="GERAL">
+      <span><strong>GERAL</strong> — Visão gerencial</span><span class="badge bg-dark">Todos (${depositosMap.size})</span></button>`;
+  depsOrdenados().forEach(([id, nome]) => {
+    html += `<button type="button" class="btn btn-outline-secondary btn-sm d-flex justify-content-between align-items-center px-3 py-2 rounded-3" data-login="${esc(id)}">
+      <span><strong class="text-dark">${esc(id)}</strong> — ${esc(nome)}</span><span class="badge bg-primary-subtle text-primary">Restrito</span></button>`;
+  });
+  $('dynamicDepotShortcuts').innerHTML = html;
+}
+function populateGlobalDepotSelect() {
+  const sel = $('globalDepotSelect'), cur = sel.value || 'ALL';
+  sel.innerHTML = `<option value="ALL">🌐 Todos os depósitos (${depositosMap.size})</option>` +
+    depsOrdenados().map(([id, nome]) => `<option value="${esc(id)}">📦 ${esc(id)} - ${esc(nome)}</option>`).join('');
+  sel.value = depositosMap.has(cur) || cur === 'ALL' ? cur : 'ALL';
+}
+function loginWithCode(code) {
+  const err = $('loginErrorMsg'), norm = normDep(code);
+  if (['GERAL', 'ADMIN', 'TODOS'].includes(code)) {
+    currentSession = { code: 'GERAL', depotId: 'ALL', label: 'Visão gerencial (todos)', isMaster: true };
+  } else if (depositosMap.has(norm)) {
+    currentSession = { code: norm, depotId: norm, label: `${norm} - ${depositosMap.get(norm)}`, isMaster: false };
+  } else { err.classList.remove('d-none'); $('accessCodeInput').focus(); return; }
+  err.classList.add('d-none');
+  try { sessionStorage.setItem('almox_session_gs', JSON.stringify(currentSession)); } catch (e) {}
+  initDashboard();
+}
+function logout() {
+  stopCameraIfRunning();
+  try { sessionStorage.removeItem('almox_session_gs'); } catch (e) {}
+  currentSession = null;
+  resetBlindInventory();
+  $('app-wrapper').style.display = 'none';
+  $('login-screen').style.display = 'flex';
+  $('accessCodeInput').value = ''; $('accessCodeInput').focus();
+}
+function initDashboard() {
+  $('login-screen').style.display = 'none';
+  $('app-wrapper').style.display = 'block';
+  $('sidebarDepotLabel').innerHTML = `<i class="bi bi-geo-alt-fill"></i><span>${esc(currentSession.label)}</span>`;
+  const badge = $('lockedDepotBadge'), sel = $('globalDepotSelect');
+  if (currentSession.isMaster) {
+    badge.classList.add('d-none'); sel.classList.remove('d-none'); sel.value = 'ALL'; activeDepotFilter = 'ALL';
+  } else {
+    sel.classList.add('d-none'); badge.classList.remove('d-none');
+    badge.innerHTML = `<i class="bi bi-lock-fill me-1"></i>${esc(currentSession.label)}`;
+    activeDepotFilter = currentSession.depotId;
+  }
+  renderQuickSampleCodes();
+  refreshAllViews();
+  navigateTo('page-kpis');
+}
+
+/* ---------- navegação ---------- */
+const TITULOS = { 'page-kpis': 'Posição Real de Estoque', 'page-consulta': 'Consulta / Produto', 'page-inventario': 'Inventário às Cegas', 'page-extrato': 'Extrato Movimentações' };
+function navigateTo(pageId) {
+  stopCameraIfRunning();
+  document.querySelectorAll('.nav-sidebar .nav-link').forEach(el => el.classList.toggle('active', el.dataset.page === pageId));
+  document.querySelectorAll('.subpage').forEach(p => p.classList.add('d-none'));
+  $(pageId).classList.remove('d-none');
+  $('pageTitle').textContent = TITULOS[pageId] || 'Dashboard';
+  $('sidebar').classList.remove('show'); $('sidebarBackdrop').classList.remove('show');
+  if (pageId === 'page-consulta') setTimeout(() => $('barcodeInput').focus(), 150);
+  if (pageId === 'page-inventario') { renderBlindTable(); setTimeout(() => $('blindCodeInput').focus(), 150); }
+}
+function toggleSidebar() { $('sidebar').classList.toggle('show'); $('sidebarBackdrop').classList.toggle('show'); }
+function scopeLabel() { return activeDepotFilter === 'ALL' ? 'Todos os depósitos' : `${activeDepotFilter} - ${depositosMap.get(activeDepotFilter) || ''}`; }
+
+function refreshAllViews() {
+  renderKPIsAndStockPosition();
+  renderExtratoTable();
+  $('blindScopeLabel').textContent = scopeLabel();
+  const cur = $('resProdCode').dataset.code;
+  if (cur && !$('consultaResultCard').classList.contains('d-none')) displayProductDetails(cur, true);
+}
+
+/* ---------- 1. posição real ---------- */
+function renderKPIsAndStockPosition() {
+  let totE = 0, totS = 0, nE = 0, nS = 0;
+  const saldoProd = new Map();
+  movimentacoes.forEach(m => {
+    if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) return;
+    if (isEstTotal(m.estado)) return;
+    let delta = 0;
+    if (isEntrada(m.mov)) { totE += m.qtd; nE++; delta = m.qtd; }
+    else if (isSaida(m.mov)) { totS += m.qtd; nS++; delta = -m.qtd; }
+    if (m.cod) saldoProd.set(m.cod, (saldoProd.get(m.cod) || 0) + delta);
+  });
+  let comSaldo = 0; saldoProd.forEach(s => { if (s > EPS) comSaldo++; });
+  const saldo = totE - totS;
+
+  const kv = $('kpiTotalUnits');
+  kv.textContent = formatQty(saldo);
+  kv.classList.toggle('neg', saldo < -EPS);
+  $('kpiSaldoSub').textContent = `${formatQty(totE)} ent. − ${formatQty(totS)} saí. (soma de quantidades)`;
+  $('kpiEntradasQtd').textContent = formatQty(totE);
+  $('kpiEntradasLanc').textContent = `${nE.toLocaleString('pt-BR')} lançamentos de entrada`;
+  $('kpiSaidasQtd').textContent = formatQty(totS);
+  $('kpiSaidasLanc').textContent = `${nS.toLocaleString('pt-BR')} lançamentos de saída`;
+  $('kpiTotalItems').textContent = comSaldo.toLocaleString('pt-BR');
+  $('kpiTotalItemsSub').textContent = activeDepotFilter === 'ALL' ? 'Produtos distintos com saldo > 0' : 'Com saldo > 0 neste depósito';
+  $('avisoEstornos').innerHTML = estornadosIgnorados
+    ? `<i class="bi bi-info-circle me-1"></i>${estornadosIgnorados.toLocaleString('pt-BR')} lançamento(s) com estado "Estornada Total" foram desconsiderados. Estornos parciais não têm quantidade estornada na planilha e entram pelo valor integral.`
+    : '';
+  renderStockPositionTable();
+  renderCostCenterChart();
+}
+
+function filtrarSaldo() {
+  const q = $('saldoSearchInput').value.trim().toLowerCase(), mode = $('saldoFilterMode').value;
+  return estoqueConsolidadoCache.filter(i => {
+    const s = i.entradasQtd - i.saidasQtd;
+    if (activeDepotFilter !== 'ALL' && i.deposito !== activeDepotFilter) return false;
+    if (mode === 'POS' && s <= EPS) return false;
+    if (mode === 'NEG' && s >= -EPS) return false;
+    if (mode === 'ZERO' && Math.abs(s) > EPS) return false;
+    if (mode === 'STAG30' && (s <= EPS || i.daysWithoutMov < 30 || i.daysWithoutMov >= 999)) return false;
+    if (q && !`${i.cod} ${i.nomeProduto} ${i.deposito} ${i.depositoNome}`.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => Math.abs(b.saldo) - Math.abs(a.saldo));
+}
+function renderStockPositionTable() {
+  const rows = filtrarSaldo(), tbody = $('stockPositionTableBody');
+  $('saldoCountLabel').textContent = rows.length > LIMITE_SALDO
+    ? `Mostrando ${LIMITE_SALDO} de ${rows.length.toLocaleString('pt-BR')} itens (use o filtro ou exporte o CSV)`
+    : `${rows.length.toLocaleString('pt-BR')} itens`;
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Nenhum item encontrado para o filtro.</td></tr>`; return; }
+  tbody.innerHTML = rows.slice(0, LIMITE_SALDO).map(i => {
+    const s = i.entradasQtd - i.saidasQtd;
+    return `<tr class="tr-click" data-cod="${esc(i.cod)}" title="Ver detalhes do produto ${esc(i.cod)}">
+      <td class="fw-bold t-ent">${esc(i.cod)}</td>
+      <td>${esc(i.nomeProduto)}</td>
+      <td><span class="badge bg-secondary">${esc(i.deposito)}</span> <span class="small-muted">${esc(i.depositoNome)}</span></td>
+      <td class="num sub-ent">${formatQty(i.entradasQtd)}</td>
+      <td class="num sub-sai">${formatQty(i.saidasQtd)}</td>
+      <td class="num fw-bold ${saldoClass(s)}">${formatQty(s)} ${esc(i.un)}</td>
+      <td class="text-center small-muted">${i.lastMovDate ? esc(i.lastMovDate.str) : '-'}</td></tr>`;
+  }).join('');
+}
+function exportarCsvSaldo() {
+  const rows = filtrarSaldo();
+  if (!rows.length) return showToast('Nada para exportar.', 'warning');
+  baixarCsv('posicao_estoque.csv', [['Depósito','Nome do depósito','Cód.','Produto','Un.','Entradas','Saídas','Saldo real','Última mov.'],
+    ...rows.map(i => [i.deposito, i.depositoNome, i.cod, i.nomeProduto, i.un, csvN(i.entradasQtd), csvN(i.saidasQtd), csvN(i.entradasQtd - i.saidasQtd), i.lastMovDate ? i.lastMovDate.str : ''])]);
+}
+function abrirConsultaDireta(cod) { navigateTo('page-consulta'); triggerSampleLookup(cod); }
+
+function renderCostCenterChart() {
+  const totals = {}; let grand = 0;
+  movimentacoes.forEach(m => {
+    if (!isSaida(m.mov) || isEstTotal(m.estado)) return;
+    if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) return;
+    const cc = m.cnpjCentroCusto || 'Não informado';
+    totals[cc] = (totals[cc] || 0) + m.qtd; grand += m.qtd;
+  });
+  const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 10), c = $('costCenterContainer');
+  if (!top.length) { c.innerHTML = `<p class="text-muted small text-center my-4">Nenhuma saída registrada para este filtro.</p>`; return; }
+  c.innerHTML = top.map(([name, q]) => {
+    const pct = grand > 0 ? Math.max(1, Math.round(q / grand * 100)) : 0;
+    return `<div>
+      <div class="d-flex justify-content-between small mb-1">
+        <span class="fw-semibold text-truncate" style="max-width:62%" title="${esc(name)}">${esc(name)}</span>
+        <span class="fw-bold">${formatQty(q)} <span class="text-muted fw-normal">(${pct}%)</span></span></div>
+      <div class="progress" style="height:8px"><div class="progress-bar" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+}
+
+/* ---------- 2. consulta ---------- */
+function renderQuickSampleCodes() {
+  const seen = new Set(), list = [];
+  for (const m of movimentacoes) {
+    if (m.cod && !seen.has(m.cod) && (activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter)) {
+      seen.add(m.cod); list.push(m); if (list.length >= 8) break;
+    }
+  }
+  $('quickSampleCodes').innerHTML = list.map(i => `
+    <button type="button" class="btn btn-sm btn-light border fw-semibold text-truncate" style="max-width:100%" data-cod="${esc(i.cod)}" title="${esc(i.cod)} - ${esc(i.nomeProduto)}">
+      <i class="bi bi-upc me-1 text-muted"></i><strong>${esc(i.cod)}</strong> · ${esc(i.nomeProduto)}</button>`).join('');
+}
+function triggerSampleLookup(cod) {
+  const clean = extrairCodigoNumerico(cod) || cod;
+  $('barcodeInput').value = clean;
+  displayProductDetails(clean, true);
+}
+function searchProductByInput(e) {
+  e.preventDefault();
+  const input = $('barcodeInput'), q = input.value.trim();
+  if (!q) return;
+  // Só números (e separadores) => código. Qualquer letra => nome (evita "Papel A4" virar código 4).
+  const soNumero = /^[\d\s.,]+$/.test(q);
+  if (soNumero) { const c = extrairCodigoNumerico(q); input.value = c; displayProductDetails(c, true); }
+  else displayProductDetails(q, false);
+  input.select();
+}
+function displayProductDetails(query, porCodigo = false) {
+  const all = estoqueConsolidadoCache;
+  let matches = [];
+  if (porCodigo) {
+    const c = extrairCodigoNumerico(query);
+    if (!c) return showToast('Código inválido (nenhum número identificado).', 'warning');
+    matches = all.filter(i => i.cod === c);
+  } else {
+    const termos = String(query).toLowerCase().split(/\s+/).filter(Boolean);
+    const hit = all.find(i => { const n = i.nomeProduto.toLowerCase(); return termos.every(t => n.includes(t)); });
+    if (hit) matches = all.filter(i => i.cod === hit.cod);
+    else if (fuseProdutos) { const f = fuseProdutos.search(query); if (f.length) matches = all.filter(i => i.cod === f[0].item.cod); }
+  }
+  if (!matches.length) return showToast(`Produto "${query}" não encontrado na planilha.`, 'warning');
+
+  $('consultaEmptyState').classList.add('d-none');
+  $('consultaResultCard').classList.remove('d-none');
+  const s0 = matches[0];
+  const codEl = $('resProdCode'); codEl.textContent = `CÓD. PRODUTO: ${s0.cod}`; codEl.dataset.code = s0.cod;
+  $('resProdName').textContent = s0.nomeProduto;
+  $('resProdUnit').textContent = `Unidade: ${s0.un}`;
+
+  let ent = 0, sai = 0;
+  if (activeDepotFilter === 'ALL') { ent = matches.reduce((a, m) => a + m.entradasQtd, 0); sai = matches.reduce((a, m) => a + m.saidasQtd, 0); }
+  else { const t = matches.find(m => m.deposito === activeDepotFilter); ent = t ? t.entradasQtd : 0; sai = t ? t.saidasQtd : 0; }
+  const saldo = ent - sai;
+  $('resDepotContext').textContent = scopeLabel();
+  const q = $('resStockQty'); q.textContent = formatQty(saldo); q.classList.toggle('neg', saldo < -EPS);
+  $('resStockUnit').textContent = s0.un;
+  $('resTotalEntradasProd').textContent = `${formatQty(ent)} ${s0.un}`;
+  $('resTotalSaidasProd').textContent = `${formatQty(sai)} ${s0.un}`;
+
+  $('resDepotsBreakdownBody').innerHTML = [...matches].sort((a, b) => Number(a.deposito) - Number(b.deposito)).map(m => {
+    const s = m.entradasQtd - m.saidasQtd, sel = activeDepotFilter !== 'ALL' && m.deposito === activeDepotFilter;
+    return `<tr class="${sel ? 'fw-semibold' : ''}" ${sel ? 'style="outline:2px solid var(--cor-entrada);outline-offset:-2px"' : ''}>
+      <td>${esc(m.deposito)} - ${esc(m.depositoNome)}</td>
+      <td class="num sub-ent">${formatQty(m.entradasQtd)}</td><td class="num sub-sai">${formatQty(m.saidasQtd)}</td>
+      <td class="num fw-bold ${saldoClass(s)}">${formatQty(s)} ${esc(m.un)}</td></tr>`;
+  }).join('');
+
+  const hist = movimentacoes.filter(m => m.cod === s0.cod && (activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter));
+  $('resHistoryBody').innerHTML = hist.length ? hist.map(m => {
+    const ent = isEntrada(m.mov);
+    return `<tr class="${/estornada/i.test(m.estado) ? 'tr-est' : ''}">
+      <td class="small">${esc(m.dataHora)}</td>
+      <td><span class="badge" style="background:${ent ? 'var(--cor-entrada)' : 'var(--cor-saida)'}">${esc(m.mov)}</span></td>
+      <td class="fw-semibold">${esc(m.num)}</td><td>${esc(m.tipo)}</td><td class="small">${esc(m.estado)}</td><td>${esc(m.deposito)}</td>
+      <td class="num fw-bold">${ent ? '+' : '−'}${formatQty(m.qtd)}</td>
+      <td class="small">${esc(m.documento || '-')}</td><td class="small text-muted">${esc(m.cnpjCentroCusto || '-')}</td></tr>`;
+  }).join('') : `<tr><td colspan="9" class="text-center text-muted py-3">Sem movimentações neste depósito.</td></tr>`;
+}
+
+/* ---------- câmera ---------- */
+function toggleCameraScanner(ctx) {
+  if (activeScannerContext === ctx) stopCameraIfRunning();
+  else { stopCameraIfRunning(); startCameraScanner(ctx); }
+}
+function startCameraScanner(ctx) {
+  const blind = ctx === 'inventario';
+  $(blind ? 'blindCameraWrapper' : 'cameraWrapper').classList.remove('d-none');
+  $(blind ? 'btnToggleBlindCamera' : 'btnToggleCamera').innerHTML = blind
+    ? `<i class="bi bi-stop-circle-fill text-danger"></i>`
+    : `<i class="bi bi-stop-circle-fill me-2 text-danger"></i>Fechar câmera`;
+  if (typeof Html5Qrcode === 'undefined') { showToast('Leitor de câmera indisponível.', 'danger'); return stopCameraIfRunning(); }
+  try {
+    const cfg = { verbose: false, experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
+    if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+      const F = Html5QrcodeSupportedFormats;
+      cfg.formatsToSupport = [F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.ITF, F.CODABAR];
+    }
+    html5QrcodeScanner = new Html5Qrcode(blind ? 'blindReader' : 'reader', cfg);
+    activeScannerContext = ctx;
+    html5QrcodeScanner.start({ facingMode: "environment" }, {
+      fps: 15, aspectRatio: 1.777778,
+      qrbox: (w, h) => ({ width: Math.max(200, Math.min(340, Math.floor(w * .88))), height: Math.max(90, Math.min(130, Math.floor(h * .45))) })
+    }, decoded => {
+      const code = extrairCodigoNumerico(decoded);
+      if (!code) return;
+      showToast(`Código lido: ${code}`, 'success');
+      stopCameraIfRunning();
+      if (blind) { $('blindCodeInput').value = code; setTimeout(() => $('blindQtyInput').focus(), 100); }
+      else { $('barcodeInput').value = code; displayProductDetails(code, true); }
+    }, () => {}).catch(() => { showToast('Não foi possível acessar a câmera.', 'warning'); stopCameraIfRunning(); });
+  } catch (e) { showToast('Leitor de câmera indisponível.', 'danger'); stopCameraIfRunning(); }
+}
+function stopCameraIfRunning() {
+  $('cameraWrapper').classList.add('d-none'); $('blindCameraWrapper').classList.add('d-none');
+  $('btnToggleCamera').innerHTML = `<i class="bi bi-upc-scan me-2"></i>Ler código de barras (câmera)`;
+  $('btnToggleBlindCamera').innerHTML = `<i class="bi bi-upc-scan"></i>`;
+  if (html5QrcodeScanner) {
+    const ref = html5QrcodeScanner; html5QrcodeScanner = null;
+    ref.stop().then(() => ref.clear()).catch(() => {});
+  }
+  activeScannerContext = null;
+}
+
+/* ---------- 3. inventário às cegas ---------- */
+// Saldo calculado na apuração, sempre pelo depósito atualmente selecionado e com a planilha mais recente.
+function getSystemQty(cod) {
+  const m = estoqueConsolidadoCache.filter(i => i.cod === cod && (activeDepotFilter === 'ALL' || i.deposito === activeDepotFilter));
+  return m.reduce((s, x) => s + x.entradasQtd - x.saidasQtd, 0);
+}
+function addBlindCountItem(e) {
+  e.preventDefault();
+  if (isBlindFinished) return showToast('Contagem já finalizada. Clique em "Limpar contagem".', 'warning');
+  const codeInput = $('blindCodeInput'), qtyInput = $('blindQtyInput');
+  const code = extrairCodigoNumerico(codeInput.value), qty = parseFloat(qtyInput.value);
+  if (!code) { showToast('Informe um código numérico válido (ex: 131).', 'warning'); return codeInput.select(); }
+  if (!Number.isFinite(qty) || qty < 0) return showToast('Quantidade inválida.', 'warning');
+  const prod = estoqueConsolidadoCache.find(i => i.cod === code);
+  if (!prod) { showToast(`Código "${code}" não encontrado na planilha.`, 'danger'); return codeInput.select(); }
+  const ex = blindInventoryItems.find(i => i.cod === code);
+  if (ex) ex.countedQty += qty;
+  else blindInventoryItems.push({ cod: code, nomeProduto: prod.nomeProduto, un: prod.un, countedQty: qty });
+  codeInput.value = ''; qtyInput.value = ''; codeInput.focus();
+  renderBlindTable();
+  showToast(`Contagem registrada: ${code} - ${prod.nomeProduto}`, 'success');
+}
+function renderBlindTable() {
+  const tbody = $('blindTableBody'), thead = $('blindTableHead');
+  $('blindTableTitle').innerHTML = isBlindFinished
+    ? `<i class="bi bi-clipboard-data t-sai me-2"></i>Resultado da auditoria — ${esc(scopeLabel())}`
+    : `Itens contados nesta sessão (${blindInventoryItems.length})`;
+  $('blindTableSubtitle').textContent = isBlindFinished ? 'Comparativo entre saldo (Entrada − Saída) e contagem física' : 'Os saldos serão revelados após a finalização';
+  $('btnExportBlindCsv').classList.toggle('d-none', !isBlindFinished);
+  $('btnFinishBlind').disabled = !blindInventoryItems.length || isBlindFinished;
+
+  if (!isBlindFinished) {
+    thead.innerHTML = `<tr><th>Cód.</th><th>Nome do produto</th><th>Un.</th><th class="text-end">Qtd. contada</th><th class="text-center">Ação</th></tr>`;
+    tbody.innerHTML = blindInventoryItems.length ? blindInventoryItems.map((i, idx) => `
+      <tr><td class="fw-bold t-ent">${esc(i.cod)}</td><td>${esc(i.nomeProduto)}</td><td>${esc(i.un)}</td>
+      <td class="num fw-bold">${formatQty(i.countedQty)}</td>
+      <td class="text-center"><button class="btn btn-sm btn-outline-danger" data-blind-remove="${idx}" aria-label="Remover"><i class="bi bi-trash"></i></button></td></tr>`).join('')
+      : `<tr><td colspan="5" class="text-center text-muted py-4">Nenhum item bipado ainda.</td></tr>`;
+    return;
+  }
+  thead.innerHTML = `<tr><th>Cód.</th><th>Nome do produto</th><th class="text-end">Saldo (E − S)</th><th class="g-sai text-end">Contagem física</th><th class="text-end">Diferença</th></tr>`;
+  tbody.innerHTML = blindInventoryItems.map(i => {
+    const sys = i.systemQty, diff = i.countedQty - sys;
+    let badge = `<span class="badge bg-secondary">OK (0)</span>`;
+    if (diff > EPS) badge = `<span class="badge" style="background:var(--cor-entrada)">+${formatQty(diff)} (sobra)</span>`;
+    if (diff < -EPS) badge = `<span class="badge bg-danger">${formatQty(diff)} (falta)</span>`;
+    return `<tr><td class="fw-bold">${esc(i.cod)}</td><td>${esc(i.nomeProduto)}</td>
+      <td class="num ${sys < 0 ? 'neg fw-bold' : 'text-muted'}">${formatQty(sys)} ${esc(i.un)}</td>
+      <td class="num fw-bold">${formatQty(i.countedQty)} ${esc(i.un)}</td><td class="num">${badge}</td></tr>`;
+  }).join('');
+}
+function finishBlindInventory() {
+  blindInventoryItems.forEach(i => { i.systemQty = getSystemQty(i.cod); });
+  isBlindFinished = true;
+  renderBlindTable();
+  showToast('Apuração concluída!', 'info');
+}
+function resetBlindInventory() { blindInventoryItems = []; isBlindFinished = false; renderBlindTable(); }
+function exportBlindCsv() {
+  baixarCsv(`inventario_divergencias_${new Date().toISOString().slice(0, 10)}.csv`,
+    [['Depósito','Cód.','Produto','Un.','Saldo (E−S)','Contagem física','Diferença'],
+     ...blindInventoryItems.map(i => [scopeLabel(), i.cod, i.nomeProduto, i.un, csvN(i.systemQty), csvN(i.countedQty), csvN(i.countedQty - i.systemQty)])]);
+}
+
+/* ---------- 4. extrato ---------- */
+function getExtratoFiltrado() {
+  const term = $('extratoSearchInput').value.trim(), tp = $('extratoTypeFilter').value;
+  let base = movimentacoes;
+  if (term && fuseExtrato) base = fuseExtrato.search(term).map(r => r.item);
+  return base.filter(m => (activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter)
+    && (tp === 'ALL' || (tp === 'E' ? isEntrada(m.mov) : isSaida(m.mov))));
+}
+function renderExtratoTable() {
+  const rows = getExtratoFiltrado(), tbody = $('extratoTableBody');
+  $('extratoCountLabel').textContent = rows.length > LIMITE_EXTRATO
+    ? `Mostrando ${LIMITE_EXTRATO} de ${rows.length.toLocaleString('pt-BR')} registros` : `${rows.length.toLocaleString('pt-BR')} registros`;
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="14" class="text-center text-muted py-4">Nenhuma movimentação encontrada.</td></tr>`; return; }
+  tbody.innerHTML = rows.slice(0, LIMITE_EXTRATO).map(m => {
+    const ent = isEntrada(m.mov), est = /estornada/i.test(m.estado);
+    return `<tr class="${est ? 'tr-est' : ''}">
+      <td><span class="badge" style="background:${ent ? 'var(--cor-entrada)' : 'var(--cor-saida)'}">${esc(m.mov)}</span></td>
+      <td class="fw-bold">${esc(m.num)}</td><td class="small">${esc(m.dataHora)}</td><td>${esc(m.tipo)}</td>
+      <td><span class="badge ${est ? 'bg-warning text-dark' : 'bg-light text-dark border'}">${esc(m.estado)}</span></td>
+      <td class="text-center fw-bold">${esc(m.deposito)}</td><td class="text-muted">${esc(m.depositoNome)}</td>
+      <td class="fw-bold t-ent">${esc(m.cod)}</td><td>${esc(m.nomeProduto)}</td><td>${esc(m.un)}</td>
+      <td class="num fw-bold">${formatQty(m.qtd)}</td><td>${esc(m.documento || '-')}</td>
+      <td class="small">${esc(m.cnpjCentroCusto || '-')}</td>
+      <td class="small text-muted" title="${esc(m.observacao)}">${esc(m.observacao || '-')}</td></tr>`;
+  }).join('');
+}
+function exportarCsvExtrato() {
+  const rows = getExtratoFiltrado();
+  if (!rows.length) return showToast('Nada para exportar.', 'warning');
+  baixarCsv('extrato_movimentacoes.csv', [['Mov.','Nº','Data/Hora','Tipo','Estado','Depósito','Nome do depósito','Cód.','Produto','Un.','Qtd.','Documento','CNPJ / C. Custo','Observação'],
+    ...rows.map(m => [m.mov, m.num, m.dataHora, m.tipo, m.estado, m.deposito, m.depositoNome, m.cod, m.nomeProduto, m.un, csvN(m.qtd), m.documento, m.cnpjCentroCusto, m.observacao])]);
+}
+
+/* ---------- eventos (delegação: sem onclick inline com dados da planilha) ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-action],[data-login],[data-cod],[data-page],[data-blind-remove]');
+  if (!t) return;
+  if (t.dataset.login) return loginWithCode(t.dataset.login.toUpperCase());
+  if (t.dataset.page) return navigateTo(t.dataset.page);
+  if (t.dataset.blindRemove !== undefined) { blindInventoryItems.splice(Number(t.dataset.blindRemove), 1); return renderBlindTable(); }
+  if (t.dataset.cod && !t.dataset.action) {
+    return t.closest('#stockPositionTableBody') ? abrirConsultaDireta(t.dataset.cod) : triggerSampleLookup(t.dataset.cod);
+  }
+  switch (t.dataset.action) {
+    case 'reload': carregarDadosGoogleSheets(true); break;
+    case 'logout': logout(); break;
+    case 'toggle-sidebar': toggleSidebar(); break;
+    case 'camera': toggleCameraScanner(t.dataset.ctx); break;
+    case 'blind-finish': finishBlindInventory(); break;
+    case 'blind-reset': resetBlindInventory(); break;
+    case 'blind-csv': exportBlindCsv(); break;
+    case 'csv-saldo': exportarCsvSaldo(); break;
+    case 'csv-extrato': exportarCsvExtrato(); break;
+  }
+});
+$('loginForm').addEventListener('submit', e => { e.preventDefault(); loginWithCode($('accessCodeInput').value.trim().toUpperCase()); });
+$('searchForm').addEventListener('submit', searchProductByInput);
+$('blindForm').addEventListener('submit', addBlindCountItem);
+$('globalDepotSelect').addEventListener('change', () => {
+  activeDepotFilter = $('globalDepotSelect').value;
+  renderQuickSampleCodes(); refreshAllViews();
+  showToast(`Visualizando: ${scopeLabel()}`, 'primary');
+});
+$('saldoSearchInput').addEventListener('input', debounce(renderStockPositionTable));
+$('saldoFilterMode').addEventListener('change', renderStockPositionTable);
+$('extratoSearchInput').addEventListener('input', debounce(renderExtratoTable));
+$('extratoTypeFilter').addEventListener('change', renderExtratoTable);
+
+window.addEventListener('DOMContentLoaded', async () => {
+  $('currentDateDisplay').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  resetBlindInventory();
+  await carregarDadosGoogleSheets(false);
+
+  const urlCod = new URLSearchParams(location.search).get('cod');
+  if (urlCod && movimentacoes.length) return loginWithCode(urlCod.trim().toUpperCase());
+
+  // Restaura sessão apenas se o depósito ainda existir na planilha
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('almox_session_gs') || 'null');
+    if (saved && movimentacoes.length && (saved.isMaster || depositosMap.has(saved.depotId))) { currentSession = saved; initDashboard(); }
+  } catch (e) {}
+
+  setInterval(() => { if (currentSession && !document.hidden) carregarDadosGoogleSheets(false, true); }, AUTO_REFRESH_MS);
+});
+</script>
 </body>
 </html>
