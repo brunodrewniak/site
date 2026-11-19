@@ -160,9 +160,9 @@ footer.rodape { background: #212529; color: #fff; font-size: .85rem; }
 
     <nav class="nav flex-column nav-sidebar mt-3 flex-grow-1" aria-label="Navegação principal">
       <button class="nav-link active" data-page="page-kpis"><i class="bi bi-speedometer2"></i><span>Posição Real de Estoque</span></button>
-      <button class="nav-link" data-page="page-consumo"><i class="bi bi-bar-chart-line"></i><span>Consumo Médio por CC</span></button>
       <button class="nav-link" data-page="page-consulta"><i class="bi bi-upc-scan"></i><span>Consulta / Produto</span></button>
       <button class="nav-link" data-page="page-inventario"><i class="bi bi-clipboard-check"></i><span>Inventário às Cegas</span></button>
+      <button class="nav-link" data-page="page-consumo"><i class="bi bi-graph-up-arrow"></i><span>Consumo Médio por CC</span></button>
       <button class="nav-link" data-page="page-extrato"><i class="bi bi-table"></i><span>Extrato Movimentações</span></button>
     </nav>
 
@@ -264,107 +264,7 @@ footer.rodape { background: #212529; color: #fff; font-size: .85rem; }
         </div>
       </div>
 
-      <!-- 2. CONSUMO MÉDIO POR CENTRO DE CUSTO -->
-      <div id="page-consumo" class="subpage d-none">
-        <!-- Filtros -->
-        <div class="kpi-card p-3 mb-4">
-          <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-4 col-lg-3">
-              <label for="consumoCcSelect" class="form-label small fw-bold text-uppercase text-secondary mb-1">Centro de Custo / CNPJ</label>
-              <select id="consumoCcSelect" class="form-select form-select-sm fw-semibold">
-                <option value="ALL">Todos os Centros de Custo</option>
-              </select>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-              <label for="consumoDataInicio" class="form-label small fw-bold text-uppercase text-secondary mb-1">Data Inicial</label>
-              <input type="date" id="consumoDataInicio" class="form-control form-control-sm">
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-              <label for="consumoDataFim" class="form-label small fw-bold text-uppercase text-secondary mb-1">Data Final</label>
-              <input type="date" id="consumoDataFim" class="form-control form-control-sm">
-            </div>
-            <div class="col-12 col-md-6 col-lg-3">
-              <label for="consumoSearchInput" class="form-label small fw-bold text-uppercase text-secondary mb-1">Buscar Produto</label>
-              <input type="search" id="consumoSearchInput" class="form-control form-control-sm" placeholder="Código ou nome do produto...">
-            </div>
-            <div class="col-12 col-md-6 col-lg-2 d-flex gap-2 justify-content-lg-end">
-              <button type="button" class="btn btn-outline-secondary btn-sm w-100" data-action="consumo-limpar" title="Resetar filtros">
-                <i class="bi bi-eraser"></i> Limpar
-              </button>
-              <button type="button" class="btn btn-outline-success btn-sm w-100" data-action="csv-consumo" title="Exportar relatório CSV">
-                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
-              </button>
-            </div>
-          </div>
-          <div class="d-flex flex-wrap gap-2 mt-2 pt-2 border-top align-items-center">
-            <small class="text-muted fw-semibold me-1">Atalhos de período:</small>
-            <button type="button" class="btn btn-light border btn-sm py-0 px-2 small" data-consumo-range="30">Últimos 30 dias</button>
-            <button type="button" class="btn btn-light border btn-sm py-0 px-2 small" data-consumo-range="90">Últimos 90 dias</button>
-            <button type="button" class="btn btn-light border btn-sm py-0 px-2 small" data-consumo-range="180">Últimos 6 meses</button>
-            <button type="button" class="btn btn-light border btn-sm py-0 px-2 small" data-consumo-range="365">Últimos 12 meses</button>
-            <button type="button" class="btn btn-light border btn-sm py-0 px-2 small" data-consumo-range="ALL">Todo o histórico</button>
-          </div>
-        </div>
-
-        <!-- KPIs do Consumo Médio -->
-        <div class="row g-3 mb-4">
-          <div class="col-12 col-sm-6 col-xl-3"><div class="card kpi k-sai h-100 border-0 shadow-sm"><div class="card-body">
-            <div class="text-muted small text-uppercase fw-semibold">Qtd. Total Consumida</div>
-            <div class="valor t-sai" id="kpiConsumoQtdTotal">0</div>
-            <div class="small-muted" id="kpiConsumoSubQtd">Soma das saídas no período</div>
-          </div></div></div>
-          <div class="col-12 col-sm-6 col-xl-3"><div class="card kpi k-ent h-100 border-0 shadow-sm"><div class="card-body">
-            <div class="text-muted small text-uppercase fw-semibold">Produtos Distintos</div>
-            <div class="valor t-ent" id="kpiConsumoProdutos">0</div>
-            <div class="small-muted" id="kpiConsumoSubProd">Itens diferentes retirados</div>
-          </div></div></div>
-          <div class="col-12 col-sm-6 col-xl-3"><div class="card kpi k-neutro h-100 border-0 shadow-sm"><div class="card-body">
-            <div class="text-muted small text-uppercase fw-semibold">Requisições / Retiradas</div>
-            <div class="valor" id="kpiConsumoRequisicoes">0</div>
-            <div class="small-muted" id="kpiConsumoSubReq">Pedidos únicos atendidos</div>
-          </div></div></div>
-          <div class="col-12 col-sm-6 col-xl-3"><div class="card kpi k-est h-100 border-0 shadow-sm"><div class="card-body">
-            <div class="text-muted small text-uppercase fw-semibold">Base de Cálculo (Período)</div>
-            <div class="valor" id="kpiConsumoMeses">1,0 mês</div>
-            <div class="small-muted" id="kpiConsumoSubPeriodo">Intervalo considerado na média</div>
-          </div></div></div>
-        </div>
-
-        <!-- Tabela Consolidada -->
-        <div class="table-container">
-          <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-              <h6 class="fw-bold mb-0"><i class="bi bi-calculator-fill text-primary me-2"></i>Consumo Médio por Produto e Unidade</h6>
-              <small class="text-muted" id="consumoCountLabel">Agrupado por Cód. Produto e Unidade (ignorando lançamentos estornados)</small>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <label for="consumoDivisorMode" class="small text-muted fw-semibold mb-0">Divisor da média mensal:</label>
-              <select id="consumoDivisorMode" class="form-select form-select-sm" style="width:auto">
-                <option value="PERIODO">Meses do range selecionado (inclui meses sem pedido)</option>
-                <option value="ATIVOS">Apenas meses com consumo ativo</option>
-              </select>
-            </div>
-          </div>
-          <div class="tabela-wrap" style="max-height:540px">
-            <table class="est w-100">
-              <thead><tr>
-                <th>Cód.</th>
-                <th>Produto</th>
-                <th>Un.</th>
-                <th class="g-sai text-end">Qtd. Total</th>
-                <th class="text-center">Requisições</th>
-                <th class="text-center">Meses Ativos</th>
-                <th class="g-ent text-end">Média / Mês</th>
-                <th class="text-end">Média / Requisição</th>
-                <th class="text-center">Últ. Saída</th>
-              </tr></thead>
-              <tbody id="consumoTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. CONSULTA -->
+      <!-- 2. CONSULTA -->
       <div id="page-consulta" class="subpage d-none">
         <div class="row g-4">
           <div class="col-12 col-lg-5">
@@ -453,7 +353,7 @@ footer.rodape { background: #212529; color: #fff; font-size: .85rem; }
         </div>
       </div>
 
-      <!-- 4. INVENTÁRIO -->
+      <!-- 3. INVENTÁRIO -->
       <div id="page-inventario" class="subpage d-none">
         <div class="alert d-flex align-items-center gap-3 rounded-3 mb-4 border-0" style="background:#f7f0f9;color:var(--cor-entrada-esc)">
           <i class="bi bi-eye-slash-fill fs-3"></i>
@@ -513,7 +413,100 @@ footer.rodape { background: #212529; color: #fff; font-size: .85rem; }
         </div>
       </div>
 
-      <!-- 5. EXTRATO -->
+      <!-- 5. CONSUMO MÉDIO POR CC -->
+      <div id="page-consumo" class="subpage d-none">
+        <div class="kpi-card p-3 mb-3">
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-lg-4">
+              <label for="consumoCC" class="form-label small fw-semibold text-uppercase text-secondary mb-1">Centro de Custo / CNPJ</label>
+              <select id="consumoCC" class="form-select"></select>
+            </div>
+            <div class="col-6 col-lg-2">
+              <label for="consumoDe" class="form-label small fw-semibold text-uppercase text-secondary mb-1">Data inicial</label>
+              <input type="date" id="consumoDe" class="form-control">
+            </div>
+            <div class="col-6 col-lg-2">
+              <label for="consumoAte" class="form-label small fw-semibold text-uppercase text-secondary mb-1">Data final</label>
+              <input type="date" id="consumoAte" class="form-control">
+            </div>
+            <div class="col-12 col-lg-4">
+              <label for="consumoBusca" class="form-label small fw-semibold text-uppercase text-secondary mb-1">Produto</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="search" id="consumoBusca" class="form-control" placeholder="Código ou descrição...">
+              </div>
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mt-3 align-items-center">
+            <span class="small-muted me-1">Atalhos:</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-range="30">Últimos 30 dias</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-range="90">90 dias</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-range="6M">6 meses</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-range="12M">12 meses</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-range="ALL">Todo o histórico</button>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6 col-xl-3"><div class="card kpi k-neutro h-100 border-0 shadow-sm"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-semibold">Produtos (cód. + un.)</div>
+            <div class="valor" id="cKpiItens">0</div>
+            <div class="small-muted">Com saída no filtro</div>
+          </div></div></div>
+          <div class="col-6 col-xl-3"><div class="card kpi k-sai h-100 border-0 shadow-sm"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-semibold">Qtd. total retirada</div>
+            <div class="valor t-sai" id="cKpiQtd">0</div>
+            <div class="small-muted">Soma de quantidades</div>
+          </div></div></div>
+          <div class="col-6 col-xl-3"><div class="card kpi k-ent h-100 border-0 shadow-sm"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-semibold">Requisições únicas</div>
+            <div class="valor t-ent" id="cKpiReq">0</div>
+            <div class="small-muted">Nº distintos no filtro</div>
+          </div></div></div>
+          <div class="col-6 col-xl-3"><div class="card kpi k-est h-100 border-0 shadow-sm"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-semibold">Período analisado</div>
+            <div class="valor" id="cKpiPeriodo" style="font-size:1.05rem">-</div>
+            <div class="small-muted" id="cKpiPeriodoSub">-</div>
+          </div></div></div>
+        </div>
+
+        <div class="table-container">
+          <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <h6 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Consumo por produto</h6>
+              <small class="text-muted" id="consumoCountLabel"></small>
+            </div>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <select id="consumoModo" class="form-select form-select-sm" style="width:auto" aria-label="Modo de cálculo da média mensal">
+                <option value="RANGE">Média/mês: meses do range (previsão de compra)</option>
+                <option value="ATIVOS">Média/mês: apenas meses com consumo</option>
+              </select>
+              <select id="consumoOrdem" class="form-select form-select-sm" style="width:auto" aria-label="Ordenação">
+                <option value="QTD">Ordenar: Qtd. total</option>
+                <option value="MEDIA">Ordenar: Média / mês</option>
+                <option value="REQ">Ordenar: Requisições</option>
+                <option value="COD">Ordenar: Código</option>
+              </select>
+              <button class="btn btn-outline-secondary btn-sm" data-action="csv-consumo"><i class="bi bi-file-earmark-spreadsheet"></i> CSV</button>
+            </div>
+          </div>
+          <div class="px-3 py-2 border-bottom small-muted">
+            <i class="bi bi-info-circle me-1"></i>Considera apenas saídas e desconsidera "Estornada Total". Itens agrupados por cód. + unidade. Clique em uma linha para abrir a ficha do produto.
+          </div>
+          <div class="tabela-wrap" style="max-height:560px">
+            <table class="est w-100">
+              <thead><tr>
+                <th>Cód.</th><th>Produto</th><th>Un.</th>
+                <th class="g-sai text-end">Qtd. total</th><th class="text-end">Requisições</th>
+                <th class="text-end">Meses c/ consumo</th><th class="text-end">Média / mês</th><th class="text-end">Média / requisição</th>
+              </tr></thead>
+              <tbody id="consumoTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. EXTRATO -->
       <div id="page-extrato" class="subpage d-none">
         <div class="kpi-card p-3 mb-3">
           <div class="row g-2 align-items-center">
@@ -559,7 +552,7 @@ footer.rodape { background: #212529; color: #fff; font-size: .85rem; }
 <script>
 const PUB_XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwk6xDCeugOO6Ykk-FPMdof6-Q1mNWVXqU-KSYbhU1y14IfoClWBKpfs8uI6ejjXPOQPd5llEtlK5A/pub?output=xlsx";
 const AUTO_REFRESH_MS = 10 * 60 * 1000;
-const LIMITE_EXTRATO = 500, LIMITE_SALDO = 300, LIMITE_CONSUMO = 400;
+const LIMITE_EXTRATO = 500, LIMITE_SALDO = 300;
 const $ = id => document.getElementById(id);
 
 let movimentacoes = [], estoqueConsolidadoCache = [], estornadosIgnorados = 0;
@@ -586,7 +579,7 @@ function extrairCodigoNumerico(raw) {
   const d = s.replace(/\D+/g, '');
   return d ? String(parseInt(d, 10)) : "";
 }
-function normHeader(str) { return String(str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); }
+function normHeader(str) { return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); }
 function getCol(row, candidates) {
   const keys = Object.keys(row);
   for (const c of candidates) { const t = normHeader(c); const f = keys.find(k => normHeader(k) === t); if (f !== undefined) return row[f]; }
@@ -621,13 +614,7 @@ function formatDateTimeBR(d, fb) {
   const p = n => String(n).padStart(2, '0');
   return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
-function toIsoDate(d) {
-  if (!d || isNaN(d)) return '';
-  const p = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
 function formatQty(v) { return Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 }); }
-function formatAvg(v) { return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 function showToast(message, type = 'primary') {
   const id = 'toast_' + Date.now() + Math.floor(Math.random() * 1000);
@@ -641,8 +628,7 @@ function showToast(message, type = 'primary') {
   el.addEventListener('hidden.bs.toast', () => el.remove());
 }
 function baixarCsv(nome, linhas) {
-  const txt = "﻿" + linhas.map(l => l.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("
-");
+  const txt = "\uFEFF" + linhas.map(l => l.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8;' }));
   a.download = nome; document.body.appendChild(a); a.click(); a.remove();
@@ -657,7 +643,11 @@ async function carregarDadosGoogleSheets(manual = false, silencioso = false) {
   const statusEl = $('sheetSyncStatus'), btnLogin = $('btnLoginSubmit'), btnRetry = $('btnRetryLoad');
   if (manual) showToast('Sincronizando com o Google Planilhas...', 'info');
   try {
-    const resp = await fetch(`${PUB_XLSX_URL}&t=${Date.now()}`);
+    const ctrl = new AbortController(), to = setTimeout(() => ctrl.abort(), 45000);
+    let resp;
+    try { resp = await fetch(`${PUB_XLSX_URL}&t=${Date.now()}`, { signal: ctrl.signal }); }
+    catch (fe) { throw new Error(fe.name === 'AbortError' ? 'Tempo esgotado (45s) ao acessar a planilha.' : fe.message); }
+    finally { clearTimeout(to); }
     if (!resp.ok) throw new Error(`HTTP ${resp.status} ao acessar a planilha.`);
     const wb = XLSX.read(await resp.arrayBuffer(), { type: 'array', cellDates: true });
     const sheetName = wb.SheetNames.find(n => /moviment/i.test(n)) || wb.SheetNames[0];
@@ -813,13 +803,7 @@ function initDashboard() {
 }
 
 /* ---------- navegação ---------- */
-const TITULOS = {
-  'page-kpis': 'Posição Real de Estoque',
-  'page-consumo': 'Consumo Médio por Centro de Custo',
-  'page-consulta': 'Consulta / Produto',
-  'page-inventario': 'Inventário às Cegas',
-  'page-extrato': 'Extrato Movimentações'
-};
+const TITULOS = { 'page-kpis': 'Posição Real de Estoque', 'page-consulta': 'Consulta / Produto', 'page-inventario': 'Inventário às Cegas', 'page-consumo': 'Consumo Médio por CC', 'page-extrato': 'Extrato Movimentações' };
 function navigateTo(pageId) {
   stopCameraIfRunning();
   document.querySelectorAll('.nav-sidebar .nav-link').forEach(el => el.classList.toggle('active', el.dataset.page === pageId));
@@ -827,8 +811,8 @@ function navigateTo(pageId) {
   $(pageId).classList.remove('d-none');
   $('pageTitle').textContent = TITULOS[pageId] || 'Dashboard';
   $('sidebar').classList.remove('show'); $('sidebarBackdrop').classList.remove('show');
-  if (pageId === 'page-consumo') renderConsumoMedioPage();
   if (pageId === 'page-consulta') setTimeout(() => $('barcodeInput').focus(), 150);
+  if (pageId === 'page-consumo') renderConsumoTabela();
   if (pageId === 'page-inventario') { renderBlindTable(); setTimeout(() => $('blindCodeInput').focus(), 150); }
 }
 function toggleSidebar() { $('sidebar').classList.toggle('show'); $('sidebarBackdrop').classList.toggle('show'); }
@@ -836,9 +820,9 @@ function scopeLabel() { return activeDepotFilter === 'ALL' ? 'Todos os depósito
 
 function refreshAllViews() {
   renderKPIsAndStockPosition();
-  populateConsumoCcSelect();
-  renderConsumoMedioPage();
   renderExtratoTable();
+  popularConsumoCC();
+  renderConsumoTabela();
   $('blindScopeLabel').textContent = scopeLabel();
   const cur = $('resProdCode').dataset.code;
   if (cur && !$('consultaResultCard').classList.contains('d-none')) displayProductDetails(cur, true);
@@ -935,185 +919,7 @@ function renderCostCenterChart() {
   }).join('');
 }
 
-/* ---------- 2. consumo médio por centro de custo ---------- */
-function populateConsumoCcSelect() {
-  const sel = $('consumoCcSelect'), cur = sel.value || 'ALL';
-  const ccSet = new Set();
-  movimentacoes.forEach(m => {
-    if (!isSaida(m.mov) || isEstTotal(m.estado)) return;
-    if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) return;
-    ccSet.add(m.cnpjCentroCusto || 'Não informado');
-  });
-  const sortedCcs = [...ccSet].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  sel.innerHTML = `<option value="ALL">Todos os Centros de Custo (${sortedCcs.length})</option>` +
-    sortedCcs.map(cc => `<option value="${esc(cc)}">${esc(cc)}</option>`).join('');
-  sel.value = ccSet.has(cur) ? cur : 'ALL';
-}
-
-function getConsumoFiltradoData() {
-  const ccFilter = $('consumoCcSelect').value;
-  const dtIniStr = $('consumoDataInicio').value;
-  const dtFimStr = $('consumoDataFim').value;
-  const searchTerm = $('consumoSearchInput').value.trim().toLowerCase();
-  const divisorMode = $('consumoDivisorMode').value;
-
-  const dtIni = dtIniStr ? new Date(dtIniStr + 'T00:00:00') : null;
-  const dtFim = dtFimStr ? new Date(dtFimStr + 'T23:59:59') : null;
-
-  let minDateFound = null, maxDateFound = null;
-  let totalQtd = 0;
-  const reqGlobalSet = new Set();
-  const map = new Map();
-
-  movimentacoes.forEach(m => {
-    if (!isSaida(m.mov) || isEstTotal(m.estado)) return;
-    if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) return;
-
-    const ccVal = m.cnpjCentroCusto || 'Não informado';
-    if (ccFilter !== 'ALL' && ccVal !== ccFilter) return;
-
-    if (dtIni && (!m.dataObj || m.dataObj < dtIni)) return;
-    if (dtFim && (!m.dataObj || m.dataObj > dtFim)) return;
-
-    if (m.dataObj) {
-      if (!minDateFound || m.dataObj < minDateFound) minDateFound = m.dataObj;
-      if (!maxDateFound || m.dataObj > maxDateFound) maxDateFound = m.dataObj;
-    }
-
-    if (searchTerm && !`${m.cod} ${m.nomeProduto}`.toLowerCase().includes(searchTerm)) return;
-
-    totalQtd += m.qtd;
-    if (m.num) reqGlobalSet.add(`${m.deposito}_${m.num}`);
-
-    // Chave por Código + Unidade para nunca misturar embalagens diferentes
-    const key = `${m.cod}_${m.un}`;
-    let item = map.get(key);
-    if (!item) {
-      item = {
-        cod: m.cod,
-        nomeProduto: m.nomeProduto,
-        un: m.un || 'UN',
-        qtdTotal: 0,
-        reqs: new Set(),
-        mesesAtivos: new Set(),
-        lastDate: null
-      };
-      map.set(key, item);
-    }
-
-    item.qtdTotal += m.qtd;
-    if (m.num) item.reqs.add(`${m.deposito}_${m.num}`);
-    if (m.dataObj) {
-      const ym = `${m.dataObj.getFullYear()}-${String(m.dataObj.getMonth() + 1).padStart(2, '0')}`;
-      item.mesesAtivos.add(ym);
-      if (!item.lastDate || m.dataObj > item.lastDate.obj) {
-        item.lastDate = { str: m.dataHora.split(' ')[0], obj: m.dataObj };
-      }
-    }
-  });
-
-  // Calcula a quantidade de meses do range (mínimo 1 mês)
-  const startRef = dtIni || minDateFound;
-  const endRef = dtFim || maxDateFound;
-  let mesesPeriodo = 1;
-  let periodoTexto = 'Sem movimentações no filtro';
-
-  if (startRef && endRef && endRef >= startRef) {
-    const diffMeses = (endRef.getFullYear() - startRef.getFullYear()) * 12 + (endRef.getMonth() - startRef.getMonth()) + 1;
-    mesesPeriodo = Math.max(1, diffMeses);
-    periodoTexto = `${startRef.toLocaleDateString('pt-BR')} até ${endRef.toLocaleDateString('pt-BR')}`;
-  }
-
-  const rows = [...map.values()].map(item => {
-    const qtdReqs = Math.max(1, item.reqs.size);
-    const qtdMesesAtivos = Math.max(1, item.mesesAtivos.size);
-    const divisor = divisorMode === 'ATIVOS' ? qtdMesesAtivos : mesesPeriodo;
-    return {
-      ...item,
-      qtdReqs: item.reqs.size,
-      qtdMesesAtivos: item.mesesAtivos.size,
-      mediaMensal: item.qtdTotal / divisor,
-      mediaRequisicao: item.qtdTotal / qtdReqs
-    };
-  }).sort((a, b) => b.mediaMensal - a.mediaMensal || b.qtdTotal - a.qtdTotal);
-
-  return { rows, totalQtd, totalProdutos: rows.length, totalReqs: reqGlobalSet.size, mesesPeriodo, periodoTexto };
-}
-
-function renderConsumoMedioPage() {
-  const { rows, totalQtd, totalProdutos, totalReqs, mesesPeriodo, periodoTexto } = getConsumoFiltradoData();
-  const tbody = $('consumoTableBody');
-
-  $('kpiConsumoQtdTotal').textContent = formatQty(totalQtd);
-  $('kpiConsumoSubQtd').textContent = $('consumoCcSelect').value === 'ALL' ? 'Todos os Centros de Custo' : $('consumoCcSelect').value;
-  $('kpiConsumoProdutos').textContent = totalProdutos.toLocaleString('pt-BR');
-  $('kpiConsumoRequisicoes').textContent = totalReqs.toLocaleString('pt-BR');
-  $('kpiConsumoMeses').textContent = `${mesesPeriodo} ${mesesPeriodo === 1 ? 'mês' : 'meses'}`;
-  $('kpiConsumoSubPeriodo').textContent = periodoTexto;
-
-  $('consumoCountLabel').textContent = rows.length > LIMITE_CONSUMO
-    ? `Mostrando ${LIMITE_CONSUMO} de ${rows.length.toLocaleString('pt-BR')} produtos (use a busca ou exporte o CSV)`
-    : `${rows.length.toLocaleString('pt-BR')} produto(s) consolidado(s)`;
-
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">Nenhuma saída registrada para o Centro de Custo e período selecionados.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = rows.slice(0, LIMITE_CONSUMO).map(i => `
-    <tr class="tr-click" data-cod="${esc(i.cod)}" title="Abrir ficha detalhada do produto ${esc(i.cod)}">
-      <td class="fw-bold t-ent">${esc(i.cod)}</td>
-      <td>${esc(i.nomeProduto)}</td>
-      <td><span class="badge bg-light text-dark border">${esc(i.un)}</span></td>
-      <td class="num sub-sai fw-semibold">${formatQty(i.qtdTotal)}</td>
-      <td class="text-center">${i.qtdReqs}</td>
-      <td class="text-center">${i.qtdMesesAtivos}</td>
-      <td class="num sub-ent fw-bold t-ent">${formatAvg(i.mediaMensal)}</td>
-      <td class="num fw-semibold">${formatAvg(i.mediaRequisicao)}</td>
-      <td class="text-center small-muted">${i.lastDate ? esc(i.lastDate.str) : '-'}</td>
-    </tr>`).join('');
-}
-
-function aplicarAtalhoDataConsumo(diasStr) {
-  if (diasStr === 'ALL') {
-    $('consumoDataInicio').value = '';
-    $('consumoDataFim').value = '';
-  } else {
-    const dias = Number(diasStr);
-    const fim = new Date();
-    const ini = new Date();
-    ini.setDate(fim.getDate() - dias);
-    $('consumoDataInicio').value = toIsoDate(ini);
-    $('consumoDataFim').value = toIsoDate(fim);
-  }
-  renderConsumoMedioPage();
-}
-
-function limparFiltrosConsumo() {
-  $('consumoCcSelect').value = 'ALL';
-  $('consumoDataInicio').value = '';
-  $('consumoDataFim').value = '';
-  $('consumoSearchInput').value = '';
-  $('consumoDivisorMode').value = 'PERIODO';
-  renderConsumoMedioPage();
-}
-
-function exportarCsvConsumo() {
-  const { rows } = getConsumoFiltradoData();
-  if (!rows.length) return showToast('Nada para exportar.', 'warning');
-  const ccLabel = $('consumoCcSelect').value === 'ALL' ? 'Todos_CC' : $('consumoCcSelect').value.replace(/[^a-zA-Z0-9]/g, '_');
-  baixarCsv(`consumo_medio_${ccLabel}.csv`, [
-    ['Centro de Custo', 'Cód. Produto', 'Produto', 'Unidade', 'Qtd. Total', 'Requisições', 'Meses Ativos', 'Média Mensal', 'Média por Requisição', 'Última Saída'],
-    ...rows.map(i => [
-      $('consumoCcSelect').value === 'ALL' ? 'Todos' : $('consumoCcSelect').value,
-      i.cod, i.nomeProduto, i.un, csvN(i.qtdTotal), i.qtdReqs, i.qtdMesesAtivos,
-      csvN(i.mediaMensal.toFixed(2)), csvN(i.mediaRequisicao.toFixed(2)),
-      i.lastDate ? i.lastDate.str : ''
-    ])
-  ]);
-}
-
-/* ---------- 3. consulta ---------- */
+/* ---------- 2. consulta ---------- */
 function renderQuickSampleCodes() {
   const seen = new Set(), list = [];
   for (const m of movimentacoes) {
@@ -1134,6 +940,7 @@ function searchProductByInput(e) {
   e.preventDefault();
   const input = $('barcodeInput'), q = input.value.trim();
   if (!q) return;
+  // Só números (e separadores) => código. Qualquer letra => nome (evita "Papel A4" virar código 4).
   const soNumero = /^[\d\s.,]+$/.test(q);
   if (soNumero) { const c = extrairCodigoNumerico(q); input.value = c; displayProductDetails(c, true); }
   else displayProductDetails(q, false);
@@ -1235,7 +1042,8 @@ function stopCameraIfRunning() {
   activeScannerContext = null;
 }
 
-/* ---------- 4. inventário às cegas ---------- */
+/* ---------- 3. inventário às cegas ---------- */
+// Saldo calculado na apuração, sempre pelo depósito atualmente selecionado e com a planilha mais recente.
 function getSystemQty(cod) {
   const m = estoqueConsolidadoCache.filter(i => i.cod === cod && (activeDepotFilter === 'ALL' || i.deposito === activeDepotFilter));
   return m.reduce((s, x) => s + x.entradasQtd - x.saidasQtd, 0);
@@ -1298,7 +1106,7 @@ function exportBlindCsv() {
      ...blindInventoryItems.map(i => [scopeLabel(), i.cod, i.nomeProduto, i.un, csvN(i.systemQty), csvN(i.countedQty), csvN(i.countedQty - i.systemQty)])]);
 }
 
-/* ---------- 5. extrato ---------- */
+/* ---------- 4. extrato ---------- */
 function getExtratoFiltrado() {
   const term = $('extratoSearchInput').value.trim(), tp = $('extratoTypeFilter').value;
   let base = movimentacoes;
@@ -1331,18 +1139,154 @@ function exportarCsvExtrato() {
     ...rows.map(m => [m.mov, m.num, m.dataHora, m.tipo, m.estado, m.deposito, m.depositoNome, m.cod, m.nomeProduto, m.un, csvN(m.qtd), m.documento, m.cnpjCentroCusto, m.observacao])]);
 }
 
+/* ---------- 5. consumo médio por centro de custo ---------- */
+const LIMITE_CONSUMO = 500, DIAS_MES = 30.4375;
+let consumoDados = [], consumoInfo = null, consumoAtalho = null;
+const ccDe = m => m.cnpjCentroCusto || 'Não informado';
+const pad2 = n => String(n).padStart(2, '0');
+const toInputDate = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const fmtData = d => d.toLocaleDateString('pt-BR');
+function parseInputDate(v, fim) {
+  if (!v) return null;
+  const [y, mo, d] = v.split('-').map(Number);
+  return fim ? new Date(y, mo - 1, d, 23, 59, 59, 999) : new Date(y, mo - 1, d, 0, 0, 0, 0);
+}
+function formatMedia(v) { return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+
+function marcarAtalhos() {
+  document.querySelectorAll('[data-range]').forEach(b => b.classList.toggle('active', b.dataset.range === consumoAtalho));
+}
+function aplicarAtalhoConsumo(r) {
+  consumoAtalho = r;
+  if (r === 'ALL') { $('consumoDe').value = ''; $('consumoAte').value = ''; }
+  else {
+    const fim = new Date(), ini = new Date();
+    if (r === '30' || r === '90') ini.setDate(ini.getDate() - Number(r));
+    else ini.setMonth(ini.getMonth() - (r === '6M' ? 6 : 12));
+    $('consumoDe').value = toInputDate(ini); $('consumoAte').value = toInputDate(fim);
+  }
+  marcarAtalhos();
+  renderConsumoTabela();
+}
+// Lista de CCs/CNPJs vem das saídas válidas do depósito selecionado (ou de todos).
+function popularConsumoCC() {
+  const sel = $('consumoCC'), atual = sel.value || 'ALL', set = new Set();
+  movimentacoes.forEach(m => {
+    if (!isSaida(m.mov) || isEstTotal(m.estado)) return;
+    if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) return;
+    set.add(ccDe(m));
+  });
+  const lista = [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  sel.innerHTML = `<option value="ALL">Todos os C. Custo / CNPJ (${lista.length})</option>` +
+    lista.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  sel.value = (atual === 'ALL' || set.has(atual)) ? atual : 'ALL';
+}
+function calcularConsumo() {
+  const cc = $('consumoCC').value;
+  const ini = parseInputDate($('consumoDe').value, false), fim = parseInputDate($('consumoAte').value, true);
+  const q = $('consumoBusca').value.trim().toLowerCase(), modo = $('consumoModo').value;
+  if (ini && fim && ini > fim) return { invalido: true, rows: [] };
+
+  const map = new Map(), reqGlobal = new Set();
+  let primeira = null, totQtd = 0;
+  for (const m of movimentacoes) {
+    if (!m.cod || !isSaida(m.mov) || isEstTotal(m.estado)) continue;
+    if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) continue;
+    if (cc !== 'ALL' && ccDe(m) !== cc) continue;
+    if (ini || fim) {
+      if (!m.dataObj) continue;
+      if (ini && m.dataObj < ini) continue;
+      if (fim && m.dataObj > fim) continue;
+    }
+    if (m.dataObj && (!primeira || m.dataObj < primeira)) primeira = m.dataObj;
+    if (q && !`${m.cod} ${m.nomeProduto}`.toLowerCase().includes(q)) continue;
+
+    const un = (m.un || 'UN').trim().toUpperCase(), key = `${m.cod}|${un}`;
+    let e = map.get(key);
+    if (!e) { e = { cod: m.cod, nomeProduto: m.nomeProduto, un, qtd: 0, reqs: new Set(), meses: new Set() }; map.set(key, e); }
+    const reqKey = m.num ? `${m.deposito}|${m.num}` : `row${m.rowIndex}`;
+    e.qtd += m.qtd; e.reqs.add(reqKey); reqGlobal.add(reqKey);
+    if (m.dataObj) e.meses.add(`${m.dataObj.getFullYear()}-${m.dataObj.getMonth()}`);
+    totQtd += m.qtd;
+  }
+
+  // Período efetivo: datas informadas; vazias => primeira saída do filtro até hoje.
+  let efIni = ini || (primeira ? new Date(primeira.getFullYear(), primeira.getMonth(), primeira.getDate()) : null);
+  let efFim = fim || (() => { const h = new Date(); h.setHours(23, 59, 59, 999); return h; })();
+  let dias = 0, mesesRange = 1;
+  if (efIni) {
+    dias = Math.max(1, Math.round((efFim - efIni) / 86400000));
+    mesesRange = Math.max(1 / DIAS_MES, dias / DIAS_MES);
+  }
+  const rows = [...map.values()].map(e => {
+    const req = e.reqs.size, mesesAtivos = e.meses.size;
+    const div = modo === 'RANGE' ? mesesRange : Math.max(1, mesesAtivos);
+    return { cod: e.cod, nomeProduto: e.nomeProduto, un: e.un, qtd: e.qtd, req, mesesAtivos,
+             mediaMes: e.qtd / div, mediaReq: req ? e.qtd / req : 0 };
+  });
+  const ord = $('consumoOrdem').value;
+  rows.sort((a, b) => ord === 'MEDIA' ? b.mediaMes - a.mediaMes
+    : ord === 'REQ' ? b.req - a.req
+    : ord === 'COD' ? (Number(a.cod) - Number(b.cod) || a.un.localeCompare(b.un))
+    : b.qtd - a.qtd);
+  return { rows, totQtd, totReq: reqGlobal.size, efIni, efFim, dias, mesesRange, modo };
+}
+function renderConsumoTabela() {
+  const tbody = $('consumoTableBody');
+  if (!tbody) return;
+  const r = calcularConsumo();
+  consumoDados = r.rows; consumoInfo = r;
+  if (r.invalido) {
+    $('cKpiItens').textContent = '0'; $('cKpiQtd').textContent = '0'; $('cKpiReq').textContent = '0';
+    $('cKpiPeriodo').textContent = 'Intervalo inválido'; $('cKpiPeriodoSub').textContent = 'Data inicial maior que a final';
+    $('consumoCountLabel').textContent = '';
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">A data inicial é posterior à data final.</td></tr>`;
+    return;
+  }
+  $('cKpiItens').textContent = r.rows.length.toLocaleString('pt-BR');
+  $('cKpiQtd').textContent = formatQty(r.totQtd);
+  $('cKpiReq').textContent = r.totReq.toLocaleString('pt-BR');
+  if (r.efIni) {
+    $('cKpiPeriodo').textContent = `${fmtData(r.efIni)} → ${fmtData(r.efFim)}`;
+    $('cKpiPeriodoSub').textContent = r.modo === 'RANGE'
+      ? `${r.dias} dias · divisor: ${formatMedia(r.mesesRange)} meses`
+      : `${r.dias} dias · divisor: meses com consumo (por item)`;
+  } else { $('cKpiPeriodo').textContent = '-'; $('cKpiPeriodoSub').textContent = 'Sem saídas no filtro'; }
+
+  $('consumoCountLabel').textContent = r.rows.length > LIMITE_CONSUMO
+    ? `Mostrando ${LIMITE_CONSUMO} de ${r.rows.length.toLocaleString('pt-BR')} itens (exporte o CSV para ver todos)`
+    : `${r.rows.length.toLocaleString('pt-BR')} itens`;
+  if (!r.rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">Nenhuma saída encontrada para o filtro.</td></tr>`; return; }
+  tbody.innerHTML = r.rows.slice(0, LIMITE_CONSUMO).map(i => `
+    <tr class="tr-click" data-cod="${esc(i.cod)}" title="Abrir ficha do produto ${esc(i.cod)}">
+      <td class="fw-bold t-ent">${esc(i.cod)}</td><td>${esc(i.nomeProduto)}</td><td>${esc(i.un)}</td>
+      <td class="num sub-sai fw-bold">${formatQty(i.qtd)}</td>
+      <td class="num">${i.req.toLocaleString('pt-BR')}</td>
+      <td class="num text-muted">${i.mesesAtivos}</td>
+      <td class="num fw-bold">${formatMedia(i.mediaMes)}</td>
+      <td class="num">${formatMedia(i.mediaReq)}</td></tr>`).join('');
+}
+function exportarCsvConsumo() {
+  if (!consumoDados.length) return showToast('Nada para exportar.', 'warning');
+  const info = consumoInfo, cc = $('consumoCC').value;
+  const periodo = info.efIni ? `${fmtData(info.efIni)} a ${fmtData(info.efFim)}` : '';
+  const modo = info.modo === 'RANGE' ? 'Meses do range' : 'Meses com consumo';
+  baixarCsv(`consumo_medio_cc_${new Date().toISOString().slice(0, 10)}.csv`,
+    [['Depósito','C. Custo / CNPJ','Período','Divisor média/mês','Cód.','Produto','Un.','Qtd. total','Requisições','Meses c/ consumo','Média / mês','Média / requisição'],
+     ...consumoDados.map(i => [scopeLabel(), cc === 'ALL' ? 'Todos' : cc, periodo, modo, i.cod, i.nomeProduto, i.un,
+       csvN(i.qtd), i.req, i.mesesAtivos, csvN(Math.round(i.mediaMes * 1000) / 1000), csvN(Math.round(i.mediaReq * 1000) / 1000)])]);
+}
+
 /* ---------- eventos (delegação: sem onclick inline com dados da planilha) ---------- */
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-action],[data-login],[data-cod],[data-page],[data-blind-remove],[data-consumo-range]');
+  const t = e.target.closest('[data-action],[data-login],[data-cod],[data-page],[data-blind-remove],[data-range]');
   if (!t) return;
   if (t.dataset.login) return loginWithCode(t.dataset.login.toUpperCase());
+  if (t.dataset.range) return aplicarAtalhoConsumo(t.dataset.range);
   if (t.dataset.page) return navigateTo(t.dataset.page);
-  if (t.dataset.consumoRange) return aplicarAtalhoDataConsumo(t.dataset.consumoRange);
   if (t.dataset.blindRemove !== undefined) { blindInventoryItems.splice(Number(t.dataset.blindRemove), 1); return renderBlindTable(); }
   if (t.dataset.cod && !t.dataset.action) {
-    return (t.closest('#stockPositionTableBody') || t.closest('#consumoTableBody'))
-      ? abrirConsultaDireta(t.dataset.cod)
-      : triggerSampleLookup(t.dataset.cod);
+    return t.closest('#stockPositionTableBody, #consumoTableBody') ? abrirConsultaDireta(t.dataset.cod) : triggerSampleLookup(t.dataset.cod);
   }
   switch (t.dataset.action) {
     case 'reload': carregarDadosGoogleSheets(true); break;
@@ -1355,7 +1299,6 @@ document.addEventListener('click', e => {
     case 'csv-saldo': exportarCsvSaldo(); break;
     case 'csv-extrato': exportarCsvExtrato(); break;
     case 'csv-consumo': exportarCsvConsumo(); break;
-    case 'consumo-limpar': limparFiltrosConsumo(); break;
   }
 });
 $('loginForm').addEventListener('submit', e => { e.preventDefault(); loginWithCode($('accessCodeInput').value.trim().toUpperCase()); });
@@ -1370,17 +1313,24 @@ $('saldoSearchInput').addEventListener('input', debounce(renderStockPositionTabl
 $('saldoFilterMode').addEventListener('change', renderStockPositionTable);
 $('extratoSearchInput').addEventListener('input', debounce(renderExtratoTable));
 $('extratoTypeFilter').addEventListener('change', renderExtratoTable);
+$('consumoCC').addEventListener('change', renderConsumoTabela);
+$('consumoModo').addEventListener('change', renderConsumoTabela);
+$('consumoOrdem').addEventListener('change', renderConsumoTabela);
+$('consumoBusca').addEventListener('input', debounce(renderConsumoTabela));
+['consumoDe', 'consumoAte'].forEach(id => $(id).addEventListener('change', () => { consumoAtalho = null; marcarAtalhos(); renderConsumoTabela(); }));
 
-/* Listeners da aba Consumo Médio */
-$('consumoCcSelect').addEventListener('change', renderConsumoMedioPage);
-$('consumoDataInicio').addEventListener('change', renderConsumoMedioPage);
-$('consumoDataFim').addEventListener('change', renderConsumoMedioPage);
-$('consumoSearchInput').addEventListener('input', debounce(renderConsumoMedioPage));
-$('consumoDivisorMode').addEventListener('change', renderConsumoMedioPage);
-
+window.addEventListener('error', ev => {
+  const st = document.getElementById('sheetSyncStatus');
+  if (st && st.textContent.includes('Carregando')) {
+    st.className = "alert alert-danger py-2 px-3 small text-center mb-3";
+    st.textContent = 'Erro no script: ' + (ev.message || 'desconhecido');
+    const r = document.getElementById('btnRetryLoad'); if (r) r.classList.remove('d-none');
+  }
+});
 window.addEventListener('DOMContentLoaded', async () => {
   $('currentDateDisplay').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   resetBlindInventory();
+  try { aplicarAtalhoConsumo('90'); } catch (e) { console.error('Consumo:', e); }
   await carregarDadosGoogleSheets(false);
 
   const urlCod = new URLSearchParams(location.search).get('cod');
