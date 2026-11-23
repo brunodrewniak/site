@@ -418,8 +418,9 @@ footer.rodape { background: #212529; color: #fff; font-size: .85rem; }
         <div class="kpi-card p-3 mb-3">
           <div class="row g-3 align-items-end">
             <div class="col-12 col-lg-4">
-              <label for="consumoCC" class="form-label small fw-semibold text-uppercase text-secondary mb-1">Centro de Custo / CNPJ</label>
-              <select id="consumoCC" class="form-select"></select>
+              <label for="consumoCCBusca" class="form-label small fw-semibold text-uppercase text-secondary mb-1">Centro de Custo / CNPJ</label>
+              <input type="search" id="consumoCCBusca" class="form-control mb-1" placeholder="Digite classificação (02.001.001) ou nome..." autocomplete="off">
+              <select id="consumoCC" class="form-select" aria-label="Centro de custo"></select>
             </div>
             <div class="col-6 col-lg-2">
               <label for="consumoDe" class="form-label small fw-semibold text-uppercase text-secondary mb-1">Data inicial</label>
@@ -513,7 +514,7 @@ footer.rodape { background: #212529; color: #fff; font-size: .85rem; }
             <div class="col-12 col-md-5">
               <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="search" class="form-control" id="extratoSearchInput" placeholder="Busca inteligente (cód., produto, nº, doc., CNPJ, tipo)...">
+                <input type="search" class="form-control" id="extratoSearchInput" placeholder="Busca inteligente (cód., produto, nº, doc., centro de custo, classificação 02.001...)...">
               </div>
             </div>
             <div class="col-6 col-md-3">
@@ -558,6 +559,47 @@ const $ = id => document.getElementById(id);
 let movimentacoes = [], estoqueConsolidadoCache = [], estornadosIgnorados = 0;
 let depositosMap = new Map(), produtosNomeMap = new Map();
 let fuseExtrato = null, fuseProdutos = null;
+/* ---------- centros de custo (aba "CentrodeCusto" da planilha) ---------- */
+let ccMap = new Map();
+const normBusca = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function ccExtrairCodigo(raw) {
+  const t = String(raw ?? '').trim();
+  if (!t) return '';
+  let m = t.match(/^(?:cc)?\s*[:\-.]?\s*(\d+)$/i);
+  if (m) return String(parseInt(m[1], 10));
+  m = t.match(/\bcc\b\s*[:\-]?\s*(\d+)/i);
+  return m ? String(parseInt(m[1], 10)) : '';
+}
+function processarCentrosCusto(rows) {
+  ccMap = new Map();
+  rows.forEach(r => {
+    const codigo = String(getCol(r, ['Código', 'Codigo', 'Cód.', 'Cod'])).trim().replace(/\.0+$/, '');
+    if (!codigo) return;
+    const ano = parseInt(getCol(r, ['Ano']), 10) || 0;
+    const ant = ccMap.get(codigo);
+    if (ant && ant.ano > ano) return;
+    ccMap.set(codigo, {
+      codigo, ano,
+      classificacao: String(getCol(r, ['Classificação', 'Classificacao'])).trim(),
+      descricao: String(getCol(r, ['Descrição', 'Descricao'])).trim(),
+      nivel: String(getCol(r, ['Nível', 'Nivel'])).trim(),
+      status: String(getCol(r, ['Status', 'Situação'])).trim()
+    });
+  });
+}
+// Resolve o valor bruto da coluna "CNPJ / C. Custo" em classificação + descrição.
+function resolverCC(raw) {
+  const bruto = String(raw ?? '').trim();
+  const info = ccMap.get(ccExtrairCodigo(bruto));
+  if (!info) return { key: bruto || 'Não informado', classif: '', desc: '', label: bruto || 'Não informado', busca: normBusca(bruto), achou: false };
+  const label = [info.classificacao, info.descricao].filter(Boolean).join(' · ') || bruto;
+  return { key: 'CC' + info.codigo, classif: info.classificacao, desc: info.descricao, label,
+           busca: normBusca(`${info.classificacao} ${info.descricao} ${info.codigo} ${bruto}`), achou: true };
+}
+function ccHtml(m) {
+  if (!m.ccAchou) return esc(m.cnpjCentroCusto || '-');
+  return `<span class="fw-semibold">${esc(m.ccDesc)}</span><br><span class="text-muted">${esc(m.ccClass)}</span>`;
+}
 let currentSession = null, activeDepotFilter = 'ALL';
 let html5QrcodeScanner = null, activeScannerContext = null;
 let blindInventoryItems = [], isBlindFinished = false;
@@ -650,8 +692,12 @@ async function carregarDadosGoogleSheets(manual = false, silencioso = false) {
     finally { clearTimeout(to); }
     if (!resp.ok) throw new Error(`HTTP ${resp.status} ao acessar a planilha.`);
     const wb = XLSX.read(await resp.arrayBuffer(), { type: 'array', cellDates: true });
-    const sheetName = wb.SheetNames.find(n => /moviment/i.test(n)) || wb.SheetNames[0];
+    const ehCC = n => /centro.*custo/i.test(n);
+    const sheetName = wb.SheetNames.find(n => /moviment/i.test(n)) || wb.SheetNames.find(n => !ehCC(n)) || wb.SheetNames[0];
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
+    const ccSheet = wb.SheetNames.find(ehCC);
+    try { processarCentrosCusto(ccSheet ? XLSX.utils.sheet_to_json(wb.Sheets[ccSheet], { defval: "" }) : []); }
+    catch (ccErr) { console.error('Centro de custo:', ccErr); ccMap = new Map(); }
     processarLinhasPlanilha(rows);
     recalcularEstoqueConsolidado();
 
@@ -710,6 +756,8 @@ function processarLinhasPlanilha(rawRows) {
   }).filter(m => m.cod || m.mov);
 
   movimentacoes.forEach(m => {
+    const c = resolverCC(m.cnpjCentroCusto);
+    m.ccKey = c.key; m.ccClass = c.classif; m.ccDesc = c.desc; m.ccLabel = c.label; m.ccBusca = c.busca; m.ccAchou = c.achou;
     if (!m.nomeProduto) m.nomeProduto = (m.cod && produtosNomeMap.get(m.cod)) || (m.cod ? `Produto ${m.cod}` : 'Sem descrição');
   });
   movimentacoes.sort((a, b) => {
@@ -717,7 +765,7 @@ function processarLinhasPlanilha(rawRows) {
     return (tb - ta) || (b.numInt - a.numInt) || (b.rowIndex - a.rowIndex);
   });
   if (typeof Fuse !== 'undefined') {
-    fuseExtrato = new Fuse(movimentacoes, { keys: ['cod','nomeProduto','num','documento','cnpjCentroCusto','tipo','observacao','deposito','depositoNome'], threshold: 0.3, ignoreLocation: true });
+    fuseExtrato = new Fuse(movimentacoes, { keys: ['cod','nomeProduto','num','documento','cnpjCentroCusto','ccClass','ccDesc','tipo','observacao','deposito','depositoNome'], threshold: 0.3, ignoreLocation: true });
   }
 }
 
@@ -904,7 +952,7 @@ function renderCostCenterChart() {
   movimentacoes.forEach(m => {
     if (!isSaida(m.mov) || isEstTotal(m.estado)) return;
     if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) return;
-    const cc = m.cnpjCentroCusto || 'Não informado';
+    const cc = m.ccLabel || 'Não informado';
     totals[cc] = (totals[cc] || 0) + m.qtd; grand += m.qtd;
   });
   const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 10), c = $('costCenterContainer');
@@ -994,7 +1042,7 @@ function displayProductDetails(query, porCodigo = false) {
       <td><span class="badge" style="background:${ent ? 'var(--cor-entrada)' : 'var(--cor-saida)'}">${esc(m.mov)}</span></td>
       <td class="fw-semibold">${esc(m.num)}</td><td>${esc(m.tipo)}</td><td class="small">${esc(m.estado)}</td><td>${esc(m.deposito)}</td>
       <td class="num fw-bold">${ent ? '+' : '−'}${formatQty(m.qtd)}</td>
-      <td class="small">${esc(m.documento || '-')}</td><td class="small text-muted">${esc(m.cnpjCentroCusto || '-')}</td></tr>`;
+      <td class="small">${esc(m.documento || '-')}</td><td class="small">${ccHtml(m)}</td></tr>`;
   }).join('') : `<tr><td colspan="9" class="text-center text-muted py-3">Sem movimentações neste depósito.</td></tr>`;
 }
 
@@ -1110,7 +1158,11 @@ function exportBlindCsv() {
 function getExtratoFiltrado() {
   const term = $('extratoSearchInput').value.trim(), tp = $('extratoTypeFilter').value;
   let base = movimentacoes;
-  if (term && fuseExtrato) base = fuseExtrato.search(term).map(r => r.item);
+  if (term) {
+    const porClass = /^\d+(\.\d+)+\.?$/.test(term) ? movimentacoes.filter(m => m.ccClass && m.ccClass.startsWith(term)) : [];
+    if (porClass.length) base = porClass;           // 02.001.001 traz o CC e todos os filhos
+    else if (fuseExtrato) base = fuseExtrato.search(term).map(r => r.item);
+  }
   return base.filter(m => (activeDepotFilter === 'ALL' || m.deposito === activeDepotFilter)
     && (tp === 'ALL' || (tp === 'E' ? isEntrada(m.mov) : isSaida(m.mov))));
 }
@@ -1128,21 +1180,20 @@ function renderExtratoTable() {
       <td class="text-center fw-bold">${esc(m.deposito)}</td><td class="text-muted">${esc(m.depositoNome)}</td>
       <td class="fw-bold t-ent">${esc(m.cod)}</td><td>${esc(m.nomeProduto)}</td><td>${esc(m.un)}</td>
       <td class="num fw-bold">${formatQty(m.qtd)}</td><td>${esc(m.documento || '-')}</td>
-      <td class="small">${esc(m.cnpjCentroCusto || '-')}</td>
+      <td class="small">${ccHtml(m)}</td>
       <td class="small text-muted" title="${esc(m.observacao)}">${esc(m.observacao || '-')}</td></tr>`;
   }).join('');
 }
 function exportarCsvExtrato() {
   const rows = getExtratoFiltrado();
   if (!rows.length) return showToast('Nada para exportar.', 'warning');
-  baixarCsv('extrato_movimentacoes.csv', [['Mov.','Nº','Data/Hora','Tipo','Estado','Depósito','Nome do depósito','Cód.','Produto','Un.','Qtd.','Documento','CNPJ / C. Custo','Observação'],
-    ...rows.map(m => [m.mov, m.num, m.dataHora, m.tipo, m.estado, m.deposito, m.depositoNome, m.cod, m.nomeProduto, m.un, csvN(m.qtd), m.documento, m.cnpjCentroCusto, m.observacao])]);
+  baixarCsv('extrato_movimentacoes.csv', [['Mov.','Nº','Data/Hora','Tipo','Estado','Depósito','Nome do depósito','Cód.','Produto','Un.','Qtd.','Documento','CNPJ / C. Custo (original)','C. Custo - Classificação','C. Custo - Descrição','Observação'],
+    ...rows.map(m => [m.mov, m.num, m.dataHora, m.tipo, m.estado, m.deposito, m.depositoNome, m.cod, m.nomeProduto, m.un, csvN(m.qtd), m.documento, m.cnpjCentroCusto, m.ccClass, m.ccDesc, m.observacao])]);
 }
 
 /* ---------- 5. consumo médio por centro de custo ---------- */
 const LIMITE_CONSUMO = 500, DIAS_MES = 30.4375;
 let consumoDados = [], consumoInfo = null, consumoAtalho = null;
-const ccDe = m => m.cnpjCentroCusto || 'Não informado';
 const pad2 = n => String(n).padStart(2, '0');
 const toInputDate = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const fmtData = d => d.toLocaleDateString('pt-BR');
@@ -1168,21 +1219,32 @@ function aplicarAtalhoConsumo(r) {
   marcarAtalhos();
   renderConsumoTabela();
 }
-// Lista de CCs/CNPJs vem das saídas válidas do depósito selecionado (ou de todos).
-function popularConsumoCC() {
-  const sel = $('consumoCC'), atual = sel.value || 'ALL', set = new Set();
+// Lista de CCs vem das saídas válidas do depósito selecionado (ou de todos); a digitação filtra a lista.
+let consumoCCLista = [];
+function reconstruirListaCC() {
+  const mapa = new Map();
   movimentacoes.forEach(m => {
     if (!isSaida(m.mov) || isEstTotal(m.estado)) return;
     if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) return;
-    set.add(ccDe(m));
+    if (!mapa.has(m.ccKey)) mapa.set(m.ccKey, { key: m.ccKey, label: m.ccLabel, classif: m.ccClass, busca: m.ccBusca });
   });
-  const lista = [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  sel.innerHTML = `<option value="ALL">Todos os C. Custo / CNPJ (${lista.length})</option>` +
-    lista.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  sel.value = (atual === 'ALL' || set.has(atual)) ? atual : 'ALL';
+  consumoCCLista = [...mapa.values()].sort((a, b) => (a.classif || '\uffff' + a.label).localeCompare(b.classif || '\uffff' + b.label, 'pt-BR', { numeric: true }));
+}
+function ccFiltrados() {
+  const toks = normBusca($('consumoCCBusca').value).split(/\s+/).filter(Boolean);
+  return toks.length ? consumoCCLista.filter(c => toks.every(t => c.busca.includes(t))) : consumoCCLista;
+}
+function popularConsumoCC(reconstruir = true) {
+  if (reconstruir) reconstruirListaCC();
+  const sel = $('consumoCC'), atual = sel.value || 'ALL', lista = ccFiltrados();
+  const digitado = $('consumoCCBusca').value.trim();
+  sel.innerHTML = `<option value="ALL">${digitado ? `Todos que combinam com "${esc(digitado)}"` : 'Todos os centros de custo'} (${lista.length})</option>` +
+    lista.map(c => `<option value="${esc(c.key)}">${esc(c.label)}</option>`).join('');
+  sel.value = lista.some(c => c.key === atual) ? atual : 'ALL';
 }
 function calcularConsumo() {
   const cc = $('consumoCC').value;
+  const ccPermitidos = (cc === 'ALL' && $('consumoCCBusca').value.trim()) ? new Set(ccFiltrados().map(c => c.key)) : null;
   const ini = parseInputDate($('consumoDe').value, false), fim = parseInputDate($('consumoAte').value, true);
   const q = $('consumoBusca').value.trim().toLowerCase(), modo = $('consumoModo').value;
   if (ini && fim && ini > fim) return { invalido: true, rows: [] };
@@ -1192,7 +1254,8 @@ function calcularConsumo() {
   for (const m of movimentacoes) {
     if (!m.cod || !isSaida(m.mov) || isEstTotal(m.estado)) continue;
     if (activeDepotFilter !== 'ALL' && m.deposito !== activeDepotFilter) continue;
-    if (cc !== 'ALL' && ccDe(m) !== cc) continue;
+    if (cc !== 'ALL' && m.ccKey !== cc) continue;
+    if (ccPermitidos && !ccPermitidos.has(m.ccKey)) continue;
     if (ini || fim) {
       if (!m.dataObj) continue;
       if (ini && m.dataObj < ini) continue;
@@ -1273,7 +1336,7 @@ function exportarCsvConsumo() {
   const modo = info.modo === 'RANGE' ? 'Meses do range' : 'Meses com consumo';
   baixarCsv(`consumo_medio_cc_${new Date().toISOString().slice(0, 10)}.csv`,
     [['Depósito','C. Custo / CNPJ','Período','Divisor média/mês','Cód.','Produto','Un.','Qtd. total','Requisições','Meses c/ consumo','Média / mês','Média / requisição'],
-     ...consumoDados.map(i => [scopeLabel(), cc === 'ALL' ? 'Todos' : cc, periodo, modo, i.cod, i.nomeProduto, i.un,
+     ...consumoDados.map(i => [scopeLabel(), cc === 'ALL' ? ($('consumoCCBusca').value.trim() ? `Filtro: ${$('consumoCCBusca').value.trim()}` : 'Todos') : ($('consumoCC').selectedOptions[0]?.text || cc), periodo, modo, i.cod, i.nomeProduto, i.un,
        csvN(i.qtd), i.req, i.mesesAtivos, csvN(Math.round(i.mediaMes * 1000) / 1000), csvN(Math.round(i.mediaReq * 1000) / 1000)])]);
 }
 
@@ -1314,6 +1377,7 @@ $('saldoFilterMode').addEventListener('change', renderStockPositionTable);
 $('extratoSearchInput').addEventListener('input', debounce(renderExtratoTable));
 $('extratoTypeFilter').addEventListener('change', renderExtratoTable);
 $('consumoCC').addEventListener('change', renderConsumoTabela);
+$('consumoCCBusca').addEventListener('input', debounce(() => { popularConsumoCC(false); renderConsumoTabela(); }, 200));
 $('consumoModo').addEventListener('change', renderConsumoTabela);
 $('consumoOrdem').addEventListener('change', renderConsumoTabela);
 $('consumoBusca').addEventListener('input', debounce(renderConsumoTabela));
