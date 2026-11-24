@@ -1208,7 +1208,7 @@ $('globalDepotSelect').addEventListener('change', () => {
   activeDepotFilter = $('globalDepotSelect').value;
   refreshAllViews();
   showToast(`Visualizando: ${scopeLabel()}`, 'primary');
-});
+}); 
 $('extratoSearchInput').addEventListener('input', debounce(renderExtratoTable));
 $('extratoTypeFilter').addEventListener('change', renderExtratoTable);
 $('consumoCC').addEventListener('change', renderConsumoTabela);
