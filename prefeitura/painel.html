@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-bs-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1920, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Painel Geral de Acompanhamento | Secretaria Municipal da Fazenda - Campo Largo</title>
 
 <!-- Bootstrap 5 & Icons (mesmo conjunto do despesas.html) -->
@@ -31,8 +31,9 @@
   --ok:#3ecf8e; --ko:#ff7a6b; --sol:#f0b429;
   --c-orc:#5b92f0; --c-emp:#2bb3c9; --c-liq:#e6ad2e; --c-pag:#34b27d;
 }
-html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; background:var(--fundo); font-family:var(--bs-body-font-family); color:var(--txt); -webkit-font-smoothing:antialiased; }
-#app { width:1920px; height:1080px; padding:12px 20px; display:flex; flex-direction:column; gap:12px; box-sizing:border-box; }
+html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:var(--fundo); font-family:var(--bs-body-font-family); color:var(--txt); -webkit-font-smoothing:antialiased; }
+/* Padrão: tela de 1920×1080. O script ajusta a escala e a altura para outras telas (modo TV) ou empilha tudo (modo celular) */
+#app { width:1920px; height:1080px; padding:12px 20px; display:flex; flex-direction:column; gap:12px; box-sizing:border-box; transform-origin:0 0; transform:scale(var(--escala,1)); }
 .text-success{ color:var(--ok) !important; } .text-danger{ color:var(--ko) !important; }
 
 .card{ border:1px solid var(--linha); box-shadow:none; border-radius:10px; background:var(--card); color:var(--txt); }
@@ -115,16 +116,16 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
 
 /* Atualização do dia: a tela treme e o cartão alterado pisca */
 @keyframes tremer {
-  0%,100% { transform:translate(0,0) rotate(0); }
-  8%  { transform:translate(-10px,4px)  rotate(-.25deg); }
-  16% { transform:translate(9px,-5px)   rotate(.25deg); }
-  24% { transform:translate(-8px,-3px) rotate(-.2deg); }
-  32% { transform:translate(8px,4px)    rotate(.2deg); }
-  40% { transform:translate(-6px,3px)   rotate(-.15deg); }
-  50% { transform:translate(6px,-3px)   rotate(.15deg); }
-  60% { transform:translate(-4px,2px); }
-  72% { transform:translate(3px,-2px); }
-  85% { transform:translate(-2px,1px); }
+  0%,100% { transform:scale(var(--escala,1)) translate(0,0) rotate(0); }
+  8%  { transform:scale(var(--escala,1)) translate(-10px,4px)  rotate(-.25deg); }
+  16% { transform:scale(var(--escala,1)) translate(9px,-5px)   rotate(.25deg); }
+  24% { transform:scale(var(--escala,1)) translate(-8px,-3px) rotate(-.2deg); }
+  32% { transform:scale(var(--escala,1)) translate(8px,4px)    rotate(.2deg); }
+  40% { transform:scale(var(--escala,1)) translate(-6px,3px)   rotate(-.15deg); }
+  50% { transform:scale(var(--escala,1)) translate(6px,-3px)   rotate(.15deg); }
+  60% { transform:scale(var(--escala,1)) translate(-4px,2px); }
+  72% { transform:scale(var(--escala,1)) translate(3px,-2px); }
+  85% { transform:scale(var(--escala,1)) translate(-2px,1px); }
 }
 #app.tremer { animation:tremer .9s cubic-bezier(.36,.07,.19,.97) 1; }
 @keyframes flash {
@@ -138,7 +139,7 @@ html, body { margin:0; padding:0; width:1920px; height:1080px; overflow:hidden; 
 .card[data-filtro]:hover, .card[data-filtro]:focus-visible { border-color:var(--c); outline:none; }
 .modal-bg { position:fixed; inset:0; z-index:10000; background:rgba(8,14,22,.62); display:none; align-items:center; justify-content:center; }
 .modal-bg.aberto { display:flex; }
-.modal-box { width:1780px; height:920px; background:var(--card); border:1px solid var(--linha); border-radius:14px; display:flex; flex-direction:column; box-shadow:0 24px 70px rgba(0,0,0,.45); overflow:hidden; }
+.modal-box { width:min(1780px, calc(100vw - 40px)); height:min(920px, calc(100vh - 40px)); background:var(--card); border:1px solid var(--linha); border-radius:14px; display:flex; flex-direction:column; box-shadow:0 24px 70px rgba(0,0,0,.45); overflow:hidden; }
 .modal-hd { display:flex; align-items:center; gap:18px; padding:16px 24px; border-bottom:1px solid var(--linha); }
 .modal-hd h2 { margin:0; font-size:21px; font-weight:600; color:var(--navy); display:flex; align-items:center; gap:10px; }
 .modal-hd h2::before { content:""; width:10px; height:10px; border-radius:3px; background:var(--c); }
@@ -170,6 +171,97 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
 .chart-card h3 { font-size:16px; font-weight:600; margin:0 0 6px; color:var(--navy); display:flex; align-items:center; gap:10px; }
 .chart-card h3 i { color:var(--mut) !important; font-size:16px; }
 .chart-wrap { position:relative; flex:1; min-height:0; }
+
+/* Sinal de conexão: verde = consulta ok · vermelho = não foi possível conectar */
+.sinal { flex:none; display:inline-block; width:11px; height:11px; border-radius:50%; background:var(--dot); }
+.sinal.ok { background:var(--ok); box-shadow:0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
+.sinal.erro { background:var(--ko); box-shadow:0 0 0 3px color-mix(in srgb, var(--ko) 22%, transparent); animation:piscar 1.6s ease-in-out infinite; }
+@keyframes piscar { 50% { opacity:.45; } }
+
+/* Botões do cabeçalho */
+.hdr-btns { display:flex; gap:10px; }
+.btn-tema i { display:inline-block; }
+.btn-tema:disabled { cursor:progress; }
+.btn-atualizar.girando i { animation:girar .9s linear infinite; }
+@keyframes girar { to { transform:rotate(360deg); } }
+
+/* ===== Modo celular / tablet / janelas estreitas (o script ativa com largura < 1200 px ou tela em pé) ===== */
+html[data-modo="movel"] { height:auto; min-height:100%; overflow-x:hidden; overflow-y:auto; }
+[data-modo="movel"] body { height:auto; min-height:100%; overflow:visible; }
+[data-modo="movel"] #app { width:auto; height:auto; min-height:100vh; padding:10px; gap:10px; transform:none; }
+[data-modo="movel"] .row-budget, [data-modo="movel"] .row-kpi, [data-modo="movel"] .row-hoje, [data-modo="movel"] .row-center, [data-modo="movel"] .row-news { flex:none; }
+[data-modo="movel"] .hdr { flex:none; grid-template-columns:1fr; height:auto; padding:14px 16px; gap:12px; }
+[data-modo="movel"] .hdr::before { top:12px; bottom:12px; }
+[data-modo="movel"] .brand { gap:12px; }
+[data-modo="movel"] .brasao-box, [data-modo="movel"] .brasao-svg { height:52px; }
+[data-modo="movel"] .brand h1 { font-size:19px; }
+[data-modo="movel"] .brand p { font-size:13px; }
+[data-modo="movel"] .weather { height:auto; border:0; border-top:1px solid var(--linha); border-bottom:1px solid var(--linha); padding:10px 0 18px; }
+[data-modo="movel"] .w-slide { gap:10px; }
+[data-modo="movel"] .w-slide .desc { white-space:normal; }
+[data-modo="movel"] .w-dots { bottom:5px; }
+[data-modo="movel"] .hdr-right { justify-content:space-between; gap:12px; }
+[data-modo="movel"] .clock { font-size:30px; }
+[data-modo="movel"] .date { font-size:13px; }
+[data-modo="movel"] .grid4 { grid-template-columns:repeat(2,1fr); }
+[data-modo="movel"] .stage, [data-modo="movel"] .stage.hoje { height:auto; gap:10px; }
+[data-modo="movel"] .stage .val { font-size:30px; }
+[data-modo="movel"] .stage.hoje .val { font-size:26px; }
+[data-modo="movel"] .kpi { height:auto; }
+[data-modo="movel"] .kpi .v { font-size:26px; }
+[data-modo="movel"] .sec-title { flex-wrap:wrap; row-gap:6px; }
+[data-modo="movel"] .row-center { grid-template-columns:1fr; }
+[data-modo="movel"] .chart-card { min-height:0; }
+[data-modo="movel"] .chart-card h3 { flex-wrap:wrap; }
+[data-modo="movel"] .chart-wrap { flex:none; height:320px; }
+[data-modo="movel"] .modal-box { width:calc(100vw - 12px); height:calc(100vh - 12px); border-radius:10px; }
+[data-modo="movel"] .modal-hd { flex-wrap:wrap; padding:12px 14px; gap:10px 12px; }
+[data-modo="movel"] .modal-hd h2 { font-size:18px; }
+[data-modo="movel"] .modal-x { margin-left:auto; }
+[data-modo="movel"] .modal-busca { order:5; flex:1 0 100%; width:auto; margin-left:0; }
+[data-modo="movel"] table.mt { min-width:980px; }
+@media (max-width:599px){
+  [data-modo="movel"] .grid4 { grid-template-columns:1fr; }
+  [data-modo="movel"] .brand h1 { font-size:17px; }
+  [data-modo="movel"] .news-lab { padding:0 12px; }
+}
+
+[hidden] { display:none !important; }
+
+/* Faixa de movimentos do dia (substitui as notícias) */
+.news-item { cursor:pointer; }
+.news-item:hover .tt { text-decoration:underline; }
+.news-win:hover .news-track { animation-play-state:paused; }
+.news-item .tp { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:2px 9px; border-radius:6px; color:var(--c); background:color-mix(in srgb, var(--c) 14%, var(--card)); align-self:center; }
+.news-item .vl { font-weight:600; color:var(--c); font-variant-numeric:tabular-nums; }
+.news-item.emp { --c:var(--c-emp); } .news-item.liq { --c:var(--c-liq); } .news-item.pago { --c:var(--c-pag); }
+
+/* Data clicável + seletor de data */
+.clock-box { position:relative; }
+.date-linha { display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:2px; }
+button.date { display:inline-flex; align-items:center; gap:8px; background:none; border:0; padding:1px 8px; margin:0; border-radius:6px; font:inherit; font-size:15px; text-transform:capitalize; color:var(--mut); cursor:pointer; }
+button.date:hover { background:var(--ic-bg); }
+button.date:focus-visible { outline:2px solid var(--azul); outline-offset:2px; }
+button.date.consulta { color:var(--azul); font-weight:600; }
+.chip-hoje { border:1px solid var(--azul); color:var(--azul); background:color-mix(in srgb, var(--azul) 10%, var(--card)); border-radius:999px; padding:1px 10px; font:inherit; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; gap:6px; align-items:center; }
+.date-pop { position:absolute; right:0; top:calc(100% + 8px); z-index:60; width:290px; padding:14px; background:var(--card); border:1px solid var(--linha); border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,.28); text-align:left; }
+.date-pop label { display:block; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:8px; }
+.date-pop input { width:100%; box-sizing:border-box; font:inherit; font-size:16px; padding:8px 10px; border:1px solid var(--linha); border-radius:8px; background:var(--fundo); color:var(--txt); }
+.date-pop-bt { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+.btn-sec, .btn-pri { font:inherit; font-size:14px; font-weight:600; padding:7px 14px; border-radius:8px; cursor:pointer; border:1px solid var(--linha); background:var(--card); color:var(--navy); }
+.btn-sec:hover { background:var(--ic-bg); }
+.btn-pri { background:var(--azul); border-color:var(--azul); color:#fff; }
+
+/* Detalhe de um movimento */
+.det-box { width:min(760px, calc(100vw - 24px)); max-height:min(860px, calc(100vh - 40px)); display:flex; flex-direction:column; background:var(--card); color:var(--txt); border:1px solid var(--linha); border-top:4px solid var(--c, var(--azul)); border-radius:14px; box-shadow:0 24px 70px rgba(0,0,0,.45); overflow:hidden; }
+.det-bd { overflow:auto; padding:4px 24px 18px; }
+.det-sec { font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--mut); margin:16px 0 4px; }
+.det-row { display:grid; grid-template-columns:190px 1fr; gap:12px; padding:7px 0; border-bottom:1px solid var(--linha2); font-size:15px; }
+.det-row .dr { color:var(--mut); }
+.det-row .dv { color:var(--txt); word-break:break-word; font-variant-numeric:tabular-nums; }
+.det-row.on .dv { color:var(--c); font-weight:600; font-size:18px; }
+.det-ft { padding:12px 24px; border-top:1px solid var(--linha); display:flex; justify-content:flex-end; }
+[data-modo="movel"] .det-row { grid-template-columns:120px 1fr; gap:8px; }
 </style>
 </head>
 <body>
@@ -203,10 +295,21 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
       <div class="w-dots" id="wDots"></div>
     </div>
     <div class="hdr-right">
-      <button id="btnTema" class="btn-tema" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema (tecla T)"><i class="bi bi-moon-stars-fill"></i></button>
+      <div class="hdr-btns">
+        <button id="btnTema" class="btn-tema" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema (tecla T)"><i class="bi bi-moon-stars-fill"></i></button>
+        <button id="btnAtualizar" class="btn-tema btn-atualizar" type="button" aria-label="Atualizar dados agora" title="Atualizar dados agora (tecla R)"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
       <div class="clock-box">
         <div class="clock" id="clock">00:00:00</div>
-        <div class="date" id="date">--</div>
+        <div class="date-linha">
+          <button id="btnHoje" class="chip-hoje" type="button" hidden title="Voltar para a data de hoje"><i class="bi bi-arrow-return-left"></i>Hoje</button>
+          <button id="date" class="date" type="button" aria-haspopup="dialog" aria-expanded="false" title="Clique para consultar outra data"><i class="bi bi-calendar3"></i><span id="dateTxt">--</span></button>
+        </div>
+        <div class="date-pop" id="datePop" hidden role="dialog" aria-label="Consultar outra data">
+          <label for="dataRef">Consultar outra data</label>
+          <input type="date" id="dataRef">
+          <div class="date-pop-bt"><button type="button" id="dpHoje" class="btn-sec">Hoje</button><button type="button" id="dpOk" class="btn-pri">Consultar</button></div>
+        </div>
         <div class="upd"><i class="bi bi-clock-history me-1"></i>Última atualização: <span id="lastUpdate">--</span></div>
       </div>
     </div>
@@ -214,10 +317,8 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
 
   <!-- 2. VISÃO ORÇAMENTÁRIA -->
   <section class="row-budget">
-    <div class="sec-title"><i class="bi bi-bank2"></i>Execução da Despesa Pública · Exercício <span id="ano"></span>
-      <span id="tagDespesa" class="tag-sim">carregando...</span>
-      <span id="tagOrcado" class="tag-sim">Orçado: carregando...</span>
-      <span class="tag-sim tag-org">Órgão: Poder Executivo Municipal</span>
+    <div class="sec-title"><i class="bi bi-bank2"></i>Execução da Despesa Pública · Exercício <span id="ano"></span><span id="ateBud"></span>
+      <span class="sinal" id="tagDespesa" role="img" aria-label="Carregando" title="Carregando…"></span>
     </div>
     <div class="grid4">
       <div class="card pad stage" style="--c:var(--c-orc)">
@@ -245,12 +346,12 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
 
   <!-- 3. KPIs -->
   <section class="row-kpi">
-    <div class="sec-title"><i class="bi bi-graph-up"></i>Indicadores Tributários e de Receita · Exercício <span id="ano2"></span> <span class="tag-sim" id="tagKpi">carregando...</span></div>
+    <div class="sec-title"><i class="bi bi-graph-up"></i>Indicadores Tributários e de Receita · Exercício <span id="ano2"></span><span id="ateKpi"></span> <span class="sinal" id="tagKpi" role="img" aria-label="Carregando" title="Carregando…"></span></div>
     <div class="grid4">
       <div class="card pad kpi">
-        <i class="bi bi-calendar-check ic"></i>
-        <div class="kpi-body"><div class="t">Receita do Mês</div><div class="v" id="kMes"></div>
-          <div class="s"><span class="fw-bold" id="kMesVar"></span> <span id="kMesSub">vs mês anterior</span></div></div>
+        <i class="bi bi-file-earmark-bar-graph ic"></i>
+        <div class="kpi-body"><div class="t">Orçamento da Receita</div><div class="v" id="kOrc"></div>
+          <div class="s">Receitas brutas − deduções</div></div>
       </div>
       <div class="card pad kpi">
         <i class="bi bi-cash-stack ic"></i>
@@ -258,9 +359,10 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
           <div class="s" id="kAnoSub">Acumulado no exercício</div></div>
       </div>
       <div class="card pad kpi">
-        <i class="bi bi-file-earmark-bar-graph ic"></i>
-        <div class="kpi-body"><div class="t">Orçamento da Receita</div><div class="v" id="kOrc"></div>
-          <div class="s">Receitas brutas − deduções</div></div>
+        <i class="bi bi-calendar-check ic"></i>
+        <div class="kpi-body"><div class="t" id="kMesT">Receita do Mês</div><div class="v" id="kMes"></div>
+          <div class="s"><span class="fw-bold" id="kMesVar"></span> <span id="kMesSub">vs ritmo do mês anterior</span></div>
+          <div class="s" id="kMesCalc"></div></div>
       </div>
       <div class="card pad kpi" id="cardMeta">
         <i class="bi bi-bullseye ic" id="icMeta"></i>
@@ -275,11 +377,11 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
   <section class="row-center">
     <div class="card chart-card">
       <h3><i class="bi bi-bar-chart-line"></i>Arrecadação × Execução Orçamentária (R$ milhões)
-        <span class="tag-live" id="tagGraf">Empenhado/Pago: API</span><span class="tag-sim" id="tagArrec">Receita: carregando...</span></h3>
+        <span class="sinal" id="tagGraf" role="img" aria-label="Carregando" title="Carregando…"></span></h3>
       <div class="chart-wrap"><canvas id="chartMain"></canvas></div>
     </div>
     <div class="card chart-card">
-      <h3><i class="bi bi-pie-chart"></i>Composição da Receita por Fonte <span class="tag-sim" id="tagFonte">carregando...</span></h3>
+      <h3><i class="bi bi-pie-chart"></i>Composição da Receita por Fonte <span class="sinal" id="tagFonte" role="img" aria-label="Carregando" title="Carregando…"></span></h3>
       <div class="chart-wrap"><canvas id="chartPie"></canvas></div>
     </div>
   </section>
@@ -287,8 +389,9 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
   <!-- 4a. MOVIMENTO DO DIA (empenhado / liquidado / pago de hoje) -->
   <section class="row-hoje">
     <div class="sec-title"><i class="bi bi-lightning-charge"></i>Movimento do Dia · <span id="hojeData">--/--/----</span>
-      <span id="tagHoje" class="tag-sim">carregando...</span>
-      <span class="tag-sim tag-org">Atualiza a cada <span id="hojeCada">10</span> min · última leitura: <span id="hojeUpd">--</span></span>
+      <span class="sinal" id="tagHoje" role="img" aria-label="Carregando" title="Carregando…"></span>
+      <span class="tag-sim tag-org" id="tagCada">Atualiza a cada <span id="hojeCada">10</span> min · última leitura: <span id="hojeUpd">--</span></span>
+      <span class="tag-sim tag-org" id="tagHist" hidden>Consulta histórica · dados de <span id="histData"></span></span>
     </div>
     <div class="grid4">
       <div class="card pad stage hoje" data-filtro="todos" tabindex="0" role="button" title="Clique para ver os registros" style="--c:var(--c-orc)">
@@ -297,28 +400,28 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
         <div class="sub" id="hRegSub">&nbsp;</div>
       </div>
       <div class="card pad stage hoje" data-filtro="emp" tabindex="0" role="button" title="Clique para ver os empenhos" style="--c:var(--c-emp)">
-        <div class="lbl"><span>Empenhado hoje</span><span class="pill" id="hEmpDelta"></span></div>
+        <div class="lbl"><span id="lEmp">Empenhado hoje</span><span class="pill" id="hEmpDelta"></span></div>
         <div class="val" id="hEmp">—</div>
         <div class="sub" id="hEmpSub">&nbsp;</div>
       </div>
       <div class="card pad stage hoje" data-filtro="liq" tabindex="0" role="button" title="Clique para ver as liquidações" style="--c:var(--c-liq)">
-        <div class="lbl"><span>Liquidado hoje</span><span class="pill" id="hLiqDelta"></span></div>
+        <div class="lbl"><span id="lLiq">Liquidado hoje</span><span class="pill" id="hLiqDelta"></span></div>
         <div class="val" id="hLiq">—</div>
         <div class="sub" id="hLiqSub">&nbsp;</div>
       </div>
       <div class="card pad stage hoje" data-filtro="pago" tabindex="0" role="button" title="Clique para ver os pagamentos" style="--c:var(--c-pag)">
-        <div class="lbl"><span>Pago hoje</span><span class="pill" id="hPagDelta"></span></div>
+        <div class="lbl"><span id="lPag">Pago hoje</span><span class="pill" id="hPagDelta"></span></div>
         <div class="val" id="hPag">—</div>
         <div class="sub" id="hPagSub">&nbsp;</div>
       </div>
     </div>
   </section>
 
-  <!-- 4b. NOTÍCIAS (faixa rolante, fim da página) -->
+  <!-- 4b. MOVIMENTOS DO DIA (faixa rolante, fim da página) -->
   <section class="row-news">
     <div class="card news">
-      <div class="news-lab"><i class="bi bi-newspaper"></i>Notícias <span class="tag-sim" id="tagNews">carregando...</span></div>
-      <div class="news-win"><div class="news-track parado" id="newsTrack"><span class="news-msg">Carregando notícias…</span></div></div>
+      <div class="news-lab"><i class="bi bi-activity"></i>Movimentos do dia <span class="sinal" id="tagNews" role="img" aria-label="Carregando" title="Carregando…"></span></div>
+      <div class="news-win"><div class="news-track parado" id="newsTrack"><span class="news-msg">Carregando movimentos do dia…</span></div></div>
     </div>
   </section>
 
@@ -337,16 +440,26 @@ table.mt { width:100%; border-collapse:collapse; font-size:15px; font-variant-nu
   </div>
 </div>
 
+<!-- POP-UP: detalhe de um movimento (clique na faixa) -->
+<div class="modal-bg" id="modalDet" aria-hidden="true">
+  <div class="det-box" role="dialog" aria-modal="true" aria-labelledby="dTitulo" id="dBox">
+    <div class="modal-hd">
+      <h2 id="dTitulo">Movimento</h2>
+      <button class="modal-x" id="dFechar" type="button" aria-label="Fechar" style="margin-left:auto"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="det-bd" id="dCorpo"></div>
+    <div class="det-ft"><button type="button" class="btn-sec" id="dVer">Ver todos os registros</button></div>
+  </div>
+</div>
+
 <script>
 /* =====================================================
    CONFIGURAÇÃO
    ===================================================== */
 const API_DESPESAS = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas";
 const API_ORCADAS  = "https://campolargo.atende.net/api/WCPDadosAbertos/despesasOrcadas";
-/* Notícias: feed RSS do Google Notícias (Campo Largo, Paraná) */
-const NOTICIAS_URL        = "https://news.google.com/rss/search?hl=pt-BR&gl=BR&ceid=BR:pt-419&q=Campo+Largo+Parana&when:7d";
-const NOTICIAS_PROXIES    = ["https://api.allorigins.win/raw?url=", "https://corsproxy.io/?url="];   // usados só se a busca direta for bloqueada (CORS); use [] para desativar
-const NOTICIAS_REFRESH_MIN = 10, NOTICIAS_MAX = 20, NOTICIAS_PX_S = 70;
+/* Faixa de movimentos do dia: máximo de itens (maiores valores primeiro) e velocidade da rolagem */
+const FAIXA_MAX = 150, FAIXA_PX_S = 90;
 const API_RECEITAS_ORC = "https://campolargo.atende.net/api/WCPDadosAbertos/receitasOrcadas";
 const API_RECEITAS = "https://campolargo.atende.net/api/WCPDadosAbertos/receitas";
 /* Contas do FAPEN (mesma lista do receitas.html): o Poder Executivo = todas as contas FORA desta lista */
@@ -358,7 +471,8 @@ const ORGAO_FILTRO = "PODER EXECUTIVO MUNICIPAL DE CAMPO LARGO - PR";
 const normTxt = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toUpperCase();
 const soExecutivo = lista => lista.filter(i => normTxt(i.orgaoDescricao) === normTxt(ORGAO_FILTRO));
 const CLIMA_URL = "https://api.open-meteo.com/v1/forecast?latitude=-25.4595&longitude=-49.5279&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=4&timezone=America%2FSao_Paulo";
-const REFRESH_DADOS_MIN = 10;   // atualização das despesas
+const REFRESH_DADOS_MIN  = 10;   // empenhado/liquidado/pago + receita do mês e anual (juntos)
+const REFRESH_ORCADO_MIN = 60;   // orçado da despesa e orçado da receita
 const REFRESH_HOJE_MIN  = 10;   // movimento do dia (empenhado/liquidado/pago de hoje)
 const REFRESH_CLIMA_MIN = 20;
 const CLIMA_ROTACAO_S   = 8;    // segundos entre hoje e cada dia da previsão
@@ -383,6 +497,7 @@ const brlCompacto = v => v >= 1e9 ? 'R$ '+(v/1e9).toFixed(2).replace('.',',')+' 
 const pct = v => (isFinite(v)?v:0).toFixed(1).replace('.',',')+'%';
 const pad2 = n => String(n).padStart(2,'0');
 const cv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const MOVEL = () => document.documentElement.dataset.modo === 'movel';
 const temaAtual = () => document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
 const paletaPie = () => temaAtual()==='dark' ? ['#7fa6ea','#2f6fdb','#1d4e9e','#2bb3c9','#e6ad2e','#6b7686'] : ['#0b2f57','#2f6fdb','#7fa6ea','#0f8fa3','#d39a1c','#b8bec9'];
 const dataBR = d => `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
@@ -396,25 +511,47 @@ function numero(valor){
   const n = Number(t); return Number.isFinite(n) ? n : 0;
 }
 
-/* Agendador: roda a cada N min; se a tarefa devolver false (erro), tenta de novo em 30 s, 1, 2 e 5 min (máx.) */
+/* Agendador: roda a cada N min; se a tarefa devolver false (erro), tenta de novo em 30 s, 1, 2 e 5 min (máx.).
+   Devolve { agora } para forçar uma execução imediata (botão "Atualizar dados agora"). */
 function agendar(fn, minutos, rotulo){
-  let falhas = 0;
-  const rodar = async () => {
+  let falhas = 0, timer = null, atual = null;
+  const ciclo = async () => {
     let ok = false;
     try{ ok = await fn(); }catch(e){ console.warn(rotulo+': erro inesperado', e); }
     falhas = ok ? 0 : falhas+1;
     const espera = ok ? minutos*60000 : Math.min(30000*Math.pow(2, falhas-1), 5*60000);
     if(!ok) console.warn(`${rotulo}: nova tentativa em ${Math.round(espera/1000)} s`);
-    setTimeout(rodar, espera);
+    timer = setTimeout(rodar, espera);
+    atual = null;
+    return ok;
   };
+  const rodar = () => { if(atual) return atual; clearTimeout(timer); atual = ciclo(); return atual; };
   rodar();
+  const refazer = async () => { if(atual) await atual; return rodar(); };   // espera a execução em curso e roda de novo (ex.: mudou a data)
+  return { agora: rodar, refazer };
 }
+
+/* Sinal de conexão (bolinha): verde = consulta ok · vermelho = não foi possível conectar; o motivo fica no texto ao passar o mouse */
+function sinal(id, ok, detalhe){
+  const el = $(id); if(!el) return;
+  el.className = 'sinal ' + (ok ? 'ok' : 'erro');
+  const txt = (ok ? 'Conectado' : 'Sem conexão') + (detalhe ? ' · '+detalhe : '');
+  el.title = txt; el.setAttribute('aria-label', txt);
+}
+
+/* Data consultada: null = hoje (acompanha o relógio); Date = consulta histórica escolhida no cabeçalho */
+let DATA_REF = null;
+const hojeZero = () => { const t = new Date(); t.setHours(0,0,0,0); return t; };
+const dataRef = () => DATA_REF ? new Date(DATA_REF) : hojeZero();
+const historico = () => DATA_REF !== null;
+/* chave de cache do mês; na consulta histórica o mês parcial (até a data) não pode se misturar ao mês completo */
+const chaveMes = (pref, ano, m) => { const R = dataRef(); const parcial = historico() && ano === R.getFullYear() && m === R.getMonth() && R.getDate() < new Date(ano, m+1, 0).getDate(); return `${pref}:${ano}-${m}`+(parcial ? '@'+R.getDate() : ''); };
 
 /* Relógio */
 function tick(){
   const n = new Date();
   $('clock').textContent = n.toLocaleTimeString('pt-BR');
-  $('date').textContent = n.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  $('dateTxt').textContent = (historico() ? DATA_REF : n).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 }
 setInterval(tick,1000); tick();
 
@@ -467,19 +604,21 @@ async function apiGet(url, tentativas=API_TENTATIVAS){
 }
 
 /* Cache local (localStorage): meses encerrados não mudam a cada atualização → evita novas requisições e o HTTP 429 */
-const CACHE_PREFIXO = 'fzcl1:'; let _cacheVelho = 0;
+const CACHE_PREFIXO = 'fzcl1:';
+const _velhos = new Set();   // chaves em que a consulta falhou e o cache antigo foi usado
+const velhoCom = (...pref) => [..._velhos].some(k => pref.some(p => k.startsWith(p)));
 function cacheGet(k, ttl, ignoraTtl){ try{ const o = JSON.parse(localStorage.getItem(CACHE_PREFIXO+k)); if(o && (ignoraTtl || Date.now()-o.t < ttl)) return o.v; }catch(e){} return null; }
 function cacheSet(k, v){ try{ localStorage.setItem(CACHE_PREFIXO+k, JSON.stringify({ t:Date.now(), v })); }catch(e){} }
 async function comCache(k, ttl, fn){
-  const c = cacheGet(k, ttl); if(c !== null) return c;
-  try{ const v = await fn(); cacheSet(k, v); return v; }
-  catch(e){ const velho = cacheGet(k, 0, true); if(velho !== null){ _cacheVelho++; console.warn('usando cache antigo de', k, e); return velho; } throw e; }
+  const c = cacheGet(k, ttl); if(c !== null){ _velhos.delete(k); return c; }
+  try{ const v = await fn(); cacheSet(k, v); _velhos.delete(k); return v; }
+  catch(e){ const velho = cacheGet(k, 0, true); if(velho !== null){ _velhos.add(k); console.warn('usando cache antigo de', k, e); return velho; } throw e; }
 }
-const TTL_MES_FECHADO = 6*3600*1000, TTL_ORCADO = 3600*1000;
-const ttlMes = (ano, m) => { const h=new Date(); return (ano<h.getFullYear() || m<h.getMonth()) ? TTL_MES_FECHADO : 0; };  // mês atual: sempre consulta
+const TTL_MES_FECHADO = 6*3600*1000, TTL_ORCADO = 0;   // orçado: sempre consulta (a cada 1 h); o cache só serve de reserva se a API falhar
+const ttlMes = (ano, m) => { if(historico()) return TTL_MES_FECHADO; const h=new Date(); return (ano<h.getFullYear() || m<h.getMonth()) ? TTL_MES_FECHADO : 0; };  // mês atual: sempre consulta
 const _msg = e => String(e && e.message || e).slice(0,70);
 
-const limitaHoje = d => { const t=new Date(); t.setHours(0,0,0,0); return d>t ? t : d; };  // algumas consultas recusam dataFinal futura
+const limitaHoje = d => { const t = dataRef(); return d>t ? t : d; };   // limita à data consultada (hoje ou a escolhida)  // algumas consultas recusam dataFinal futura
 async function consultarDespesas(ini, fim){
   const url = `${API_DESPESAS}?dataInicial=${dataBR(ini)}&dataFinal=${dataBR(limitaHoje(fim))}`;
   const json = { retorno: await apiGet(url) };
@@ -488,7 +627,7 @@ async function consultarDespesas(ini, fim){
 
 /* Despesas orçadas (mesmo endpoint do despesasorcadas.html), filtradas pelo Poder Executivo */
 async function consultarOrcado(){
-  const ano = new Date().getFullYear();
+  const ano = dataRef().getFullYear();
   return comCache('orcDesp:'+ano, TTL_ORCADO, async () => {
   const tenta = d => apiGet(`${API_ORCADAS}?dataFinal=${dataBR(d)}`);
   let retorno;
@@ -509,7 +648,7 @@ function liquida(lista, campo){
 
 /* Receita orçada do exercício (receitasOrcadas), somente Poder Executivo */
 async function consultarReceitaOrcada(){
-  const ano = new Date().getFullYear();
+  const ano = dataRef().getFullYear();
   return comCache('orcRec:'+ano, TTL_ORCADO, async () => {
   const tenta = d => apiGet(`${API_RECEITAS_ORC}?dataFinal=${dataBR(d)}`);
   let retorno;
@@ -542,16 +681,22 @@ function resumoReceita(lista){
 }
 
 async function carregarReceitas(){
-  const hoje = new Date(), ano = hoje.getFullYear(), mAtual = hoje.getMonth();
+  const hoje = dataRef(), ano = hoje.getFullYear(), mAtual = hoje.getMonth();
   const reqs = [];
   for(let m=0; m<=mAtual; m++){
-    reqs.push(comCache(`rec:${ano}-${m}`, ttlMes(ano,m), async () => resumoReceita(await consultarReceitas(new Date(ano,m,1), new Date(ano,m+1,0)))));
+    reqs.push(comCache(chaveMes('rec', ano, m), ttlMes(ano,m), async () => resumoReceita(await consultarReceitas(new Date(ano,m,1), new Date(ano,m+1,0)))));
   }
   const res = await Promise.allSettled(reqs);
   const falhas = res.filter(x=>x.status==='rejected');
   if(falhas.length === res.length) throw falhas[0].reason;
   const resumos = res.map(x => x.status==='fulfilled' ? x.value : { liq:0, grupos:{} });
   const meses = resumos.map(r => r.liq);
+  /* mês anterior (base do ritmo diário); em janeiro, busca dezembro do ano anterior */
+  let mesAnt = mAtual > 0 ? meses[mAtual-1] : null;
+  if(mAtual === 0){
+    try{ mesAnt = (await comCache(`rec:${ano-1}-11`, TTL_MES_FECHADO, async () => resumoReceita(await consultarReceitas(new Date(ano-1,11,1), new Date(ano-1,11,31))))).liq; }
+    catch(e){ mesAnt = null; }
+  }
   /* composição: junta os grupos de todos os meses */
   const grupos = {};
   resumos.forEach(r => Object.values(r.grupos).forEach(g=>{
@@ -563,11 +708,12 @@ async function carregarReceitas(){
   const top = ord.slice(0, FONTE_TOP).map(g=>({ label:(g.desc||g.cod).replace(/\s+-\s+principal$/i,'').trim()+' ('+g.cod+')', valor:g.total }));
   const resto = ord.slice(FONTE_TOP).reduce((s,g)=>s+g.total,0);
   if(resto>0) top.push({ label:'Outras', valor:resto });
-  return { meses, fontes:top, ao_vivo:true, falhas:falhas.length, orcada:null, orcadaVivo:false };
+  return { meses, fontes:top, ao_vivo:true, falhas:falhas.length, orcada:null, orcadaVivo:false,
+    mesAnt, diasMesAnt:new Date(ano, mAtual, 0).getDate(), ref:{ dia:hoje.getDate(), mes:mAtual, ano } };
 }
 
 function receitasFallback(){
-  const n = new Date().getMonth()+1;
+  const n = dataRef().getMonth()+1;
   return { meses: Array(n).fill(0), fontes:[], ao_vivo:false, orcada:0, orcadaVivo:false };
 }
 
@@ -584,10 +730,10 @@ function somar(lista){
 
 /* Busca mês a mês (Jan..mês atual) e consolida o ano */
 async function carregarDespesas(){
-  const hoje = new Date(), ano = hoje.getFullYear(), mAtual = hoje.getMonth();
+  const hoje = dataRef(), ano = hoje.getFullYear(), mAtual = hoje.getMonth();
   const reqs = [];
   for(let m=0; m<=mAtual; m++){
-    reqs.push(comCache(`desp:${ano}-${m}`, ttlMes(ano,m), async () => somar(await consultarDespesas(new Date(ano,m,1), new Date(ano,m+1,0)))));
+    reqs.push(comCache(chaveMes('desp', ano, m), ttlMes(ano,m), async () => somar(await consultarDespesas(new Date(ano,m,1), new Date(ano,m+1,0)))));
   }
   const res = await Promise.allSettled(reqs);
   const falhas = res.filter(x=>x.status==='rejected');
@@ -599,7 +745,7 @@ async function carregarDespesas(){
 }
 
 function despesasFallback(){
-  const n = new Date().getMonth()+1;
+  const n = dataRef().getMonth()+1;
   const meses = Array.from({length:n}, ()=>({ emp:0, liq:0, pago:0 }));
   return { total:{ emp:0, anu:0, liq:0, ret:0, pago:0, n:0, credores:0 }, meses, ao_vivo:false, orcado:0, orcadoVivo:false };
 }
@@ -614,7 +760,8 @@ function renderDespesas(d){
   const orc = d.orcado || 0;
   const dv = (a,b) => b>0 ? a/b*100 : 0;
   const pEmp = dv(t.emp,orc), pLiq = dv(t.liq,t.emp), pPag = dv(t.pago,t.liq);
-  $('ano').textContent = new Date().getFullYear();
+  $('ano').textContent = dataRef().getFullYear();
+  $('ateBud').textContent = historico() ? ' · até '+dataBR(dataRef()) : '';
   $('orcado').textContent = brlCompacto(orc);
   $('empenhado').textContent = brlCompacto(t.emp);
   $('liquidado').textContent = brlCompacto(t.liq);
@@ -629,12 +776,6 @@ function renderDespesas(d){
   $('bPag').textContent = pct(pPag)+' do Liquidado';
   $('pEmp').style.width = Math.min(pEmp,100)+'%'; $('pLiq').style.width = Math.min(pLiq,100)+'%'; $('pPag').style.width = Math.min(pPag,100)+'%';
 
-  const tag = $('tagDespesa'), tg = $('tagGraf');
-  const to = $('tagOrcado');
-  if(d.orcadoVivo){ to.className='tag-live'; to.textContent='Orçado: API ao vivo'; } else { to.className='tag-sim'; to.textContent = d.orcado>0 ? 'Orçado: última leitura · nova tentativa em instantes' : 'Orçado: API indisponível · R$ 0,00'; }
-  if(d.ao_vivo){ tag.className='tag-live'; tag.textContent='Empenhado/Liquidado/Pago: API ao vivo'; tg.className='tag-live'; tg.textContent='Empenhado/Pago: API ao vivo'; }
-  else if(d.antigo){ tag.className='tag-sim'; tag.textContent='API indisponível · exibindo última leitura · nova tentativa em instantes'; tg.className='tag-sim'; tg.textContent='Despesas: última leitura · nova tentativa em instantes'; }
-  else { tag.className='tag-sim'; tag.textContent='API indisponível · '+(d.erro||'')+' · R$ 0,00'; tg.className='tag-sim'; tg.textContent='Despesas: API indisponível · 0'; }
 }
 
 /* ---------- valor por extenso (pt-BR) + tooltip ---------- */
@@ -688,7 +829,7 @@ function setExtPct(elId, p){ const c=$(elId).closest('.card'); c.dataset.num = p
   const mover = e => { const w=tip.offsetWidth, h=tip.offsetHeight;
     let x=e.clientX+18, y=e.clientY+18; if(x+w>innerWidth-8) x=e.clientX-w-18; if(y+h>innerHeight-8) y=e.clientY-h-18;
     tip.style.left=Math.max(8,x)+'px'; tip.style.top=Math.max(8,y)+'px'; };
-  document.addEventListener('mouseover', e=>{ const c=e.target.closest('[data-extenso]'); if(!c){ tip.style.display='none'; return; }
+  document.addEventListener('mouseover', e=>{ if(window.matchMedia('(hover: none)').matches) return; const c=e.target.closest('[data-extenso]'); if(!c){ tip.style.display='none'; return; }
     tip.innerHTML='<div style="font-weight:800;font-size:24px">'+c.dataset.num+'</div><div style="opacity:.92">'+c.dataset.extenso.charAt(0).toUpperCase()+c.dataset.extenso.slice(1)+'</div>';
     tip.style.display='block'; mover(e); });
   document.addEventListener('mousemove', e=>{ if(tip.style.display==='block') mover(e); });
@@ -696,84 +837,51 @@ function setExtPct(elId, p){ const c=$(elId).closest('.card'); c.dataset.num = p
 })();
 
 /* =====================================================
-   NOTÍCIAS (faixa rolante)
+   FAIXA DE MOVIMENTOS DO DIA (substitui as notícias)
    ===================================================== */
 const escN = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-async function buscarTexto(url){
-  const ctl = new AbortController(), to = setTimeout(()=>ctl.abort(), 25000);
-  try{
-    const resp = await fetch(url, { signal:ctl.signal, cache:'no-store' });
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    return await resp.text();
-  } finally { clearTimeout(to); }
-}
-function parseNoticias(txt){
-  const doc = new DOMParser().parseFromString(txt, 'text/xml');
-  if(doc.querySelector('parsererror')) throw new Error('feed inválido');
-  const itens = [...doc.querySelectorAll('item, entry')].map(it => {
-    const q = s => { const e = it.querySelector(s); return e ? (e.textContent||'').trim() : ''; };
-    let titulo = q('title'), fonte = q('source');
-    if(fonte && titulo.endsWith(' - '+fonte)) titulo = titulo.slice(0, -(fonte.length+3)).trim();   // Google: "Título - Fonte"
-    else { const m = titulo.match(/^(.*) - ([^-]{2,40})$/); if(m){ titulo = m[1].trim(); fonte = fonte || m[2].trim(); } }
-    const t = Date.parse(q('pubDate') || q('updated') || q('published'));
-    return { titulo, fonte, t: isFinite(t) ? t : 0, link: q('link') };
-  }).filter(n => n.titulo.length >= 8);
-  const vistos = new Set();
-  return itens.sort((a,b)=>b.t-a.t).filter(n => !vistos.has(n.titulo) && vistos.add(n.titulo)).slice(0, NOTICIAS_MAX)
-    .map(n => ({ titulo:n.titulo, fonte:n.fonte, link:n.link, data: n.t ? new Date(n.t).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '' }));
-}
-
-let _newsSig = '';
-function renderNoticias(lista, estado, motivo){
-  const tag = $('tagNews'), tr = $('newsTrack');
-  tag.className = estado==='ao vivo' ? 'tag-live' : 'tag-sim';
-  tag.textContent = estado==='ao vivo' ? 'Google Notícias · ao vivo' : (estado==='cache' ? 'cache · '+motivo : 'indisponível · '+motivo);
-  if(!lista.length){
-    _newsSig = '';
-    tr.className = 'news-track parado';
-    tr.innerHTML = '<span class="news-msg">Notícias indisponíveis no momento · nova tentativa automática em '+NOTICIAS_REFRESH_MIN+' min</span>';
+/* Faixa rolante: empenhos, liquidações e pagamentos do dia (maiores valores primeiro); clique abre o detalhe */
+const TIPOS_MOV = {
+  emp:  { nome:'Empenhado', col:'valorEmpenhado',  cor:'--c-emp' },
+  liq:  { nome:'Liquidado', col:'valorLiquidado',  cor:'--c-liq' },
+  pago: { nome:'Pago',      col:'valorPago',       cor:'--c-pag' }
+};
+let FAIXA = [], _faixaSig = '';
+const corta = (s, n) => { s = String(s ?? '').trim(); return s.length > n ? s.slice(0, n-1)+'…' : s; };
+function renderFaixa(lista){
+  const tr = $('newsTrack'), it = [];
+  lista.forEach(reg => Object.entries(TIPOS_MOV).forEach(([tipo, c]) => { const v = numero(reg[c.col]); if(v > 0) it.push({ reg, tipo, valor:v }); }));
+  it.sort((a,b) => b.valor - a.valor);
+  FAIXA = it.slice(0, FAIXA_MAX);
+  if(!FAIXA.length){
+    _faixaSig = ''; tr.className = 'news-track parado'; tr.style.animation = '';
+    tr.innerHTML = '<span class="news-msg">'+(historico() ? 'Nenhum empenho, liquidação ou pagamento registrado nesta data.' : 'Nenhum empenho, liquidação ou pagamento registrado hoje até o momento.')+'</span>';
     return;
   }
-  const sig = JSON.stringify(lista);
-  if(sig === _newsSig) return;           // sem mudança: não reinicia a rolagem
-  _newsSig = sig;
-  const un = lista.map(n => `<span class="news-item">${n.data?`<span class="dt">${escN(n.data)}</span>`:''}<span class="tt">${escN(n.titulo)}</span>${n.fonte?`<span class="fn">${escN(n.fonte)}</span>`:''}</span>`).join('');
-  const largura = $('newsTrack').parentElement.clientWidth || 1500;
+  const sig = FAIXA.map(x => x.tipo+x.valor+(x.reg.nomeCredor || '')).join('|');
+  if(sig === _faixaSig) return;          // sem mudança: não reinicia a rolagem
+  _faixaSig = sig;
+  const un = FAIXA.map((x,k) => `<span class="news-item ${x.tipo}" data-k="${k}" role="button" title="Clique para ver mais"><span class="tp">${TIPOS_MOV[x.tipo].nome}</span><span class="fn">${escN(corta(mUnidade(x.reg), 36))}</span><span class="tt">${escN(corta(x.reg.nomeCredor || '—', 44))}</span><span class="vl">${brl2(x.valor)}</span></span>`).join('');
+  const largura = tr.parentElement.clientWidth || 1500;
   tr.className = 'news-track'; tr.style.animation = 'none';
   tr.innerHTML = '<span class="news-meia">'+un+'</span>';
-  let w = tr.firstChild.getBoundingClientRect().width || 1, k = Math.max(1, Math.ceil(largura / w));
+  let w = tr.firstChild.getBoundingClientRect().width || 1; const k = Math.max(1, Math.ceil(largura / w));
   const meia = un.repeat(k);
   tr.innerHTML = '<span class="news-meia">'+meia+'</span><span class="news-meia">'+meia+'</span>';
   w = tr.firstChild.getBoundingClientRect().width || w;
-  tr.style.setProperty('--dur', Math.max(20, w / NOTICIAS_PX_S).toFixed(0)+'s');
+  tr.style.setProperty('--dur', Math.max(20, w / FAIXA_PX_S).toFixed(0)+'s');
   void tr.offsetWidth; tr.style.animation = '';
 }
 
-async function carregarNoticias(){
-  const alvo = NOTICIAS_URL;
-  const urls = [alvo, ...NOTICIAS_PROXIES.map(p => p + encodeURIComponent(alvo))];
-  let lista = [], erro = null;
-  for(const u of urls){
-    try{
-      lista = parseNoticias(await buscarTexto(u));
-      if(lista.length) break;
-      erro = new Error('feed sem notícias');
-    }catch(e){ erro = (e.name==='AbortError') ? new Error('tempo esgotado') : (e instanceof TypeError ? new Error('bloqueio CORS/rede') : e); }
-  }
-  if(lista.length){ cacheSet('noticias', lista); renderNoticias(lista, 'ao vivo'); return; }
-  console.warn('Notícias:', erro);
-  const c = cacheGet('noticias', 0, true);
-  if(c && c.length) renderNoticias(c, 'cache', _msg(erro)); else renderNoticias([], 'erro', _msg(erro));
-}
-
-function renderTagsReceita(r){
-  const a=$('tagArrec'), b=$('tagFonte');
-  a.className=b.className = r.ao_vivo ? 'tag-live' : 'tag-sim';
-  a.textContent = r.ao_vivo ? 'Receita: API ao vivo'+(r.falhas?` · ${r.falhas} mês(es) sem resposta`:'') : 'Receita: API indisponível · '+(r.erro||'0');
-  b.textContent = r.ao_vivo ? 'API ao vivo · por código de conta' : 'API indisponível · sem dados';
-  const k=$('tagKpi'), vivo = r.ao_vivo && r.orcadaVivo;
-  k.className = vivo ? 'tag-live' : 'tag-sim';
-  k.textContent = vivo ? 'Receita e Orçamento: API ao vivo · Poder Executivo' : (r.ao_vivo ? 'Receita: API ao vivo · Orçamento: API indisponível · '+(r.erroOrc||'0') : 'API indisponível · exibindo R$ 0,00');
+/* Bolinhas de conexão de cada bloco */
+function renderSinais(d, r){
+  const j = (...p) => p.filter(Boolean).join(' · ');
+  const eD = (d.ao_vivo && !d.falhas && !d.velho) ? '' : j('despesas', d.antigo ? 'exibindo última leitura' : (d.erro || (d.falhas ? d.falhas+' mês(es) sem resposta' : 'dados em cache')));
+  const eR = (r.ao_vivo && !r.falhas && !r.velho) ? '' : j('receitas', r.erro || (r.falhas ? r.falhas+' mês(es) sem resposta' : 'dados em cache'));
+  const eOD = d.orcadoVivo ? '' : j('orçado da despesa', ORC.despErro || 'indisponível');
+  const eOR = r.orcadaVivo ? '' : j('orçado da receita', ORC.recErro || 'indisponível');
+  const alvo = (id, ...e) => { const m = e.filter(Boolean); sinal(id, m.length === 0, m.join(' | ')); };
+  alvo('tagDespesa', eD, eOD); alvo('tagGraf', eD, eR); alvo('tagFonte', eR); alvo('tagKpi', eR, eOR);
 }
 
 function corMeta(p){ const hue = Math.max(0,Math.min(p,100))*1.2; return `hsl(${hue.toFixed(0)},60%,${temaAtual()==='dark'?58:38}%)`; }
@@ -781,13 +889,20 @@ function renderKpis(r){
   const n = r.meses.length, mes = r.meses[n-1] ?? 0, ant = r.meses[n-2];
   const anual = r.meses.reduce((a,b)=>a+b,0), orc = r.orcada;
   const meta = orc>0 ? anual/orc*100 : 0;
-  $('ano2').textContent = new Date().getFullYear();
+  $('ano2').textContent = dataRef().getFullYear();
+  $('ateKpi').textContent = historico() ? ' · até '+dataBR(dataRef()) : '';
 
+  /* Receita do mês proporcional ao dia: ritmo diário do mês anterior (total ÷ dias do mês) × dia atual */
+  const rf = r.ref || { dia: dataRef().getDate(), mes: dataRef().getMonth() };
+  $('kMesT').textContent = `Receita do Mês · até ${pad2(rf.dia)}/${pad2(rf.mes+1)}`;
   $('kMes').textContent = brlCompacto(mes);
-  if(ant>0){ const v=(mes-ant)/ant*100, up=v>=0;
+  if(r.mesAnt > 0 && r.diasMesAnt){
+    const media = r.mesAnt / r.diasMesAnt, esperado = media * rf.dia, v = (mes - esperado) / esperado * 100, up = v >= 0;
     $('kMesVar').className = 'fw-bold '+(up?'text-success':'text-danger');
     $('kMesVar').innerHTML = `<i class="bi bi-arrow-${up?'up':'down'}-right"></i> ${up?'+':''}`+pct(v);
-  } else $('kMesVar').textContent = '';
+    $('kMesSub').textContent = 'vs ritmo do mês anterior';
+    $('kMesCalc').textContent = `R$ ${(media/1e6).toFixed(3).replace('.',',')} mi/dia × ${rf.dia} d = ${brlCompacto(esperado)}`;
+  } else { $('kMesVar').textContent = ''; $('kMesSub').textContent = 'Sem base do mês anterior'; $('kMesCalc').textContent = ''; }
   $('kAno').textContent = brlCompacto(anual);
   $('kAnoSub').textContent = `Acumulado ${MESES[0]}–${MESES[n-1]}`;
   $('kOrc').textContent = brlCompacto(orc);
@@ -796,14 +911,15 @@ function renderKpis(r){
   $('kMeta').textContent = pct(meta); $('kMeta').style.color = cor;
   $('kMetaBar').style.width = Math.min(meta,100)+'%'; $('kMetaBar').style.backgroundColor = cor;
   $('icMeta').style.color = cor;
-  const hoje=new Date(), dec = ((hoje - new Date(hoje.getFullYear(),0,1)) / (new Date(hoje.getFullYear()+1,0,1) - new Date(hoje.getFullYear(),0,1)))*100;
+  const ref = dataRef(), fimRef = historico() ? new Date(ref.getFullYear(), ref.getMonth(), ref.getDate()+1) : new Date(), ini = new Date(ref.getFullYear(),0,1);
+  const dec = ((fimRef - ini) / (new Date(ref.getFullYear()+1,0,1) - ini))*100;
   $('kMetaSub').textContent = `Ano decorrido: ${pct(dec)}`;
 
   setExtMoeda('kMes', mes); setExtMoeda('kAno', anual); setExtMoeda('kOrc', orc); setExtPct('kMeta', meta);
 }
 
 function renderGraficos(d, r){
-  Chart.defaults.font.size = 14;
+  Chart.defaults.font.size = MOVEL() ? 12 : 14;
   Chart.defaults.color = cv('--mut');
   Chart.defaults.font.family = "Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif";
   Chart.defaults.animation = false;
@@ -834,7 +950,7 @@ function renderGraficos(d, r){
     data:{ labels:fontes.map(f=>cur(f.label)), datasets:[{ data:fontes.map(f=>f.valor),
       backgroundColor: vazio ? [cv('--linha')] : paletaPie(), borderWidth:2, borderColor:cv('--card') }]},
     options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
-      plugins:{ legend:{ position:'right', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, padding:14, font:{size:14} } },
+      plugins:{ legend:{ position: MOVEL() ? 'bottom' : 'right', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, padding:14, font:{size:14} } },
         tooltip:{ callbacks:{ label:c=>` ${fontes[c.dataIndex].label}: ${brlCompacto(c.parsed)} (${(c.parsed/tot*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%)` } } } }
   });
 }
@@ -905,9 +1021,9 @@ const brlDia = v => { const a = Math.abs(v), s = v<0 ? '-' : '';
   if(a >= 1e3) return s+'R$ '+(a/1e3).toFixed(1).replace('.',',')+' mil';
   return s+brl2(a); };
 const HOJE_CAMPOS = [
-  { id:'hEmp', k:'emp',  n:'nEmp', un:['empenho','empenhos'] },
-  { id:'hLiq', k:'liq',  n:'nLiq', un:['liquidação','liquidações'] },
-  { id:'hPag', k:'pago', n:'nPag', un:['pagamento','pagamentos'] }
+  { id:'hEmp', lid:'lEmp', rot:'Empenhado', k:'emp',  n:'nEmp', un:['empenho','empenhos'] },
+  { id:'hLiq', lid:'lLiq', rot:'Liquidado', k:'liq',  n:'nLiq', un:['liquidação','liquidações'] },
+  { id:'hPag', lid:'lPag', rot:'Pago',      k:'pago', n:'nPag', un:['pagamento','pagamentos'] }
 ];
 let HOJE_ANT = null;   // última leitura do dia { dia, t }
 
@@ -929,7 +1045,8 @@ function renderHoje(t, ant){
     const card = $(c.id).closest('.card'), v = t[c.k], q = t[c.n], dl = $(c.id+'Delta');
     $(c.id).textContent = brlDia(v);
     setExtMoeda(c.id, v);
-    $(c.id+'Sub').textContent = q ? `${q.toLocaleString('pt-BR')} ${q===1?c.un[0]:c.un[1]} no dia` : 'Sem movimentação hoje';
+    $(c.lid).textContent = c.rot + (historico() ? ' no dia' : ' hoje');
+    $(c.id+'Sub').textContent = q ? `${q.toLocaleString('pt-BR')} ${q===1?c.un[0]:c.un[1]} no dia` : (historico() ? 'Sem movimentação na data' : 'Sem movimentação hoje');
     const delta = ant ? v - ant[c.k] : 0;
     if(ant && Math.abs(delta) >= 0.005){
       dl.textContent = (delta>0 ? '+' : '−')+brlDia(Math.abs(delta));
@@ -943,20 +1060,23 @@ function renderHoje(t, ant){
   return mudou;
 }
 function limparHoje(){
+  FAIXA = []; _faixaSig = ''; { const tr = $('newsTrack'); tr.className = 'news-track parado'; tr.style.animation = ''; tr.innerHTML = '<span class="news-msg">Carregando movimentos do dia…</span>'; }
   ['hReg','hEmp','hLiq','hPag'].forEach(id => { $(id).textContent = '—'; const c = $(id).closest('.card'); delete c.dataset.extenso; delete c.dataset.num; });
   ['hRegSub','hEmpSub','hLiqSub','hPagSub'].forEach(id => $(id).innerHTML = '&nbsp;');
   ['hEmpDelta','hLiqDelta','hPagDelta'].forEach(id => $(id).textContent = '');
 }
 async function atualizarHoje(){
-  const agora = new Date(), dia = dataBR(agora);
+  const ref = dataRef(), dia = dataBR(ref);
   $('hojeData').textContent = dia;
   $('hojeCada').textContent = REFRESH_HOJE_MIN;
+  $('tagCada').hidden = historico(); $('tagHist').hidden = !historico(); $('histData').textContent = dia;
   try{
-    const t = somarDia(await consultarDespesas(agora, agora));
+    const t = somarDia(await consultarDespesas(ref, ref));
     const ant = (HOJE_ANT && HOJE_ANT.dia === dia) ? HOJE_ANT.t : null;   // virada do dia: sem comparação
     const mudou = renderHoje(t, ant);
     HOJE_ANT = { dia, t };
-    const tg = $('tagHoje'); tg.className = 'tag-live'; tg.textContent = 'API ao vivo · Poder Executivo';
+    renderFaixa(t.lista); sinal('tagNews', true);
+    sinal('tagHoje', true);
     $('hojeUpd').textContent = new Date().toLocaleTimeString('pt-BR');
     if(MODAL.f) renderModal();   // pop-up aberto: acompanha a atualização
     if(mudou) tremerTela();
@@ -964,8 +1084,7 @@ async function atualizarHoje(){
   }catch(e){
     console.warn('Falha no movimento do dia:', e);
     if(HOJE_ANT && HOJE_ANT.dia !== dia){ HOJE_ANT = null; limparHoje(); }
-    const tg = $('tagHoje'); tg.className = 'tag-sim';
-    tg.textContent = 'API indisponível · '+_msg(e)+' · nova tentativa em instantes';
+    sinal('tagHoje', false, _msg(e)); sinal('tagNews', false, _msg(e));
     return false;
   }
 }
@@ -996,7 +1115,7 @@ const mDoc     = i => { const k = Object.keys(i).find(k => /cpf|cnpj|documento/i
 function renderModal(){
   const f = MODAL_FILTROS[MODAL.f]; if(!f) return;
   const box = $('modalBox'); box.style.setProperty('--c', 'var('+f.cor+')');
-  $('mTitulo').textContent = f.titulo+' · '+(HOJE_ANT ? HOJE_ANT.dia : dataBR(new Date()));
+  $('mTitulo').textContent = (historico() ? f.titulo.replace(' hoje',' no dia') : f.titulo)+' · '+(HOJE_ANT ? HOJE_ANT.dia : dataBR(dataRef()));
   const lista = (HOJE_ANT && HOJE_ANT.t.lista) || [];
   let linhas = lista.filter(i => !f.col || numero(i[f.col]) > 0);
   const q = normTxt(MODAL.busca);
@@ -1008,7 +1127,7 @@ function renderModal(){
   $('mRes').textContent = `${linhas.length.toLocaleString('pt-BR')}${q ? ' de '+base.toLocaleString('pt-BR') : ''} registro(s) · ${f.regra}`;
   const corpo = $('mCorpo');
   if(!linhas.length){
-    corpo.innerHTML = '<div class="mt-vazio">'+(HOJE_ANT ? (q ? 'Nenhum registro encontrado para a busca.' : 'Nenhum registro '+f.regra+' hoje.') : 'Dados do dia ainda não carregados.')+'</div>';
+    corpo.innerHTML = '<div class="mt-vazio">'+(HOJE_ANT ? (q ? 'Nenhum registro encontrado para a busca.' : 'Nenhum registro '+f.regra+(historico() ? ' nesta data.' : ' hoje.')) : 'Dados do dia ainda não carregados.')+'</div>';
     return;
   }
   const on = c => f.col === c ? ' on' : '';
@@ -1022,8 +1141,8 @@ function renderModal(){
     + `<td class="n${on('valorEmpenhado')}">${brl2(tot.e)}</td><td class="n">${brl2(tot.a)}</td><td class="n${on('valorLiquidado')}">${brl2(tot.l)}</td><td class="n${on('valorPago')}">${brl2(tot.p)}</td></tr></tfoot></table>`;
 }
 function reiniciaOcioso(){ clearTimeout(MODAL.ocioso); if(MODAL.f) MODAL.ocioso = setTimeout(fecharModal, MODAL_OCIOSO_S*1000); }
-function abrirModal(f){
-  MODAL.f = f; MODAL.busca = ''; $('mBusca').value = '';
+function abrirModal(f, busca=''){
+  MODAL.f = f; MODAL.busca = busca; $('mBusca').value = busca;
   renderModal();
   $('modalHoje').classList.add('aberto'); $('modalHoje').setAttribute('aria-hidden','false');
   $('mCorpo').scrollTop = 0; reiniciaOcioso();
@@ -1043,6 +1162,41 @@ $('modalHoje').addEventListener('mousemove', reiniciaOcioso);
 $('mBusca').addEventListener('input', e => { MODAL.busca = e.target.value; renderModal(); });
 
 /* =====================================================
+   DETALHE DE UM MOVIMENTO (clique na faixa)
+   ===================================================== */
+const DET = { aberto:false, ocioso:null, item:null };
+const rotuloCampo = k => k.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
+function abrirDetalhe(k){
+  const it = FAIXA[k]; if(!it) return;
+  const tp = TIPOS_MOV[it.tipo], r = it.reg; DET.item = it;
+  $('dBox').style.setProperty('--c', 'var('+tp.cor+')');
+  $('dTitulo').textContent = tp.nome + ' · ' + dataBR(dataRef());
+  const lin = (nome, val, on) => `<div class="det-row${on ? ' on' : ''}"><span class="dr">${escN(nome)}</span><span class="dv">${escN(val)}</span></div>`;
+  const v = c => brl2(numero(r[c]));
+  const ja = /unidade|fonte|cpf|cnpj|documento|^nomeCredor$|^valor(Empenhado|Anulado|Liquidado|Pago|Retido)$|^orgao/i;   // já exibidos acima
+  const extras = Object.entries(r).filter(([c, val]) => !ja.test(c) && val !== null && val !== '' && typeof val !== 'object');
+  $('dCorpo').innerHTML = '<div class="det-sec">Identificação</div>'
+    + lin('Unidade', mUnidade(r)) + lin('Fonte de recurso', mFonte(r)) + lin('CPF/CNPJ', mDoc(r)) + lin('Credor', r.nomeCredor || '—')
+    + '<div class="det-sec">Valores</div>'
+    + lin('Empenhado', v('valorEmpenhado'), it.tipo === 'emp') + lin('Anulado', v('valorAnulado')) + lin('Liquidado', v('valorLiquidado'), it.tipo === 'liq') + lin('Pago', v('valorPago'), it.tipo === 'pago')
+    + (r.valorRetido !== undefined ? lin('Retido', v('valorRetido')) : '')
+    + (extras.length ? '<div class="det-sec">Outras informações</div>' + extras.map(([c, val]) => lin(rotuloCampo(c), /^valor/i.test(c) && isFinite(Number(val)) ? brl2(numero(val)) : String(val))).join('') : '');
+  $('dVer').textContent = 'Ver todos · ' + tp.nome.toLowerCase() + 's do dia';
+  $('modalDet').classList.add('aberto'); $('modalDet').setAttribute('aria-hidden', 'false');
+  DET.aberto = true; $('dCorpo').scrollTop = 0;
+  clearTimeout(DET.ocioso); DET.ocioso = setTimeout(fecharDetalhe, MODAL_OCIOSO_S*1000);
+}
+function fecharDetalhe(){
+  DET.aberto = false; clearTimeout(DET.ocioso);
+  $('modalDet').classList.remove('aberto'); $('modalDet').setAttribute('aria-hidden', 'true');
+}
+$('newsTrack').addEventListener('click', e => { const el = e.target.closest('.news-item'); if(el) abrirDetalhe(+el.dataset.k); });
+$('dFechar').addEventListener('click', fecharDetalhe);
+$('modalDet').addEventListener('click', e => { if(e.target.id === 'modalDet') fecharDetalhe(); });
+$('dVer').addEventListener('click', () => { const it = DET.item; fecharDetalhe(); if(it) abrirModal(it.tipo, it.reg.nomeCredor || ''); });
+document.addEventListener('keydown', e => { if(DET.aberto && e.key === 'Escape') fecharDetalhe(); });
+
+/* =====================================================
    TEMA CLARO / ESCURO
    ===================================================== */
 let ULT = {};   // última leitura (para redesenhar ao trocar o tema)
@@ -1060,37 +1214,126 @@ aplicarTema(temaAtual(), false);
 /* =====================================================
    CICLO DE ATUALIZAÇÃO (devolve false se alguma consulta falhou → o agendador tenta de novo)
    ===================================================== */
+/* Orçado (despesa e receita): atualizado a cada 1 h, em tarefa própria; as demais consultas usam o último valor */
+const ORC = { desp:0, despOk:false, despErro:'', rec:0, recOk:false, recErro:'' };
+function reaplicarOrcados(){
+  if(!ULT.cur) return;   // a primeira carga ainda não terminou: ela mesma lê ORC
+  const { d, r } = ULT.cur;
+  d.orcado = ORC.desp; d.orcadoVivo = ORC.despOk; r.orcada = ORC.rec; r.orcadaVivo = ORC.recOk;
+  renderDespesas(d); renderKpis(r); renderSinais(d, r);
+}
+async function carregarOrcados(){
+  try{ const v = await consultarOrcado(); if(!(v > 0)) throw new Error('sem valor orçado'); ORC.desp = v; ORC.despOk = !velhoCom('orcDesp:'); ORC.despErro = ORC.despOk ? '' : 'exibindo última leitura'; }
+  catch(e){ console.warn('Falha na API de despesas orçadas:', e); ORC.despOk = false; ORC.despErro = _msg(e); }
+  try{ const v = await consultarReceitaOrcada(); if(!(v > 0)) throw new Error('sem valor orçado'); ORC.rec = v; ORC.recOk = !velhoCom('orcRec:'); ORC.recErro = ORC.recOk ? '' : 'exibindo última leitura'; }
+  catch(e){ console.warn('Falha na API de receitas orçadas:', e); ORC.recOk = false; ORC.recErro = _msg(e); }
+  reaplicarOrcados();
+  return ORC.despOk && ORC.recOk;
+}
+
+/* Empenhado / liquidado / pago, receita do mês e anual e gráficos (a cada 10 min, junto com o movimento do dia).
+   Devolve false se alguma consulta falhou → o agendador tenta de novo. */
 async function carregar(){
   let ok = true, d, r;
-  _cacheVelho = 0;
   try{ d = await carregarDespesas(); if(d.falhas) ok = false; }
   catch(e){
     ok = false; console.warn('Falha na API de despesas (CORS/rede?):', e);
     d = ULT.d ? { ...ULT.d, ao_vivo:false, antigo:true } : despesasFallback();   // mantém a última leitura na tela
     d.erro = _msg(e);
   }
-  try{ d.orcado = await consultarOrcado(); d.orcadoVivo = d.orcado > 0; }
-  catch(e){ console.warn('Falha na API de despesas orçadas:', e); d.orcado = 0; d.orcadoVivo = false; }
-  if(d.orcadoVivo) ULT.orcado = d.orcado; else { ok = false; d.orcado = ULT.orcado || 0; }
-  renderDespesas(d);
-  if(_cacheVelho > 0){ $('tagDespesa').className='tag-sim'; $('tagDespesa').textContent='API instável · exibindo última leitura · nova tentativa em instantes'; }
-  if(d.ao_vivo) ULT.d = d;
+  d.velho = velhoCom('desp:'); if(d.velho) ok = false;
+  d.orcado = ORC.desp; d.orcadoVivo = ORC.despOk;
   try{ r = await carregarReceitas(); if(r.falhas) ok = false; }
   catch(e){ ok = false; console.warn('Falha na API de receitas:', e); r = receitasFallback(); r.erro = _msg(e); }
-  try{ r.orcada = await consultarReceitaOrcada(); r.orcadaVivo = r.orcada > 0; if(!r.orcadaVivo) r.orcada = 0; }
-  catch(e){ console.warn('Falha na API de receitas orçadas:', e); r.orcada = 0; r.orcadaVivo = false; r.erroOrc = _msg(e); }
-  if(!r.orcadaVivo || _cacheVelho > 0) ok = false;
+  r.velho = velhoCom('rec:'); if(r.velho) ok = false;
+  r.orcada = ORC.rec; r.orcadaVivo = ORC.recOk;
+  renderDespesas(d);
+  if(d.ao_vivo) ULT.d = d;
   renderKpis(r);
   renderGraficos(d, r);
-  renderTagsReceita(r);
+  renderSinais(d, r);
   ULT.cur = { d, r };
   marcarAtualizacao();
   return ok;
 }
-agendar(carregar,       REFRESH_DADOS_MIN, 'painel');
-agendar(atualizarHoje,  REFRESH_HOJE_MIN,  'movimento do dia');
-agendar(carregarClima,  REFRESH_CLIMA_MIN, 'clima');
-carregarNoticias();   setInterval(carregarNoticias, NOTICIAS_REFRESH_MIN*60*1000);
+
+/* =====================================================
+   LAYOUT: padrão 1920×1080; escala para outras telas; empilha em celular/tablet
+   ===================================================== */
+function ajustarLayout(){
+  const w = window.innerWidth, h = window.innerHeight, dEl = document.documentElement, app = $('app');
+  const modo = (w < 1200 || h > w*1.1) ? 'movel' : 'tv';
+  const mudou = dEl.dataset.modo !== modo;
+  dEl.dataset.modo = modo;
+  if(modo === 'tv'){
+    const s = Math.min(w/1920, h/1000);   // 1920×1080 → escala 1; telas mais largas/baixas ganham/perdem escala e altura útil
+    app.style.setProperty('--escala', s);
+    app.style.width = (w/s)+'px'; app.style.height = (h/s)+'px';
+  } else {
+    app.style.setProperty('--escala', 1); app.style.width = ''; app.style.height = '';
+  }
+  if(mudou && ULT.cur) renderGraficos(ULT.cur.d, ULT.cur.r);
+}
+let _rz = null;
+window.addEventListener('resize', () => { cancelAnimationFrame(_rz); _rz = requestAnimationFrame(ajustarLayout); });
+ajustarLayout();
+
+/* =====================================================
+   AGENDAMENTO
+   ===================================================== */
+const TAREFAS = {
+  orcados:  agendar(carregarOrcados,  REFRESH_ORCADO_MIN,    'orçado'),
+  painel:   agendar(carregar,         REFRESH_DADOS_MIN,     'painel'),
+  hoje:     agendar(atualizarHoje,    REFRESH_HOJE_MIN,      'movimento do dia'),
+  clima:    agendar(carregarClima,    REFRESH_CLIMA_MIN,     'clima')
+};
+
+/* Botão "Atualizar dados agora" (ou tecla R): roda todas as tarefas já e reinicia os relógios de cada uma */
+async function atualizarAgora(){
+  const b = $('btnAtualizar'); if(b.disabled) return;
+  b.disabled = true; b.classList.add('girando');
+  try{ await Promise.allSettled([...Object.values(TAREFAS).map(x => x.agora()), _dorme(800)]); }
+  finally{ b.disabled = false; b.classList.remove('girando'); }
+}
+$('btnAtualizar').addEventListener('click', atualizarAgora);
+document.addEventListener('keydown', e => { if((e.key==='r' || e.key==='R') && !(e.target.closest && e.target.closest('input')) && !e.ctrlKey && !e.metaKey && !e.altKey) atualizarAgora(); });
+
+/* =====================================================
+   DATA CONSULTADA (clique na data do cabeçalho)
+   ===================================================== */
+const isoLocal = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+function fecharPopData(){ $('datePop').hidden = true; $('date').setAttribute('aria-expanded', 'false'); }
+function abrirPopData(){
+  const inp = $('dataRef'); inp.max = isoLocal(hojeZero()); inp.value = isoLocal(dataRef());
+  $('datePop').hidden = false; $('date').setAttribute('aria-expanded', 'true'); inp.focus();
+}
+/* valor 'AAAA-MM-DD'; hoje (ou vazio) volta ao acompanhamento em tempo real. Recarrega a página inteira para a data escolhida. */
+async function aplicarData(valor){
+  fecharPopData();
+  if(!valor) return;
+  const [y, m, d] = valor.split('-').map(Number), dt = new Date(y, m-1, d);
+  const nova = (isFinite(dt) && dt < hojeZero()) ? dt : null;
+  if((nova && DATA_REF && nova.getTime() === DATA_REF.getTime()) || (!nova && !DATA_REF)) return;   // mesma data
+  DATA_REF = nova;
+  fecharModal(); fecharDetalhe();
+  HOJE_ANT = null; limparHoje(); ULT.d = null; ULT.cur = null; _velhos.clear();
+  $('date').classList.toggle('consulta', historico()); $('btnHoje').hidden = !historico();
+  tick();
+  const b = $('btnAtualizar'); b.disabled = true; b.classList.add('girando');
+  try{ await Promise.allSettled(Object.values(TAREFAS).map(x => x.refazer())); }
+  finally{ b.disabled = false; b.classList.remove('girando'); }
+}
+let _dtDeb = null;
+$('date').addEventListener('click', () => { $('datePop').hidden ? abrirPopData() : fecharPopData(); });
+$('dataRef').addEventListener('change', e => {   // espera o fim da digitação/seleção antes de consultar
+  clearTimeout(_dtDeb); _dtDeb = setTimeout(() => { if(e.target.value && +e.target.value.slice(0,4) >= 2000) aplicarData(e.target.value); }, 600);
+});
+$('dataRef').addEventListener('keydown', e => { if(e.key === 'Enter'){ clearTimeout(_dtDeb); aplicarData($('dataRef').value); } });
+$('dpOk').addEventListener('click', () => { clearTimeout(_dtDeb); aplicarData($('dataRef').value); });
+$('dpHoje').addEventListener('click', () => { clearTimeout(_dtDeb); aplicarData(isoLocal(hojeZero())); });
+$('btnHoje').addEventListener('click', () => aplicarData(isoLocal(hojeZero())));
+document.addEventListener('click', e => { if(!$('datePop').hidden && !e.target.closest('#datePop') && !e.target.closest('#date')) fecharPopData(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('datePop').hidden) fecharPopData(); });
 </script>
 </body>
 </html>
