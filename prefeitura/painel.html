@@ -38,7 +38,7 @@ html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; back
 
 .card{ border:1px solid var(--linha); box-shadow:none; border-radius:10px; background:var(--card); color:var(--txt); }
 
-/*  CABEÇALHO  */
+/* CABEÇALHO */
 .hdr { flex:0 0 88px; height:88px; background:var(--card); border:1px solid var(--linha); border-radius:10px; display:grid; grid-template-columns:1fr 440px 1fr; align-items:center; padding:0 28px; position:relative; }
 .hdr::before { content:""; position:absolute; left:0; top:16px; bottom:16px; width:3px; background:var(--navy); border-radius:0 3px 3px 0; }
 .brand { display:flex; align-items:center; gap:18px; }
@@ -597,7 +597,7 @@ async function apiGet(url, tentativas=API_TENTATIVAS){
   let ultimo;
   for(let t=0; t<tentativas; t++){
     await _slot();
-    const ctl = new AbortController(), to = setTimeout(()=>ctl.abort(), 60000);
+    const ctl = new AbortController(), to = setTimeout(()=>ctl.abort(), 120000);
     let fatal = false;
     try{
       /* respeita a pausa global (após HTTP 429) e o intervalo entre requisições */
@@ -641,10 +641,23 @@ const ttlMes = (ano, m) => { if(historico()) return TTL_MES_FECHADO; const h=new
 const _msg = e => String(e && e.message || e).slice(0,70);
 
 const limitaHoje = d => { const t = dataRef(); return d>t ? t : d; };   // limita à data consultada (hoje ou a escolhida)  // algumas consultas recusam dataFinal futura
+/* Consulta por período; se falhar (tempo esgotado, servidor ocupado, resposta muito grande), divide o período ao meio e tenta de novo */
+async function apiPeriodo(base, ini, fim){
+  const f = limitaHoje(fim);
+  if(f < ini) return [];
+  try{ return await apiGet(`${base}?dataInicial=${dataBR(ini)}&dataFinal=${dataBR(f)}`, 3); }
+  catch(e){
+    const dias = Math.round((f-ini)/86400000)+1;
+    if(dias < 6 || (e && e.status >= 400 && e.status < 500 && e.status !== 429)) throw e;
+    console.warn('período', dataBR(ini), 'a', dataBR(f), 'falhou; dividindo ao meio', e);
+    const meio = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + Math.floor(dias/2) - 1);
+    const a = await apiPeriodo(base, ini, meio);
+    const b = await apiPeriodo(base, new Date(meio.getFullYear(), meio.getMonth(), meio.getDate()+1), f);
+    return a.concat(b);
+  }
+}
 async function consultarDespesas(ini, fim){
-  const url = `${API_DESPESAS}?dataInicial=${dataBR(ini)}&dataFinal=${dataBR(limitaHoje(fim))}`;
-  const json = { retorno: await apiGet(url) };
-  return soExecutivo(json.retorno);
+  return soExecutivo(await apiPeriodo(API_DESPESAS, ini, fim));
 }
 
 /* Despesas orçadas (mesmo endpoint do despesasorcadas.html), filtradas pelo Poder Executivo */
@@ -683,9 +696,7 @@ async function consultarReceitaOrcada(){
 
 /* Receitas (mesmo endpoint do receitas.html): valores totais */
 async function consultarReceitas(ini, fim){
-  const url = `${API_RECEITAS}?dataInicial=${dataBR(ini)}&dataFinal=${dataBR(limitaHoje(fim))}`;
-  const json = { retorno: await apiGet(url) };
-  return json.retorno;
+  return await apiPeriodo(API_RECEITAS, ini, fim);
 }
 
 /* Busca mês a mês (Jan..mês atual): total do mês + composição por código de conta */
