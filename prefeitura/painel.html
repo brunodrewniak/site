@@ -14,7 +14,7 @@
 
 <script>try{var _t=localStorage.getItem('fzcl1:tema');if(_t==='dark'||_t==='light')document.documentElement.setAttribute('data-bs-theme',_t);}catch(e){}</script>
 <style>
-
+/* ===== Tema minimalista sobre Bootstrap 5 (claro / escuro) ===== */
 :root{
   --bs-primary:#0b2f57; --bs-primary-rgb:11,47,87;
   --bs-success:#1f8f5f; --bs-danger:#c0392b; --bs-warning:#d39a1c;
@@ -220,6 +220,17 @@ html[data-modo="movel"] { height:auto; min-height:100%; overflow-x:hidden; overf
 [data-modo="movel"] .modal-x { margin-left:auto; }
 [data-modo="movel"] .modal-busca { order:5; flex:1 0 100%; width:auto; margin-left:0; }
 [data-modo="movel"] table.mt { min-width:980px; }
+.dica-clique { font-size:12px; font-weight:400; color:var(--mut); }
+.grp-box { width:min(1600px, calc(100vw - 40px)); height:min(880px, calc(100vh - 40px)); background:var(--card); border:1px solid var(--linha); border-top:4px solid var(--c); border-radius:14px; display:flex; flex-direction:column; box-shadow:0 24px 70px rgba(0,0,0,.45); overflow:hidden; }
+.grp-bd { flex:1; min-height:0; display:grid; grid-template-columns:5fr 6fr; gap:0; }
+.grp-graf { position:relative; padding:18px 20px; min-height:0; border-right:1px solid var(--linha); }
+.grp-tab { overflow:auto; min-height:0; }
+.mt tr.sub td { background:var(--ic-bg); font-weight:600; color:var(--navy); position:sticky; top:0; }
+.mt td.ind { padding-left:28px; color:var(--mut); }
+.mt td.cod { font-variant-numeric:tabular-nums; white-space:nowrap; font-size:13px; color:var(--mut); }
+[data-modo="movel"] .grp-bd { grid-template-columns:1fr; grid-template-rows:340px 1fr; overflow:auto; }
+[data-modo="movel"] .grp-graf { border-right:0; border-bottom:1px solid var(--linha); }
+[data-modo="movel"] .grp-tab table.mt { min-width:0; }
 @media (max-width:599px){
   [data-modo="movel"] .grid4 { grid-template-columns:1fr; }
   [data-modo="movel"] .brand h1 { font-size:17px; }
@@ -381,7 +392,7 @@ button.date.consulta { color:var(--azul); font-weight:600; }
       <div class="chart-wrap"><canvas id="chartMain"></canvas></div>
     </div>
     <div class="card chart-card">
-      <h3><i class="bi bi-pie-chart"></i>Composição da Receita por Fonte <span class="sinal" id="tagFonte" role="img" aria-label="Carregando" title="Carregando…"></span></h3>
+      <h3><i class="bi bi-pie-chart"></i>Composição da Receita por Macrogrupo <small class="dica-clique">· clique para detalhar</small> <span class="sinal" id="tagFonte" role="img" aria-label="Carregando" title="Carregando…"></span></h3>
       <div class="chart-wrap"><canvas id="chartPie"></canvas></div>
     </div>
   </section>
@@ -440,6 +451,21 @@ button.date.consulta { color:var(--azul); font-weight:600; }
   </div>
 </div>
 
+<!-- POP-UP: detalhe de um macrogrupo da receita (clique na pizza) -->
+<div class="modal-bg" id="modalGrp" aria-hidden="true">
+  <div class="grp-box" role="dialog" aria-modal="true" aria-labelledby="gTitulo" id="gBox">
+    <div class="modal-hd">
+      <h2 id="gTitulo">Macrogrupo</h2>
+      <span class="modal-res" id="gRes"></span>
+      <button class="modal-x" id="gFechar" type="button" aria-label="Fechar" style="margin-left:auto"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="grp-bd">
+      <div class="grp-graf"><canvas id="chartGrp"></canvas></div>
+      <div class="grp-tab" id="gTab"></div>
+    </div>
+  </div>
+</div>
+
 <!-- POP-UP: detalhe de um movimento (clique na faixa) -->
 <div class="modal-bg" id="modalDet" aria-hidden="true">
   <div class="det-box" role="dialog" aria-modal="true" aria-labelledby="dTitulo" id="dBox">
@@ -462,10 +488,8 @@ const API_ORCADAS  = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas
 const FAIXA_MAX = 150, FAIXA_PX_S = 90;
 const API_RECEITAS_ORC = "https://campolargo.atende.net/api/WCPDadosAbertos/receitasOrcadas";
 const API_RECEITAS = "https://campolargo.atende.net/api/WCPDadosAbertos/receitas";
-/* Contas do FAPEN (mesma lista do receitas.html): o Poder Executivo = todas as contas FORA desta lista */
+/* Contas do fundo de previdência (FAPEN): NÃO são mais excluídas; servem apenas para classificar no macrogrupo Previdência (RPPS) */
 const CONTAS_FAPEN = new Set(["4121501110000000000","4121501210000000000","4121501310000000000","4121501410000000000","4121502110000000000","4131102110000000000","4132104010100000000","4132104010200000000","4132104010500000000","4132104010700000000","4199903010000000000","4721502110000000000","4721502210000000000","4721502260000000000","4721551110000000000","4721551120000000000","4799901010000000000","9132104010100000000"]);
-const FONTE_DIGITOS = 4;   // composição da receita: agrupa as contas pelos N primeiros dígitos do código
-const FONTE_TOP = 5;       // fatias exibidas; o restante vai para "Outras"
 /* Filtro fixo de órgão: apenas o Poder Executivo Municipal */
 const ORGAO_FILTRO = "PODER EXECUTIVO MUNICIPAL DE CAMPO LARGO - PR";
 const normTxt = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toUpperCase();
@@ -604,7 +628,7 @@ async function apiGet(url, tentativas=API_TENTATIVAS){
 }
 
 /* Cache local (localStorage): meses encerrados não mudam a cada atualização → evita novas requisições e o HTTP 429 */
-const CACHE_PREFIXO = 'fzcl1:';
+const CACHE_PREFIXO = 'fzcl2:';
 const _velhos = new Set();   // chaves em que a consulta falhou e o cache antigo foi usado
 const velhoCom = (...pref) => [..._velhos].some(k => pref.some(p => k.startsWith(p)));
 function cacheGet(k, ttl, ignoraTtl){ try{ const o = JSON.parse(localStorage.getItem(CACHE_PREFIXO+k)); if(o && (ignoraTtl || Date.now()-o.t < ttl)) return o.v; }catch(e){} return null; }
@@ -646,7 +670,7 @@ function liquida(lista, campo){
   return achou ? b - d : tot;   // sem contas 4/9 no retorno: soma total, como no receitas.html
 }
 
-/* Receita orçada do exercício (receitasOrcadas), somente Poder Executivo */
+/* Receita orçada do exercício (receitasOrcadas): valor total */
 async function consultarReceitaOrcada(){
   const ano = dataRef().getFullYear();
   return comCache('orcRec:'+ano, TTL_ORCADO, async () => {
@@ -655,29 +679,33 @@ async function consultarReceitaOrcada(){
   try{ retorno = await tenta(new Date(ano,11,31)); }
   catch(e){ console.warn('receitasOrcadas com 31/12 falhou; tentando a data de hoje', e); retorno = await tenta(limitaHoje(new Date(ano,11,31))); }
   const json = { retorno };
-  return liquida(json.retorno.filter(i => !CONTAS_FAPEN.has(String(i.contaCodigo ?? "").trim())), 'valorOrcado');
+  return liquida(json.retorno, 'valorOrcado');
   });
 }
 
-/* Receitas (mesmo endpoint do receitas.html), somente Poder Executivo */
+/* Receitas (mesmo endpoint do receitas.html): valores totais */
 async function consultarReceitas(ini, fim){
   const url = `${API_RECEITAS}?dataInicial=${dataBR(ini)}&dataFinal=${dataBR(limitaHoje(fim))}`;
   const json = { retorno: await apiGet(url) };
-  return json.retorno.filter(i => !CONTAS_FAPEN.has(String(i.contaCodigo ?? "").trim()));
+  return json.retorno;
 }
 
 /* Busca mês a mês (Jan..mês atual): total do mês + composição por código de conta */
 /* Resumo de um mês de receita: valor líquido (4 − 9) + grupos por prefixo do código (só contas 4) */
 function resumoReceita(lista){
-  const grupos = {};
+  /* contas por natureza (código sem o 1º dígito): 4 soma, 9 reduz a conta 4 de mesma natureza */
+  const m = new Map();
   lista.forEach(i=>{
-    const cod = String(i.contaCodigo ?? "").trim(); if(!cod || cod[0] !== '4') return;
-    const k = cod.slice(0, FONTE_DIGITOS), v = numero(i.valorArrecadado);
-    const g = grupos[k] || (grupos[k] = { cod:k, total:0, maior:0, desc:"" });
-    g.total += v;
-    if(v > g.maior){ g.maior = v; g.desc = i.contaDescricao || ""; }
+    const cod = String(i.contaCodigo ?? "").trim(); if(cod.length < 2) return;
+    const t = cod[0]; if(t !== '4' && t !== '9') return;
+    const nat = cod.slice(1), v = numero(i.valorArrecadado);
+    const g = m.get(nat) || { nat, net:0, maior:0, desc:"" };
+    if(t === '4'){ g.net += v; if(v > g.maior){ g.maior = v; g.desc = i.contaDescricao || ""; } }
+    else { g.net -= v; if(!g.desc) g.desc = i.contaDescricao || ""; }
+    m.set(nat, g);
   });
-  return { liq: liquida(lista, 'valorArrecadado'), grupos };
+  const contas = [...m.values()].filter(g=>Math.abs(g.net) > 0.004).map(g=>[g.nat, String(g.desc).replace(/\s+/g,' ').trim().slice(0,90), Math.round(g.net*100)/100]);
+  return { liq: liquida(lista, 'valorArrecadado'), contas };
 }
 
 async function carregarReceitas(){
@@ -689,7 +717,7 @@ async function carregarReceitas(){
   const res = await Promise.allSettled(reqs);
   const falhas = res.filter(x=>x.status==='rejected');
   if(falhas.length === res.length) throw falhas[0].reason;
-  const resumos = res.map(x => x.status==='fulfilled' ? x.value : { liq:0, grupos:{} });
+  const resumos = res.map(x => x.status==='fulfilled' ? x.value : { liq:0, contas:[] });
   const meses = resumos.map(r => r.liq);
   /* mês anterior (base do ritmo diário); em janeiro, busca dezembro do ano anterior */
   let mesAnt = mAtual > 0 ? meses[mAtual-1] : null;
@@ -697,24 +725,20 @@ async function carregarReceitas(){
     try{ mesAnt = (await comCache(`rec:${ano-1}-11`, TTL_MES_FECHADO, async () => resumoReceita(await consultarReceitas(new Date(ano-1,11,1), new Date(ano-1,11,31))))).liq; }
     catch(e){ mesAnt = null; }
   }
-  /* composição: junta os grupos de todos os meses */
-  const grupos = {};
-  resumos.forEach(r => Object.values(r.grupos).forEach(g=>{
-    const a = grupos[g.cod] || (grupos[g.cod] = { cod:g.cod, total:0, maior:0, desc:"" });
-    a.total += g.total;
-    if(g.maior > a.maior){ a.maior = g.maior; a.desc = g.desc; }
+  /* composição: soma as contas (líquidas) de todos os meses */
+  const acc = new Map();
+  resumos.forEach(r => (r.contas||[]).forEach(([nat, desc, v])=>{
+    const a = acc.get(nat) || { cod:nat, desc:'', v:0 };
+    a.v += v; if(!a.desc) a.desc = desc; acc.set(nat, a);
   }));
-  const ord = Object.values(grupos).filter(g=>g.total>0).sort((a,b)=>b.total-a.total);
-  const top = ord.slice(0, FONTE_TOP).map(g=>({ label:(g.desc||g.cod).replace(/\s+-\s+principal$/i,'').trim()+' ('+g.cod+')', valor:g.total }));
-  const resto = ord.slice(FONTE_TOP).reduce((s,g)=>s+g.total,0);
-  if(resto>0) top.push({ label:'Outras', valor:resto });
-  return { meses, fontes:top, ao_vivo:true, falhas:falhas.length, orcada:null, orcadaVivo:false,
+  const contas = [...acc.values()];
+  return { meses, contas, ao_vivo:true, falhas:falhas.length, orcada:null, orcadaVivo:false,
     mesAnt, diasMesAnt:new Date(ano, mAtual, 0).getDate(), ref:{ dia:hoje.getDate(), mes:mAtual, ano } };
 }
 
 function receitasFallback(){
   const n = dataRef().getMonth()+1;
-  return { meses: Array(n).fill(0), fontes:[], ao_vivo:false, orcada:0, orcadaVivo:false };
+  return { meses: Array(n).fill(0), contas:[], ao_vivo:false, orcada:0, orcadaVivo:false };
 }
 
 function somar(lista){
@@ -753,6 +777,59 @@ function despesasFallback(){
 /* =====================================================
    RENDER
    ===================================================== */
+/* =====================================================
+   MACROGRUPOS DA RECEITA (gráfico de pizza + detalhe)
+   Classificação pelo código da natureza (após o 1º dígito 4/9) e, quando preciso, por palavras da descrição.
+   Ajuste aqui se algum código cair em grupo diferente do esperado.
+   ===================================================== */
+const GRUPOS_RECEITA = [
+  { nome:'Tributos Próprios', resto:'Outros tributos próprios', subs:[
+    ['IPTU',/IPTU|PREDIAL E TERRITORIAL/],['ISSQN',/ISS\b|ISSQN|SERVICOS DE QUALQUER NATUREZA/],['ITBI',/ITBI|TRANSMISSAO .*INTER VIVOS|BENS IMOVEIS/],
+    ['IRRF',/IRRF|RENDA RETIDO|IMPOSTO .*RENDA/],['COSIP',/COSIP|ILUMINACAO PUBLICA/],['Taxas',/TAXA/],['Dívida Ativa',/DIVIDA ATIVA/]] },
+  { nome:'Transf. Constitucionais', resto:'Outras transf. constitucionais', subs:[
+    ['FPM',/\bFPM\b|PARTICIPACAO DOS MUNICIPIOS|FUNDO DE PARTICIPACAO/],['ICMS',/ICMS|CIRCULACAO DE MERCADORIAS/],['IPVA',/IPVA|VEICULOS AUTOMOTORES/],
+    ['ITR/IPI/CIDE',/\bITR\b|\bIPI\b|CIDE|TERRITORIAL RURAL|PRODUTOS INDUSTRIALIZADOS|INTERVENCAO NO DOMINIO/],['Royalties',/ROYALT|COMPENSACAO FINANCEIRA|CFEM|RECURSOS MINERAIS|PETROLEO/],['FUNDEB',/FUNDEB|MANUTENCAO E DESENVOLVIMENTO DA EDUCACAO BASICA/]] },
+  { nome:'Transf. Vinculadas e Convênios', resto:'Outras transf. vinculadas', subs:[
+    ['Convênios',/CONVENIO|CONVENIOS|CONTRATO DE REPASSE/],['SUS (Custeio)',/\bSUS\b|SAUDE|FUNDO NACIONAL DE SAUDE|\bFNS\b/],
+    ['Educação (FNDE/Estado)',/FNDE|EDUCACAO|SALARIO.EDUCACAO|PNAE|PNATE|ESCOLAR/],['Assistência',/ASSISTENCIA|\bFNAS\b|\bSUAS\b|\bCRAS\b/]] },
+  { nome:'Previdência (RPPS)', resto:'Outras receitas previdenciárias', subs:[
+    ['Aportes p/ déficit',/APORTE|DEFICIT|COBERTURA/],['COMPREV',/COMPENSACAO PREVIDENCIARIA|COMPREV/],['Contrib. Patronal',/PATRONAL|EMPREGADOR|\bENTE\b/],
+    ['Contrib. Servidor',/SERVIDOR|SEGURADO|ATIVO|INATIVO|PENSIONISTA/],['Rendimentos',/REMUNERACAO|RENDIMENTO|JUROS|APLICACAO|FINANCEIR/]] },
+  { nome:'Outras Receitas Correntes', resto:'Demais receitas correntes', subs:[
+    ['Multas e juros',/MULTA|JUROS DE MORA/],['Restituições',/RESTITUI|INDENIZA|RESSARCIMENTO/],['Rendimentos (Tesouro)',/REMUNERACAO|RENDIMENTO|APLICACAO|FINANCEIR/],
+    ['Patrimônio',/PATRIMON|ALUGU|CONCESS|PERMISS|DIVIDENDO/],['Serviços/ESTAR',/SERVICO|ESTAR|ESTACIONAMENTO|CEMITERIO|TARIFA/]] },
+  { nome:'Receitas de Capital', resto:'Outras receitas de capital', subs:[
+    ['Alienação de bens',/ALIENACAO/],['Operações de crédito',/OPERACOES? DE CREDITO|FINANCIAMENTO|EMPRESTIMO/],['Convênios de obras',/CONVENIO|TRANSFERENCIAS? DE CAPITAL|OBRAS|CONTRATO DE REPASSE/]] }
+];
+const RPPS_MACRO = 3, CAPITAL_MACRO = 5;
+function macroDe(nat0, desc){
+  const d = normTxt(desc);
+  if(CONTAS_FAPEN.has('4'+nat0) || /^[17]215/.test(nat0)) return RPPS_MACRO;
+  const cat = nat0[0] === '7' ? '1' : nat0[0] === '8' ? '2' : nat0[0];
+  if(cat === '2') return CAPITAL_MACRO;
+  const n = (cat + nat0.slice(1));
+  if(/^11|^124/.test(n) || /DIVIDA ATIVA/.test(d)) return 0;
+  if(/^17/.test(n)){
+    const g2 = /\bFPM\b|PARTICIPACAO DOS MUNICIPIOS|FUNDEB|ICMS|IPVA|\bITR\b|\bIPI\b|CIDE|ROYALT|COMPENSACAO FINANCEIRA|CFEM/.test(d);
+    const g3 = /\bSUS\b|SAUDE|FNDE|EDUCACAO|ASSISTENCIA|\bFNAS\b|CONVENIO/.test(d);
+    if(g2 && !/CONVENIO/.test(d)) return 1;
+    if(/^17(11|12|15|21|22|5)/.test(n) && !g3) return 1;
+    return 2;
+  }
+  return 4;
+}
+function agruparReceita(contas){
+  const gr = GRUPOS_RECEITA.map(g => ({ nome:g.nome, valor:0, subs:[...g.subs.map(([nome])=>({ nome, valor:0, contas:[] })), { nome:g.resto, valor:0, contas:[] }] }));
+  (contas||[]).forEach(c=>{
+    const mi = macroDe(c.cod, c.desc), g = GRUPOS_RECEITA[mi], d = normTxt(c.desc);
+    let si = g.subs.findIndex(([, re]) => re.test(d)); if(si < 0) si = g.subs.length;
+    const S = gr[mi].subs[si]; S.contas.push(c); S.valor += c.v; gr[mi].valor += c.v;
+  });
+  gr.forEach(g => { g.subs = g.subs.filter(x => x.contas.length); g.subs.forEach(x => x.contas.sort((a,b)=>Math.abs(b.v)-Math.abs(a.v))); g.subs.sort((a,b)=>b.valor-a.valor); });
+  return gr;
+}
+let GRP_ATUAL = [];
+
 let chartMain, chartPie;
 
 function renderDespesas(d){
@@ -940,19 +1017,24 @@ function renderGraficos(d, r){
       scales:{ y:{ beginAtZero:true, grid:{color:cv('--grid')}, border:{display:false} }, x:{ grid:{display:false}, border:{color:cv('--linha')} } } }
   });
 
-  const vazio = !r.fontes.length;
-  const fontes = vazio ? [{ label:'Sem dados', valor:1 }] : r.fontes;
-  const tot = fontes.reduce((s,f)=>s+f.valor,0) || 1;
-  const cur = s => s.length>30 ? s.slice(0,29)+'…' : s;
+  GRP_ATUAL = agruparReceita(r.contas);
+  const vals = GRP_ATUAL.map(g => Math.max(0, g.valor));
+  const tot = vals.reduce((a,b)=>a+b,0);
+  const vazio = tot <= 0;
   if(chartPie) chartPie.destroy();
   chartPie = new Chart($('chartPie'),{
     type:'doughnut',
-    data:{ labels:fontes.map(f=>cur(f.label)), datasets:[{ data:fontes.map(f=>f.valor),
+    data:{ labels:GRP_ATUAL.map(g=>g.nome), datasets:[{ data: vazio ? [1] : vals,
       backgroundColor: vazio ? [cv('--linha')] : paletaPie(), borderWidth:2, borderColor:cv('--card') }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
-      plugins:{ legend:{ position: MOVEL() ? 'bottom' : 'right', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, padding:14, font:{size:14} } },
-        tooltip:{ callbacks:{ label:c=>` ${fontes[c.dataIndex].label}: ${brlCompacto(c.parsed)} (${(c.parsed/tot*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%)` } } } }
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      onClick:(e, els)=>{ if(!vazio && els.length) abrirGrupo(els[0].index); },
+      onHover:(e, els)=>{ e.native.target.style.cursor = (!vazio && els.length) ? 'pointer' : 'default'; },
+      plugins:{ legend:{ position: MOVEL() ? 'bottom' : 'right', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, padding:14, font:{size:14} },
+          onClick:(e, it)=>{ if(!vazio) abrirGrupo(it.index); } },
+        tooltip:{ callbacks:{ label:c=> vazio ? ' Sem dados' : ` ${GRP_ATUAL[c.dataIndex].nome}: ${brlCompacto(GRP_ATUAL[c.dataIndex].valor)} (${(vals[c.dataIndex]/tot*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%)`,
+          footer:()=> vazio ? '' : 'Clique para detalhar' } } } }
   });
+  if(GRP.aberto) renderGrupo();
 }
 
 /* =====================================================
@@ -1195,6 +1277,58 @@ $('dFechar').addEventListener('click', fecharDetalhe);
 $('modalDet').addEventListener('click', e => { if(e.target.id === 'modalDet') fecharDetalhe(); });
 $('dVer').addEventListener('click', () => { const it = DET.item; fecharDetalhe(); if(it) abrirModal(it.tipo, it.reg.nomeCredor || ''); });
 document.addEventListener('keydown', e => { if(DET.aberto && e.key === 'Escape') fecharDetalhe(); });
+
+/* =====================================================
+   DETALHE DO MACROGRUPO (clique na pizza ou na legenda)
+   ===================================================== */
+const GRP = { aberto:false, idx:-1, ocioso:null };
+let chartGrp;
+const brlAbrev = v => { const a = Math.abs(v), s = v < 0 ? '-' : '';
+  return a >= 1e9 ? s+'R$ '+(a/1e9).toFixed(2).replace('.',',')+' bi' : a >= 1e6 ? s+'R$ '+(a/1e6).toFixed(2).replace('.',',')+' mi' : a >= 1e3 ? s+'R$ '+(a/1e3).toFixed(1).replace('.',',')+' mil' : s+'R$ '+a.toFixed(0); };
+const fmtNat = c => { const t = c.padEnd(18,'0'); return [t[0],t[1],t[2],t[3],t.slice(4,6),t[6],t.slice(7)].join('.'); };
+const rotuloBarras = { id:'rotuloBarras', afterDatasetsDraw(ch){
+  const x = ch.ctx, meta = ch.getDatasetMeta(0), dados = ch.data.datasets[0].data, tot = dados.reduce((s,v)=>s+Math.max(0,v),0) || 1;
+  x.save(); x.font = '600 14px '+getComputedStyle(document.body).fontFamily; x.fillStyle = cv('--txt'); x.textBaseline = 'middle';
+  meta.data.forEach((b,i)=>{ x.fillText(brlAbrev(dados[i])+'  ·  '+(dados[i]/tot*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%', b.x+8, b.y); });
+  x.restore(); } };
+function renderGrupo(){
+  const g = GRP_ATUAL[GRP.idx]; if(!g) return;
+  const cor = paletaPie()[GRP.idx];
+  $('gBox').style.setProperty('--c', cor);
+  $('gTitulo').textContent = g.nome;
+  const totalPie = GRP_ATUAL.reduce((s,x)=>s+Math.max(0,x.valor),0) || 1;
+  $('gRes').textContent = brl2(g.valor) + ' · ' + (Math.max(0,g.valor)/totalPie*100).toLocaleString('pt-BR',{maximumFractionDigits:1}) + '% da receita realizada · ' + g.subs.reduce((s,x)=>s+x.contas.length,0) + ' contas';
+  /* barras: top 12 subgrupos + "Demais" */
+  let sb = g.subs.map(x=>({ nome:x.nome, v:x.valor })); if(sb.length > 12){ const r = sb.slice(12).reduce((s,x)=>s+x.v,0); sb = sb.slice(0,12); sb.push({ nome:'Demais', v:r }); }
+  if(chartGrp) chartGrp.destroy();
+  chartGrp = new Chart($('chartGrp'),{ type:'bar', plugins:[rotuloBarras],
+    data:{ labels:sb.map(x=>x.nome), datasets:[{ data:sb.map(x=>x.v), backgroundColor:cor, borderRadius:4, barThickness:'flex', maxBarThickness:34 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{ padding:{ right: MOVEL() ? 135 : 170 } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>' '+brl2(c.parsed.x) } } },
+      scales:{ x:{ beginAtZero:true, grid:{ color:cv('--grid') }, border:{ display:false }, ticks:{ callback:v=>brlAbrev(v) } }, y:{ grid:{ display:false }, ticks:{ font:{ size:14 }, color:cv('--txt') } } } } });
+  let h = '<table class="mt"><thead><tr><th>Natureza</th><th>Descrição da conta</th><th class="n">Receita líquida</th></tr></thead><tbody>';
+  g.subs.forEach(sg=>{
+    h += `<tr class="sub"><td colspan="2">${escN(sg.nome)} <span style="font-weight:400;color:var(--mut)">· ${sg.contas.length} conta${sg.contas.length>1?'s':''}</span></td><td class="n">${escN(brl2(sg.valor))}</td></tr>`;
+    sg.contas.forEach(c=>{ h += `<tr><td class="cod ind">${escN(fmtNat(c.cod))}</td><td>${escN(c.desc||'—')}</td><td class="n">${escN(brl2(c.v))}</td></tr>`; });
+  });
+  h += `</tbody><tfoot><tr><td colspan="2">Total do macrogrupo (contas 4 − contas 9)</td><td class="n">${escN(brl2(g.valor))}</td></tr></tfoot></table>`;
+  $('gTab').innerHTML = h;
+}
+function abrirGrupo(i){
+  if(!GRP_ATUAL[i]) return;
+  GRP.idx = i; GRP.aberto = true;
+  $('modalGrp').classList.add('aberto'); $('modalGrp').setAttribute('aria-hidden','false');
+  renderGrupo(); $('gTab').scrollTop = 0;
+  clearTimeout(GRP.ocioso); GRP.ocioso = setTimeout(fecharGrupo, MODAL_OCIOSO_S*1000);
+}
+function fecharGrupo(){
+  GRP.aberto = false; clearTimeout(GRP.ocioso);
+  $('modalGrp').classList.remove('aberto'); $('modalGrp').setAttribute('aria-hidden','true');
+  if(chartGrp){ chartGrp.destroy(); chartGrp = null; }
+}
+$('gFechar').addEventListener('click', fecharGrupo);
+$('modalGrp').addEventListener('click', e => { if(e.target.id === 'modalGrp') fecharGrupo(); });
+document.addEventListener('keydown', e => { if(GRP.aberto && e.key === 'Escape') fecharGrupo(); });
 
 /* =====================================================
    TEMA CLARO / ESCURO
