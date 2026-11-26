@@ -488,8 +488,6 @@ const API_ORCADAS  = "https://campolargo.atende.net/api/WCPDadosAbertos/despesas
 const FAIXA_MAX = 150, FAIXA_PX_S = 90;
 const API_RECEITAS_ORC = "https://campolargo.atende.net/api/WCPDadosAbertos/receitasOrcadas";
 const API_RECEITAS = "https://campolargo.atende.net/api/WCPDadosAbertos/receitas";
-/* Contas do fundo de previdência (FAPEN): NÃO são mais excluídas; servem apenas para classificar no macrogrupo Previdência (RPPS) */
-const CONTAS_FAPEN = new Set(["4121501110000000000","4121501210000000000","4121501310000000000","4121501410000000000","4121502110000000000","4131102110000000000","4132104010100000000","4132104010200000000","4132104010500000000","4132104010700000000","4199903010000000000","4721502110000000000","4721502210000000000","4721502260000000000","4721551110000000000","4721551120000000000","4799901010000000000","9132104010100000000"]);
 /* Filtro fixo de órgão: apenas o Poder Executivo Municipal */
 const ORGAO_FILTRO = "PODER EXECUTIVO MUNICIPAL DE CAMPO LARGO - PR";
 const normTxt = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toUpperCase();
@@ -628,7 +626,7 @@ async function apiGet(url, tentativas=API_TENTATIVAS){
 }
 
 /* Cache local (localStorage): meses encerrados não mudam a cada atualização → evita novas requisições e o HTTP 429 */
-const CACHE_PREFIXO = 'fzcl2:';
+const CACHE_PREFIXO = 'fzcl3:';
 const _velhos = new Set();   // chaves em que a consulta falhou e o cache antigo foi usado
 const velhoCom = (...pref) => [..._velhos].some(k => pref.some(p => k.startsWith(p)));
 function cacheGet(k, ttl, ignoraTtl){ try{ const o = JSON.parse(localStorage.getItem(CACHE_PREFIXO+k)); if(o && (ignoraTtl || Date.now()-o.t < ttl)) return o.v; }catch(e){} return null; }
@@ -666,7 +664,7 @@ async function consultarOrcado(){
 function liquida(lista, campo){
   let b=0, d=0;
   let tot=0, achou=false;
-  lista.forEach(i=>{ const c=String(i.contaCodigo ?? "").trim(), v=numero(i[campo]); tot+=v; if(c[0]==='4'){ b+=v; achou=true; } else if(c[0]==='9') d+=v; });
+  lista.forEach(i=>{ const c=String(i.contaCodigo ?? "").trim(), v=numero(i[campo]); tot+=v; if(c[0]==='4'){ b+=v; achou=true; } else if(c[0]==='9') d+=Math.abs(v); });   // contas 9 já vêm negativas: reduz sempre o módulo
   return achou ? b - d : tot;   // sem contas 4/9 no retorno: soma total, como no receitas.html
 }
 
@@ -693,18 +691,15 @@ async function consultarReceitas(ini, fim){
 /* Busca mês a mês (Jan..mês atual): total do mês + composição por código de conta */
 /* Resumo de um mês de receita: valor líquido (4 − 9) + grupos por prefixo do código (só contas 4) */
 function resumoReceita(lista){
-  /* contas por natureza (código sem o 1º dígito): 4 soma, 9 reduz a conta 4 de mesma natureza */
-  const m = new Map();
+  /* cada conta (código completo) vira uma linha; contas 9 entram NEGATIVAS (reduzem a receita) */
+  const mp = new Map();
   lista.forEach(i=>{
-    const cod = String(i.contaCodigo ?? "").trim(); if(cod.length < 2) return;
-    const t = cod[0]; if(t !== '4' && t !== '9') return;
-    const nat = cod.slice(1), v = numero(i.valorArrecadado);
-    const g = m.get(nat) || { nat, net:0, maior:0, desc:"" };
-    if(t === '4'){ g.net += v; if(v > g.maior){ g.maior = v; g.desc = i.contaDescricao || ""; } }
-    else { g.net -= v; if(!g.desc) g.desc = i.contaDescricao || ""; }
-    m.set(nat, g);
+    const cod = String(i.contaCodigo ?? "").trim(); if(cod.length < 2 || (cod[0] !== '4' && cod[0] !== '9')) return;
+    const v = numero(i.valorArrecadado), liq = cod[0] === '9' ? -Math.abs(v) : v;
+    const g = mp.get(cod) || { cod, net:0, desc:"" };
+    g.net += liq; if(!g.desc) g.desc = i.contaDescricao || ""; mp.set(cod, g);
   });
-  const contas = [...m.values()].filter(g=>Math.abs(g.net) > 0.004).map(g=>[g.nat, String(g.desc).replace(/\s+/g,' ').trim().slice(0,90), Math.round(g.net*100)/100]);
+  const contas = [...mp.values()].filter(g=>Math.abs(g.net) > 0.004).map(g=>[g.cod, String(g.desc).replace(/\s+/g,' ').trim().slice(0,220), Math.round(g.net*100)/100]);
   return { liq: liquida(lista, 'valorArrecadado'), contas };
 }
 
@@ -788,29 +783,29 @@ const GRUPOS_RECEITA = [
     ['IRRF',/IRRF|RENDA RETIDO|IMPOSTO .*RENDA/],['COSIP',/COSIP|ILUMINACAO PUBLICA/],['Taxas',/TAXA/],['Dívida Ativa',/DIVIDA ATIVA/]] },
   { nome:'Transf. Constitucionais', resto:'Outras transf. constitucionais', subs:[
     ['FPM',/\bFPM\b|PARTICIPACAO DOS MUNICIPIOS|FUNDO DE PARTICIPACAO/],['ICMS',/ICMS|CIRCULACAO DE MERCADORIAS/],['IPVA',/IPVA|VEICULOS AUTOMOTORES/],
-    ['ITR/IPI/CIDE',/\bITR\b|\bIPI\b|CIDE|TERRITORIAL RURAL|PRODUTOS INDUSTRIALIZADOS|INTERVENCAO NO DOMINIO/],['Royalties',/ROYALT|COMPENSACAO FINANCEIRA|CFEM|RECURSOS MINERAIS|PETROLEO/],['FUNDEB',/FUNDEB|MANUTENCAO E DESENVOLVIMENTO DA EDUCACAO BASICA/]] },
-  { nome:'Transf. Vinculadas e Convênios', resto:'Outras transf. vinculadas', subs:[
+    ['ITR/IPI/CIDE',/\bITR\b|\bIPI\b|CIDE|TERRITORIAL RURAL|PRODUTOS INDUSTRIALIZADOS|INTERVENCAO NO DOMINIO/],['Royalties',/ROYALT|COMPENSACAO FINANCEIRA|CFEM|RECURSOS MINERAIS|PETROLEO|PARTICIPACAO ESPECIAL/],['FUNDEB',/FUNDEB|MANUTENCAO E DESENVOLVIMENTO DA EDUCACAO BASICA/]] },
+  { nome:'Transf. Vinculadas e Convênios', resto:'Convênios e demais transferências', subs:[
     ['Convênios',/CONVENIO|CONVENIOS|CONTRATO DE REPASSE/],['SUS (Custeio)',/\bSUS\b|SAUDE|FUNDO NACIONAL DE SAUDE|\bFNS\b/],
     ['Educação (FNDE/Estado)',/FNDE|EDUCACAO|SALARIO.EDUCACAO|PNAE|PNATE|ESCOLAR/],['Assistência',/ASSISTENCIA|\bFNAS\b|\bSUAS\b|\bCRAS\b/]] },
   { nome:'Previdência (RPPS)', resto:'Outras receitas previdenciárias', subs:[
     ['Aportes p/ déficit',/APORTE|DEFICIT|COBERTURA/],['COMPREV',/COMPENSACAO PREVIDENCIARIA|COMPREV/],['Contrib. Patronal',/PATRONAL|EMPREGADOR|\bENTE\b/],
-    ['Contrib. Servidor',/SERVIDOR|SEGURADO|ATIVO|INATIVO|PENSIONISTA/],['Rendimentos',/REMUNERACAO|RENDIMENTO|JUROS|APLICACAO|FINANCEIR/]] },
+    ['Contrib. Servidor',/SERVIDOR|SEGURADO|ATIVO|INATIVO|PENSIONISTA/],['Rendimentos',/REMUNERACAO|RENDIMENTO|JUROS|APLICACAO|FINANCEIR|PERDAS EFETIVAS|INVESTIMENTO/]] },
   { nome:'Outras Receitas Correntes', resto:'Demais receitas correntes', subs:[
-    ['Multas e juros',/MULTA|JUROS DE MORA/],['Restituições',/RESTITUI|INDENIZA|RESSARCIMENTO/],['Rendimentos (Tesouro)',/REMUNERACAO|RENDIMENTO|APLICACAO|FINANCEIR/],
-    ['Patrimônio',/PATRIMON|ALUGU|CONCESS|PERMISS|DIVIDENDO/],['Serviços/ESTAR',/SERVICO|ESTAR|ESTACIONAMENTO|CEMITERIO|TARIFA/]] },
+    ['Multas e juros',/MULTA|JUROS DE MORA/],['Restituições',/RESTITUI|INDENIZA|RESSARCIMENTO|SUCUMBENCIA|DECISOES JUDICIAIS|IMPUGNACOES/],['Rendimentos (Tesouro)',/REMUNERACAO|RENDIMENTO|APLICACAO|FINANCEIR/],
+    ['Patrimônio',/PATRIMON|ALUGU|CONCESS|PERMISS|DIVIDENDO|IMOBILIARI/],['Serviços/ESTAR',/SERVICO|ESTAR|ESTACIONAMENTO|CEMITERIO|TARIFA|INDUSTRIAL|INSCRICAO/]] },
   { nome:'Receitas de Capital', resto:'Outras receitas de capital', subs:[
-    ['Alienação de bens',/ALIENACAO/],['Operações de crédito',/OPERACOES? DE CREDITO|FINANCIAMENTO|EMPRESTIMO/],['Convênios de obras',/CONVENIO|TRANSFERENCIAS? DE CAPITAL|OBRAS|CONTRATO DE REPASSE/]] }
+    ['Alienação de bens',/ALIENACAO/],['Operações de crédito',/OPERACOES? DE CREDITO|FINANCIAMENTO|EMPRESTIMO/],['Convênios de obras',/CONVENIO|TRANSFERENCIA|OBRAS|CONTRATO DE REPASSE/]] }
 ];
 const RPPS_MACRO = 3, CAPITAL_MACRO = 5;
 function macroDe(nat0, desc){
   const d = normTxt(desc);
-  if(CONTAS_FAPEN.has('4'+nat0) || /^[17]215/.test(nat0)) return RPPS_MACRO;
+  if(/^[17]215|^132104|^799/.test(nat0) || /DEFICIT ATUARIAL|REGIMES? PROPRIOS? DE PREVIDENCIA|RPPS|COMPENSACOES FINANCEIRAS ENTRE O REGIME GERAL|PERDAS EFETIVAS DE INVESTIMENTOS/.test(d)) return RPPS_MACRO;
   const cat = nat0[0] === '7' ? '1' : nat0[0] === '8' ? '2' : nat0[0];
   if(cat === '2') return CAPITAL_MACRO;
   const n = (cat + nat0.slice(1));
   if(/^11|^124/.test(n) || /DIVIDA ATIVA/.test(d)) return 0;
   if(/^17/.test(n)){
-    const g2 = /\bFPM\b|PARTICIPACAO DOS MUNICIPIOS|FUNDEB|ICMS|IPVA|\bITR\b|\bIPI\b|CIDE|ROYALT|COMPENSACAO FINANCEIRA|CFEM/.test(d);
+    const g2 = /\bFPM\b|PARTICIPACAO DOS MUNICIPIOS|FUNDEB|ICMS|IPVA|\bITR\b|\bIPI\b|CIDE|ROYALT|COMPENSACAO FINANCEIRA|CFEM|PARTICIPACAO ESPECIAL|FUNDO ESPECIAL DO PETROLEO/.test(d);
     const g3 = /\bSUS\b|SAUDE|FNDE|EDUCACAO|ASSISTENCIA|\bFNAS\b|CONVENIO/.test(d);
     if(g2 && !/CONVENIO/.test(d)) return 1;
     if(/^17(11|12|15|21|22|5)/.test(n) && !g3) return 1;
@@ -821,11 +816,11 @@ function macroDe(nat0, desc){
 function agruparReceita(contas){
   const gr = GRUPOS_RECEITA.map(g => ({ nome:g.nome, valor:0, subs:[...g.subs.map(([nome])=>({ nome, valor:0, contas:[] })), { nome:g.resto, valor:0, contas:[] }] }));
   (contas||[]).forEach(c=>{
-    const mi = macroDe(c.cod, c.desc), g = GRUPOS_RECEITA[mi], d = normTxt(c.desc);
+    const mi = macroDe(c.cod.slice(1), c.desc), g = GRUPOS_RECEITA[mi], d = normTxt(c.desc);
     let si = g.subs.findIndex(([, re]) => re.test(d)); if(si < 0) si = g.subs.length;
     const S = gr[mi].subs[si]; S.contas.push(c); S.valor += c.v; gr[mi].valor += c.v;
   });
-  gr.forEach(g => { g.subs = g.subs.filter(x => x.contas.length); g.subs.forEach(x => x.contas.sort((a,b)=>Math.abs(b.v)-Math.abs(a.v))); g.subs.sort((a,b)=>b.valor-a.valor); });
+  gr.forEach(g => { g.subs = g.subs.filter(x => x.contas.length); g.subs.forEach(x => x.contas.sort((a,b)=>a.cod.slice(1).localeCompare(b.cod.slice(1)) || a.cod.localeCompare(b.cod))); g.subs.sort((a,b)=>b.valor-a.valor); });
   return gr;
 }
 let GRP_ATUAL = [];
@@ -1306,12 +1301,12 @@ function renderGrupo(){
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{ padding:{ right: MOVEL() ? 135 : 170 } },
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>' '+brl2(c.parsed.x) } } },
       scales:{ x:{ beginAtZero:true, grid:{ color:cv('--grid') }, border:{ display:false }, ticks:{ callback:v=>brlAbrev(v) } }, y:{ grid:{ display:false }, ticks:{ font:{ size:14 }, color:cv('--txt') } } } } });
-  let h = '<table class="mt"><thead><tr><th>Natureza</th><th>Descrição da conta</th><th class="n">Receita líquida</th></tr></thead><tbody>';
+  let h = '<table class="mt"><thead><tr><th>Conta</th><th>Descrição da conta</th><th class="n">Receita líquida</th></tr></thead><tbody>';
   g.subs.forEach(sg=>{
     h += `<tr class="sub"><td colspan="2">${escN(sg.nome)} <span style="font-weight:400;color:var(--mut)">· ${sg.contas.length} conta${sg.contas.length>1?'s':''}</span></td><td class="n">${escN(brl2(sg.valor))}</td></tr>`;
-    sg.contas.forEach(c=>{ h += `<tr><td class="cod ind">${escN(fmtNat(c.cod))}</td><td>${escN(c.desc||'—')}</td><td class="n">${escN(brl2(c.v))}</td></tr>`; });
+    sg.contas.forEach(c=>{ h += `<tr><td class="cod ind">${escN(c.cod)}</td><td>${escN(c.desc||'—')}${c.cod[0]==='9'?' <span style="color:var(--mut)">(dedução)</span>':''}</td><td class="n"${c.v<0?' style="color:#c0392b"':''}>${escN(brl2(c.v))}</td></tr>`; });
   });
-  h += `</tbody><tfoot><tr><td colspan="2">Total do macrogrupo (contas 4 − contas 9)</td><td class="n">${escN(brl2(g.valor))}</td></tr></tfoot></table>`;
+  h += `</tbody><tfoot><tr><td colspan="2">Total do macrogrupo (contas 4 + contas 9 negativas)</td><td class="n">${escN(brl2(g.valor))}</td></tr></tfoot></table>`;
   $('gTab').innerHTML = h;
 }
 function abrirGrupo(i){
