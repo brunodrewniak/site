@@ -520,7 +520,29 @@ async function consultarAutomatica(){
   }
 }
 
+// Classifica cada linha da API em um dos 6 blocos do demonstrativo.
+// 1) Colunas de receita/despesa/dívida definem o bloco diretamente.
+// 2) Linhas de coluna única (ex.: "VALOR") seguem a ordem do demonstrativo:
+//    Acima da Linha -> Abaixo da Linha/Ajustes -> Informações Adicionais.
+let secaoSimples = "resultadosAcimaLinha";
+function normalizar(t){ return String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase(); }
+function bucketDoItem(item){
+  const col = normalizar(item.coluna);
+  const txt = normalizar(item.conta) + " " + normalizar(item.cod_conta);
+
+  if(/PREVISAO|RECEITAS? REALIZADA/.test(col)) return "receitasPrimarias";
+  if(/DOTACAO|EMPENHADA|LIQUIDADA|PAGA|RESTOS/.test(col)) return "despesasPrimarias";
+  if(/^EM \d|^ATE O BIMESTRE/.test(col)) return "calculoResultadoNominal";
+
+  // coluna única: atualiza a seção conforme a linha (a API respeita a ordem do demonstrativo)
+  if(CODCONTA_AJUSTE_ABAIXO.has(item.cod_conta) || /ABAIXO DA LINHA|AJUSTE|VARIACAO|VARIACAO CAMBIAL/.test(txt)) secaoSimples = "ajusteEResultadosAbaixo";
+  if(/INFORMACOES ADICIONAIS|PRIVATIZA|PASSIVOS RECONHECIDOS|META /.test(txt)) secaoSimples = "informacoesAdicionais";
+  if(/ACIMA DA LINHA/.test(txt) && secaoSimples !== "informacoesAdicionais") secaoSimples = "resultadosAcimaLinha";
+  return secaoSimples;
+}
+
 function processarDados(lista){
+  secaoSimples = "resultadosAcimaLinha";
   dadosPorConta = {};
   ordemPorBucket = {}; colunasPorBucket = {};
   BUCKETS.forEach(b=>{ ordemPorBucket[b] = []; colunasPorBucket[b] = []; });
