@@ -521,20 +521,6 @@ const COL_ANTERIOR = "SALDO DO EXERCÍCIO ANTERIOR";
 function colQuad(n){ return `Até o ${n}º Quadrimestre`; }
 const COLUNAS_QUAD = [1,2,3].map(colQuad);
 
-// Cópia dos dados do Siconfi (arquivo rgf.json: 2º Quadrimestre/2026, Campo Largo),
-// usada somente quando a consulta à API falha
-const DADOS_LOCAIS = [{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"SALDO DO EXERCÍCIO ANTERIOR","cod_conta":"RGF3ReceitaCorrenteLiquida","conta":"RECEITA CORRENTE LÍQUIDA - RCL (VI)","valor":695545627},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 1º Quadrimestre","cod_conta":"RGF3ReceitaCorrenteLiquida","conta":"RECEITA CORRENTE LÍQUIDA - RCL (VI)","valor":712286778.29},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 2º Quadrimestre","cod_conta":"RGF3ReceitaCorrenteLiquida","conta":"RECEITA CORRENTE LÍQUIDA - RCL (VI)","valor":741915906.59},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"SALDO DO EXERCÍCIO ANTERIOR","cod_conta":"TransferenciasObrigatoriasDaUniaoRelativasAsEmendasIndividuais","conta":"(-) Transferências Obrigatórias da União Relativas às Emendas Individuais (art. 166-A, §1º, da CF) (VII)","valor":5471000},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 1º Quadrimestre","cod_conta":"TransferenciasObrigatoriasDaUniaoRelativasAsEmendasIndividuais","conta":"(-) Transferências Obrigatórias da União Relativas às Emendas Individuais (art. 166-A, §1º, da CF) (VII)","valor":1970000},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 2º Quadrimestre","cod_conta":"TransferenciasObrigatoriasDaUniaoRelativasAsEmendasIndividuais","conta":"(-) Transferências Obrigatórias da União Relativas às Emendas Individuais (art. 166-A, §1º, da CF) (VII)","valor":-1000000},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"SALDO DO EXERCÍCIO ANTERIOR","cod_conta":"ReceitaCorrenteLiquidaAjustadaParaCalculoDosLimitesDeEndividamento","conta":"RECEITA CORRENTE LÍQUIDA AJUSTADA PARA CÁLCULO DOS LIMITES DE ENDIVIDAMENTO (VIII) = (VI - VII)","valor":690074627},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 1º Quadrimestre","cod_conta":"ReceitaCorrenteLiquidaAjustadaParaCalculoDosLimitesDeEndividamento","conta":"RECEITA CORRENTE LÍQUIDA AJUSTADA PARA CÁLCULO DOS LIMITES DE ENDIVIDAMENTO (VIII) = (VI - VII)","valor":710316778.29},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 2º Quadrimestre","cod_conta":"ReceitaCorrenteLiquidaAjustadaParaCalculoDosLimitesDeEndividamento","conta":"RECEITA CORRENTE LÍQUIDA AJUSTADA PARA CÁLCULO DOS LIMITES DE ENDIVIDAMENTO (VIII) = (VI - VII)","valor":742915906.59},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"SALDO DO EXERCÍCIO ANTERIOR","cod_conta":"LimiteDefinidoPorResolucaoDoSenadoFederal","conta":"LIMITE DEFINIDO POR RESOLUÇÃO DO SENADO FEDERAL","valor":151816417.94},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 1º Quadrimestre","cod_conta":"LimiteDefinidoPorResolucaoDoSenadoFederal","conta":"LIMITE DEFINIDO POR RESOLUÇÃO DO SENADO FEDERAL","valor":156269691.22},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 2º Quadrimestre","cod_conta":"LimiteDefinidoPorResolucaoDoSenadoFederal","conta":"LIMITE DEFINIDO POR RESOLUÇÃO DO SENADO FEDERAL","valor":163441499.45},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"SALDO DO EXERCÍCIO ANTERIOR","cod_conta":"LimiteDeAlerta","conta":"LIMITE DE ALERTA (inciso III § 1º do art. 59 da LRF)","valor":136634776.15},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 1º Quadrimestre","cod_conta":"LimiteDeAlerta","conta":"LIMITE DE ALERTA (inciso III § 1º do art. 59 da LRF)","valor":140642722.1},{"exercicio":2026,"periodo":2,"periodicidade":"Q","instituicao":"Prefeitura Municipal de Campo Largo - PR","cod_ibge":4104204,"uf":"PR","co_poder":"E","populacao":144504,"anexo":"RGF-Anexo 03","esfera":"M","rotulo":"Padrão","coluna":"Até o 2º Quadrimestre","cod_conta":"LimiteDeAlerta","conta":"LIMITE DE ALERTA (inciso III § 1º do art. 59 da LRF)","valor":147097349.51}];
-
-// Exibe a cópia local se ela corresponder ao período e ao ente pedidos
-function usarDadosLocais(exercicio, periodo, erro){
-  const m = DADOS_LOCAIS[0];
-  if(String(m.exercicio) !== String(exercicio) || String(m.periodo) !== String(periodo) ||
-     String(m.cod_ibge) !== $("filtroEnte").value.trim()) return false;
-  processarDados(DADOS_LOCAIS);
-  mostrarStatus(`Exibindo a cópia local do ${periodo}º Quadrimestre/${exercicio}, pois a consulta à API não funcionou. ${MSG_ERRO_API(erro)}`, "warning");
-  return true;
-}
-
 let dadosPorConta = {};
 let metaConsulta = {};
 let graficos = {};
@@ -643,14 +629,7 @@ async function buscarLista(url){
   return lista;
 }
 
-// Separa falha de acesso à API (rede/CORS/HTTP) de erro no próprio código da página
-const MSG_ERRO_API = err => {
-  console.error(err);
-  const falhaDeAcesso = /Failed to fetch|NetworkError|Load failed|^HTTP /i.test(err.message);
-  return falhaDeAcesso
-    ? `Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`
-    : `Erro interno do relatório (${err.name}: ${err.message}). Detalhes no console do navegador (F12). Versão do arquivo: 27/11/2026-b.`;
-};
+const MSG_ERRO_API = err => `Não foi possível consultar a API diretamente (${err.message}). Caso seja um bloqueio de CORS do navegador, utilize o botão "Carregar JSON Local".`;
 
 // Consulta manual (botão de busca): usa exatamente o que foi escolhido; sem dados => zera o relatório
 async function consultarManual(){
@@ -670,10 +649,7 @@ async function consultarManual(){
       mostrarStatus(`Nenhum dado encontrado para o ${periodo}º Quadrimestre/${exercicio} e o ente informado.`, "warning");
     }
   }catch(err){
-    if(!usarDadosLocais(exercicio, periodo, err)){
-      processarDados([]); // não deixa na tela valores de outro período
-      mostrarStatus(MSG_ERRO_API(err), "warning");
-    }
+    mostrarStatus(MSG_ERRO_API(err), "warning");
   }finally{
     mostrarLoading(false);
   }
@@ -708,10 +684,7 @@ async function consultarAutomatica(){
     processarDados([]);
     mostrarStatus(`Nenhum dado encontrado nos últimos períodos consultados. Exibindo o ${inicial.periodo}º Quadrimestre/${inicial.exercicio} zerado.`, "warning");
   }catch(err){
-    const m = DADOS_LOCAIS[0];
-    aplicarFiltros(m);
-    $("urlApiTexto").textContent = montarUrl(m.exercicio, m.periodo);
-    usarDadosLocais(m.exercicio, m.periodo, err);
+    mostrarStatus(MSG_ERRO_API(err), "warning");
   }finally{
     mostrarLoading(false);
   }
