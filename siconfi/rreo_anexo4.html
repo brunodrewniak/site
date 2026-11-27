@@ -512,7 +512,28 @@ async function consultarAutomatica(){
   }
 }
 
+// Classifica cada linha da API em um dos 6 blocos do demonstrativo.
+// Tipo (receita / despesa / bens) vem da COLUNA; fundo x administração vem da seção
+// em que a linha aparece (a API devolve as linhas na ordem do demonstrativo: o bloco da
+// Administração começa na primeira linha cuja conta/código cita "Administração").
+let secaoAtual = "Fundo";
+function normalizar(t){ return String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase(); }
+function tipoDaColuna(coluna){
+  const c = normalizar(coluna);
+  if(/^SALDO/.test(c)) return "bens";
+  if(/PREVISAO|RECEITAS? REALIZADA/.test(c)) return "receitas";
+  if(/DOTACAO|EMPENHADA|LIQUIDADA|PAGA/.test(c)) return "despesas";
+  return null; // ex.: colunas anuais do Plano de Amortização — ignoradas
+}
+function bucketDoItem(item){
+  const tipo = tipoDaColuna(item.coluna);
+  if(!tipo) return null;
+  if(/ADMINISTRA/.test(normalizar(item.conta) + " " + normalizar(item.cod_conta))) secaoAtual = "Adm";
+  return tipo + secaoAtual; // receitasFundo, despesasAdm, bensFundo...
+}
+
 function processarDados(lista){
+  secaoAtual = "Fundo";
   dadosPorConta = {};
   ordemPorBucket = {}; colunasPorBucket = {};
   BUCKETS.forEach(b=>{ ordemPorBucket[b] = []; colunasPorBucket[b] = []; });
@@ -523,7 +544,7 @@ function processarDados(lista){
     if(!metaConsulta.instituicao){
       metaConsulta = { instituicao:item.instituicao, exercicio:item.exercicio, periodo:item.periodo, cod_ibge:item.cod_ibge };
     }
-    const bucket = bucketDoItem(item.cod_conta, item.coluna);
+    const bucket = bucketDoItem(item);
     if(!bucket) return;
 
     if(!dadosPorConta[item.cod_conta]){
